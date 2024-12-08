@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">eSaver</string>
+    <string name="enter_url">輸入URL</string>
+    <string name="all">全部</string>
+    <string name="downloaded">已下載</string>
+    <string name="not_downloaded">未下載</string>
+    <string name="confirm">確定</string>
+    <string name="doDelete">刪除?</string>
+    <string name="noName">佚名</string>
+    <string name="apply">應用</string>
+    <string name="author">作者</string>
+    <string name="cover_page">封面頁</string>
+    <string name="skip_pages">跳過書頁</string>
+</resources>

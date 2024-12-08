@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/black">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageView
+            android:id="@+id/pass_7"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:srcCompat="@drawable/pass_circle" />
+
+        <ImageView
+            android:id="@+id/pass_8"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            app:layout_constraintStart_toEndOf="@+id/pass_7"
+            app:layout_constraintTop_toTopOf="parent"
+            app:srcCompat="@drawable/pass_circle" />
+
+        <ImageView
+            android:id="@+id/pass_9"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            app:layout_constraintStart_toEndOf="@+id/pass_8"
+            app:layout_constraintTop_toTopOf="parent"
+            app:srcCompat="@drawable/pass_circle" />
+
+        <ImageView
+            android:id="@+id/pass_4"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/pass_7"
+            app:srcCompat="@drawable/pass_circle" />
+
+        <ImageView
+            android:id="@+id/pass_5"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="8dp"
+            app:layout_constraintStart_toEndOf="@+id/pass_4"
+            app:layout_constraintTop_toBottomOf="@+id/pass_8"
+            app:srcCompat="@drawable/pass_circle" />
+
+        <ImageView
+            android:id="@+id/pass_6"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="8dp"
+            app:layout_constraintStart_toEndOf="@+id/pass_5"
+            app:layout_constraintTop_toBottomOf="@+id/pass_9"
+            app:srcCompat="@drawable/pass_circle" />
+
+        <ImageView
+            android:id="@+id/pass_1"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/pass_4"
+            app:srcCompat="@drawable/pass_circle" />
+
+        <ImageView
+            android:id="@+id/pass_2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="8dp"
+            app:layout_constraintStart_toEndOf="@+id/pass_1"
+            app:layout_constraintTop_toBottomOf="@+id/pass_5"
+            app:srcCompat="@drawable/pass_circle" />
+
+        <ImageView
+            android:id="@+id/pass_3"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="8dp"
+            app:layout_constraintStart_toEndOf="@+id/pass_2"
+            app:layout_constraintTop_toBottomOf="@+id/pass_6"
+            app:srcCompat="@drawable/pass_circle" />
+
+        <ImageView
+            android:id="@+id/pass_0"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="8dp"
+            app:layout_constraintStart_toEndOf="@+id/pass_dummy1"
+            app:layout_constraintTop_toBottomOf="@+id/pass_2"
+            app:srcCompat="@drawable/pass_circle" />
+
+        <ImageView
+            android:id="@+id/pass_dummy1"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/pass_1"
+            app:srcCompat="@drawable/pass_circle" />
+
+        <ImageView
+            android:id="@+id/pass_dummy2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="8dp"
+            app:layout_constraintStart_toEndOf="@+id/pass_0"
+            app:layout_constraintTop_toBottomOf="@+id/pass_3"
+            app:srcCompat="@drawable/pass_circle" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
