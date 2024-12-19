@@ -21,7 +21,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.File
 import kotlin.math.ceil
-import kotlin.random.Random
 
 class BookGallery (private val context: Context, private val recyclerView: RecyclerView) {
     private val authorRecyclerViewAdapter: AuthorRecyclerViewAdapter = AuthorRecyclerViewAdapter(
@@ -46,24 +45,7 @@ class BookGallery (private val context: Context, private val recyclerView: Recyc
         recyclerView.scrollToPosition(0)
     }
 
-    fun openRandomBook () {
-        val isInternetAvailable = Util.isInternetAvailable(context)
-        val bookIds = History.getAllBookIds().filter {
-            if (isInternetAvailable) {
-                true
-            }
-            else {
-                val bookFolder = File(context.getExternalFilesDir(null), it)
-                History.getBookPageNum(it) <= bookFolder.listFiles()!!.size
-            }
-        }
-
-        if (bookIds.isEmpty()) {
-            Toast.makeText(context, "沒找到可打開的書", Toast.LENGTH_SHORT).show()
-            return
-        }
-        openBook(bookIds[Random.nextInt(bookIds.size)])
-    }
+    fun openRandomBook () = openBook(RandomBook.next(context, !Util.isInternetAvailable(context)))
 
     private fun openBook (bookId: String) {
         val bookFolder = File(context.getExternalFilesDir(null), bookId)

@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.util.TypedValue
+import java.io.File
 
 class Util {
     companion object {
@@ -17,6 +18,11 @@ class Util {
             val network = connectivityManager.activeNetwork ?: return false
             val cap = connectivityManager.getNetworkCapabilities(network) ?: return false
             return cap.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+        }
+
+        fun isBookDownloaded (context: Context, bookId: String): Boolean {
+            val folder = File(context.getExternalFilesDir(null), bookId)
+            return History.getBookPageNum(bookId) <= folder.listFiles()!!.size
         }
     }
 }

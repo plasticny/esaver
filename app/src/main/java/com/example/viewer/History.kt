@@ -6,8 +6,10 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.byteArrayPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import kotlin.random.Random
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
@@ -15,6 +17,7 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
+import java.util.PriorityQueue
 
 enum class BookSource (val keyString: String) {
     E("E"),
@@ -41,6 +44,7 @@ class History {
         // store keys
         //
         private class StoreKeys {
+            // --------------
             // books
             fun allBookIds () = byteArrayPreferencesKey("bookIds")
             // individual book
@@ -74,6 +78,11 @@ class History {
                 assertBookIdExist(bookId)
                 return byteArrayPreferencesKey("${bookId}_skipPages")
             }
+            fun bookLastViewTime (bookId: String): Preferences.Key<Long> {
+                assertBookIdExist(bookId)
+                return longPreferencesKey("${bookId}_lastViewTime")
+            }
+            // -----------
             // author
             fun allAuthors () = byteArrayPreferencesKey("authors")
             // individual author
@@ -92,6 +101,7 @@ class History {
         // books
         fun getAllBookIds () = readList<String>(storeKeys.allBookIds()) ?: listOf()
         fun addBookId (id: String) {
+            // NOTE: make sure the new id is stored in the last of the list
             val ids = getAllBookIds().toMutableList()
             if (ids.contains(id)) {
                 throw Exception("bookId $id already exist")
@@ -146,6 +156,10 @@ class History {
         fun getBookSkipPages (bookId: String) = readList<Int>(storeKeys.bookSkipPages(bookId)) ?: listOf()
         fun setBookSkipPages (bookId: String, v: List<Int>) = store(storeKeys.bookSkipPages(bookId), v)
         fun removeBookSkipPages (bookId: String) = remove(storeKeys.bookSkipPages(bookId))
+
+        fun getBookLastViewTime (bookId: String) = read(storeKeys.bookLastViewTime(bookId)) ?: 0L
+        fun updateBookLastViewTime (bookId: String) = store(storeKeys.bookLastViewTime(bookId), System.currentTimeMillis())
+        fun removeBookLastViewTime (bookId: String) = remove(storeKeys.bookLastViewTime(bookId))
 
         // authors
         fun getAllAuthors (): List<String> {

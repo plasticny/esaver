@@ -1,6 +1,5 @@
 package com.example.viewer
 
-import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.os.Bundle
 import android.view.KeyEvent
@@ -9,7 +8,6 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.ui.input.key.Key
 import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
@@ -19,7 +17,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.File
-import kotlin.random.Random
 
 class ViewerActivity: AppCompatActivity() {
     private val loadListener = object: RequestListener<Bitmap> {
@@ -51,8 +48,8 @@ class ViewerActivity: AppCompatActivity() {
     private var firstPage = 0 // 0 to pageNum - 1
     private var lastPage = 0 // 0 to pageNum - 1
     private var nextBookFlag = false
+    private var volumeDownKeyHeld = false
 
-    @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.viewer)
@@ -64,7 +61,8 @@ class ViewerActivity: AppCompatActivity() {
 
         bookId = intent.getStringExtra("bookId")!!
         skipPageSet = History.getBookSkipPages(bookId).toSet()
-        updatePageNumRange()
+
+        updatePageNumRange() // first page and last page are updated here
         page = firstPage
 
         fetcher = APictureFetcher.getFetcher(this, bookId)
@@ -102,9 +100,26 @@ class ViewerActivity: AppCompatActivity() {
                     } else if (!nextBookFlag) {
                         nextBookFlag = true
                         Toast.makeText(this, "尾頁，再按一次到下一本", Toast.LENGTH_SHORT).show()
-                    } else {
+                    } else if (!volumeDownKeyHeld) {
                         nextBook()
                     }
+                    volumeDownKeyHeld = true
+                    return true
+                }
+            }
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
+        if (event != null) {
+            when (keyCode) {
+                KeyEvent.KEYCODE_VOLUME_DOWN -> {
+                    volumeDownKeyHeld = false
+                    return true
+                }
+                KeyEvent.KEYCODE_BACK -> {
+                    finish()
                     return true
                 }
             }
@@ -161,23 +176,7 @@ class ViewerActivity: AppCompatActivity() {
     }
 
     private fun nextBook () {
-        val bookIds = History.getAllBookIds().filter {
-            when {
-                it == bookId -> false
-                !Util.isInternetAvailable(this) -> {
-                    val bookFolder = File(getExternalFilesDir(null), it)
-                    History.getBookPageNum(it) <= bookFolder.listFiles()!!.size
-                }
-                else -> true
-            }
-        }
-
-        if (bookIds.isEmpty()) {
-            Toast.makeText(this, "沒有另一本書", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        bookId = bookIds[Random.nextInt(bookIds.size)]
+        bookId = RandomBook.next(this, !Util.isInternetAvailable(this))
         skipPageSet = History.getBookSkipPages(bookId).toSet()
         updatePageNumRange()
         page = firstPage
