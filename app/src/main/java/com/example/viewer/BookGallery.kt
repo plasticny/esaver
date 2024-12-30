@@ -45,6 +45,8 @@ class BookGallery (private val context: Context, private val recyclerView: Recyc
         recyclerView.scrollToPosition(0)
     }
 
+    fun refresh () = authorRecyclerViewAdapter.refreshAuthorBooks()
+
     fun openRandomBook () = openBook(RandomBook.next(context, !Util.isInternetAvailable(context)))
 
     private fun openBook (bookId: String) {
@@ -53,6 +55,8 @@ class BookGallery (private val context: Context, private val recyclerView: Recyc
             Toast.makeText(context, "未完成下載+沒有網絡", Toast.LENGTH_SHORT).show()
             return
         }
+
+        History.updateBookLastViewTime(bookId)
 
         val intent = Intent(context, ViewerActivity::class.java)
         intent.putExtra("bookId", bookId)
@@ -151,6 +155,7 @@ class BookGallery (private val context: Context, private val recyclerView: Recyc
         History.removeBookUrl(bookId)
         History.removeBookCoverPage(bookId)
         History.removeBookSkipPages(bookId)
+        History.removeBookLastViewTime(bookId)
 
         if (History.getBookSource(bookId) == BookSource.E) {
             History.removeBookPageUrls(bookId)
