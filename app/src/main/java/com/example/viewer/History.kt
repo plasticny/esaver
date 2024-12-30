@@ -154,7 +154,7 @@ class History {
         fun removeBookCoverPage (bookId: String) = remove(storeKeys.bookCoverPage(bookId))
 
         fun getBookSkipPages (bookId: String) = readList<Int>(storeKeys.bookSkipPages(bookId)) ?: listOf()
-        fun setBookSkipPages (bookId: String, v: List<Int>) = store(storeKeys.bookSkipPages(bookId), v)
+        fun setBookSkipPages (bookId: String, v: List<Int>) = store(storeKeys.bookSkipPages(bookId), v.sorted())
         fun removeBookSkipPages (bookId: String) = remove(storeKeys.bookSkipPages(bookId))
 
         fun getBookLastViewTime (bookId: String) = read(storeKeys.bookLastViewTime(bookId)) ?: 0L
