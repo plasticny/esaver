@@ -44,7 +44,9 @@ class ViewerActivity: AppCompatActivity() {
     private lateinit var bookId: String
     private lateinit var skipPageSet: Set<Int>
 
-    private var page = 0 // firstPage to lastPage
+    @Volatile
+    private var page = 0 // current page num, firstPage to lastPage
+
     private var firstPage = 0 // 0 to pageNum - 1
     private var lastPage = 0 // 0 to pageNum - 1
     private var nextBookFlag = false
@@ -148,15 +150,19 @@ class ViewerActivity: AppCompatActivity() {
     }
 
     private fun loadPage () {
-        pageTextView.text = (page + 1).toString()
+        val myPage = page
+
+        pageTextView.text = (myPage + 1).toString()
         toggleProgressBar(true)
 
         CoroutineScope(Dispatchers.Main).launch {
-            val pictureBuilder = fetcher.getPicture(page, loadListener) ?: return@launch
-            pictureBuilder.into(photoView)
+            val pictureBuilder = fetcher.getPicture(myPage, loadListener) ?: return@launch
+            if (page == myPage) {
+                pictureBuilder.into(photoView)
+            }
         }
         CoroutineScope(Dispatchers.IO).launch {
-            val nextPage = page + 1
+            val nextPage = myPage + 1
             if (nextPage > lastPage || File(fetcher.bookFolder, nextPage.toString()).exists()) {
                 return@launch
             }
