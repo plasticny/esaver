@@ -11,4 +11,7 @@
     <string name="author">作者</string>
     <string name="cover_page">封面頁</string>
     <string name="skip_pages">跳過書頁</string>
+    <string name="skip_page">跳過此頁</string>
+    <string name="reload_page">重讀此頁</string>
+    <string name="set_as_cover_page">設為封面</string>
 </resources>

@@ -84,6 +84,8 @@ class RandomBook private constructor() {
 
     private fun drawId (context: Context, onlyDownloaded: Boolean): String {
         // WARNING: this function supposed some book is downloaded
+        println("[RandomBook.drawId] $randomPool")
+
         if (!onlyDownloaded) {
             return randomPool.random()
         }
