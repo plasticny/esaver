@@ -1,6 +1,5 @@
 package com.example.viewer
 
-import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.os.Bundle
 import android.view.GestureDetector
@@ -93,7 +92,6 @@ class ViewerActivity: AppCompatActivity() {
             }
         )
         pageTextView.setOnTouchListener { v, event ->
-            v.performClick()
             pageTextGestureDetector.onTouchEvent(event)
             true
         }
