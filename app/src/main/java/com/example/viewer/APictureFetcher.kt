@@ -33,6 +33,7 @@ abstract class APictureFetcher (
     private val fileGlide = Glide.with(context)
         .setDefaultRequestOptions(RequestOptions().diskCacheStrategy(DiskCacheStrategy.NONE))
         .asBitmap()
+    private val downloadedPage = mutableSetOf<Int>()
 
     val bookFolder = File(context.getExternalFilesDir(null), bookId)
 
@@ -43,6 +44,11 @@ abstract class APictureFetcher (
         println("[APictureFetcher.getPicture]\n${pictureFile.path}")
 
         if (!pictureFile.exists()) {
+            if (downloadedPage.contains(page)) {
+                return null
+            }
+            downloadedPage.add(page)
+
             val retFlag = savePicture(page)
             if (!retFlag) {
                 return null
@@ -58,13 +64,13 @@ abstract class APictureFetcher (
     }
 
     protected suspend fun downloadPicture (page: Int, url: String, headers: Map<String, String> = mapOf()): Boolean {
+        println("[APictureFetcher.downloadPicture] $url")
+
         if(!Util.isInternetAvailable(context)) {
             return false
         }
 
         val file = File(bookFolder, page.toString())
-        println("[APictureFetcher.downloadPicture] $url")
-
         val requestBuilder = Request.Builder().url(url)
         for (header in headers) {
             requestBuilder.addHeader(header.key, header.value)

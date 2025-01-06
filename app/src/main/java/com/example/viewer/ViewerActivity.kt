@@ -2,11 +2,16 @@ package com.example.viewer
 
 import android.graphics.Bitmap
 import android.os.Bundle
+import android.view.GestureDetector
 import android.view.KeyEvent
+import android.view.LayoutInflater
+import android.view.MotionEvent
+import android.widget.Button
 import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.GlideException
@@ -17,23 +22,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.File
+import kotlin.math.abs
 
 class ViewerActivity: AppCompatActivity() {
-    private val loadListener = object: RequestListener<Bitmap> {
-        override fun onLoadFailed(
-            e: GlideException?, model: Any?, target: Target<Bitmap>?, isFirstResource: Boolean
-        ): Boolean = loadEnded()
-
-        override fun onResourceReady(
-            resource: Bitmap?, model: Any?, target: Target<Bitmap>?, dataSource: DataSource?, isFirstResource: Boolean
-        ): Boolean = loadEnded()
-
-        private fun loadEnded (): Boolean {
-            toggleProgressBar(false)
-            return false
-        }
-    }
-
     private lateinit var photoView: ImageView
     private lateinit var progressBar: ProgressBar
     private lateinit var tmpImageView: ImageView
@@ -44,7 +35,9 @@ class ViewerActivity: AppCompatActivity() {
     private lateinit var bookId: String
     private lateinit var skipPageSet: Set<Int>
 
-    private var page = 0 // firstPage to lastPage
+    @Volatile
+    private var page = 0 // current page num, firstPage to lastPage
+
     private var firstPage = 0 // 0 to pageNum - 1
     private var lastPage = 0 // 0 to pageNum - 1
     private var nextBookFlag = false
@@ -67,8 +60,39 @@ class ViewerActivity: AppCompatActivity() {
 
         fetcher = APictureFetcher.getFetcher(this, bookId)
 
+        // open image dialog when long clicked on image
         photoView.setOnLongClickListener {
-            loadPage()
+            showImageDialog()
+            true
+        }
+
+        // change page when swipe on page num
+        val pageTextGestureDetector = GestureDetector(
+            this,
+            object: GestureDetector.SimpleOnGestureListener () {
+                override fun onFling(
+                    e1: MotionEvent?, e2: MotionEvent,
+                    velocityX: Float, velocityY: Float
+                ): Boolean {
+                    if (e1 != null) {
+                        val diffX = e2.x - e1.x
+                        val diffY = e2.y - e1.y
+                        // Check if the swipe is horizontal
+                        if (abs(diffX) > abs(diffY)) {
+                            if (diffX > 0) {
+                                prevPage()
+                            } else {
+                                nextPage()
+                            }
+                            return true
+                        }
+                    }
+                    return false
+                }
+            }
+        )
+        pageTextView.setOnTouchListener { v, event ->
+            pageTextGestureDetector.onTouchEvent(event)
             true
         }
 
@@ -127,6 +151,43 @@ class ViewerActivity: AppCompatActivity() {
         return super.onKeyDown(keyCode, event)
     }
 
+    private fun showImageDialog () {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.viewer_image_dialog, null)
+        val dialog = AlertDialog.Builder(this).setView(dialogView).create()
+
+        val coverPageButton = dialogView.findViewById<Button>(R.id.view_img_dialog_coverPage_button)
+        val skipButton = dialogView.findViewById<Button>(R.id.view_img_dialog_skip_button)
+        val reloadButton = dialogView.findViewById<Button>(R.id.view_img_dialog_reload_button)
+
+        coverPageButton.setOnClickListener {
+            History.setBookCoverPage(bookId, page)
+            dialog.dismiss()
+        }
+
+        skipButton.setOnClickListener {
+            History.setBookSkipPages(bookId, skipPageSet.toMutableList().also { it.add(page) })
+
+            if (page == firstPage) {
+                nextPage()
+            }
+            else {
+                prevPage()
+            }
+
+            skipPageSet = History.getBookSkipPages(bookId).toSet()
+            updatePageNumRange()
+
+            dialog.dismiss()
+        }
+
+        reloadButton.setOnClickListener {
+            loadPage()
+            dialog.dismiss()
+        }
+
+        dialog.show()
+    }
+
     private fun nextPage () {
         if (page < lastPage) {
             page++
@@ -148,15 +209,38 @@ class ViewerActivity: AppCompatActivity() {
     }
 
     private fun loadPage () {
-        pageTextView.text = (page + 1).toString()
+        val myPage = page
+
+        pageTextView.text = (myPage + 1).toString()
         toggleProgressBar(true)
 
+        // load this page
         CoroutineScope(Dispatchers.Main).launch {
-            val pictureBuilder = fetcher.getPicture(page, loadListener) ?: return@launch
-            pictureBuilder.into(photoView)
+            val pictureBuilder = fetcher.getPicture(
+                myPage,
+                object: RequestListener<Bitmap> {
+                    override fun onLoadFailed(
+                        e: GlideException?, model: Any?, target: Target<Bitmap>?, isFirstResource: Boolean
+                    ): Boolean = loadEnded()
+
+                    override fun onResourceReady(
+                        resource: Bitmap?, model: Any?, target: Target<Bitmap>?, dataSource: DataSource?, isFirstResource: Boolean
+                    ): Boolean = loadEnded()
+
+                    private fun loadEnded (): Boolean {
+                        toggleProgressBar(false)
+                        return false
+                    }
+                }
+            ) ?: return@launch
+            if (page == myPage) {
+                pictureBuilder.into(photoView)
+            }
         }
+
+        // load next page
         CoroutineScope(Dispatchers.IO).launch {
-            val nextPage = page + 1
+            val nextPage = myPage + 1
             if (nextPage > lastPage || File(fetcher.bookFolder, nextPage.toString()).exists()) {
                 return@launch
             }
@@ -184,6 +268,7 @@ class ViewerActivity: AppCompatActivity() {
         fetcher = APictureFetcher.getFetcher(this, bookId)
         nextBookFlag = false
 
+        History.updateBookLastViewTime(bookId)
         loadPage()
     }
 }

@@ -30,7 +30,6 @@ class GalleryActivity: AppCompatActivity() {
         setContentView(R.layout.gallery)
 
         History.init(this)
-        println("authors: ${History.getAllAuthors()}")
 
         bookGallery = BookGallery(this, this.findViewById(R.id.recycler_view))
 
@@ -75,6 +74,11 @@ class GalleryActivity: AppCompatActivity() {
             textViewDownloaded.setTextColor(ContextCompat.getColor(this, R.color.grey))
             textViewNotDownloaded.setTextColor(ContextCompat.getColor(this, R.color.white))
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        bookGallery.refresh()
     }
 
     private fun showAddDialog () {

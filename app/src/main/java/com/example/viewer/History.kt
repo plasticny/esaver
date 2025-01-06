@@ -9,7 +9,6 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import kotlin.random.Random
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
@@ -17,7 +16,6 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
-import java.util.PriorityQueue
 
 enum class BookSource (val keyString: String) {
     E("E"),
@@ -154,7 +152,7 @@ class History {
         fun removeBookCoverPage (bookId: String) = remove(storeKeys.bookCoverPage(bookId))
 
         fun getBookSkipPages (bookId: String) = readList<Int>(storeKeys.bookSkipPages(bookId)) ?: listOf()
-        fun setBookSkipPages (bookId: String, v: List<Int>) = store(storeKeys.bookSkipPages(bookId), v)
+        fun setBookSkipPages (bookId: String, v: List<Int>) = store(storeKeys.bookSkipPages(bookId), v.sorted())
         fun removeBookSkipPages (bookId: String) = remove(storeKeys.bookSkipPages(bookId))
 
         fun getBookLastViewTime (bookId: String) = read(storeKeys.bookLastViewTime(bookId)) ?: 0L
