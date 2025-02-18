@@ -1,6 +1,7 @@
 package com.example.viewer
 
 import android.graphics.Bitmap
+import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.view.GestureDetector
 import android.view.KeyEvent
@@ -281,13 +282,13 @@ class ViewerActivity: AppCompatActivity() {
         CoroutineScope(Dispatchers.Main).launch {
             val pictureBuilder = fetcher.getPicture(
                 myPage,
-                object: RequestListener<Bitmap> {
+                object: RequestListener<Drawable> {
                     override fun onLoadFailed(
-                        e: GlideException?, model: Any?, target: Target<Bitmap>?, isFirstResource: Boolean
+                        e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean
                     ): Boolean = loadEnded()
 
                     override fun onResourceReady(
-                        resource: Bitmap?, model: Any?, target: Target<Bitmap>?, dataSource: DataSource?, isFirstResource: Boolean
+                        resource: Drawable?, model: Any?, target: Target<Drawable>?, dataSource: DataSource?, isFirstResource: Boolean
                     ): Boolean = loadEnded()
 
                     private fun loadEnded (): Boolean {

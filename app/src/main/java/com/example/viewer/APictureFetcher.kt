@@ -2,6 +2,7 @@ package com.example.viewer
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.drawable.Drawable
 import com.bumptech.glide.Glide
 import com.bumptech.glide.RequestBuilder
 import com.bumptech.glide.load.engine.DiskCacheStrategy
@@ -14,6 +15,7 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.withContext
 import okhttp3.Request
 import java.io.File
+import java.io.FileInputStream
 
 abstract class APictureFetcher (
     protected val context: Context, protected val bookId: String
@@ -29,18 +31,19 @@ abstract class APictureFetcher (
         }
     }
 
+    abstract suspend fun savePicture (page: Int): Boolean
+
     protected val pageNum: Int = History.getBookPageNum(bookId)
     private val fileGlide = Glide.with(context)
         .setDefaultRequestOptions(RequestOptions()
             .diskCacheStrategy(DiskCacheStrategy.NONE)
             .skipMemoryCache(true)
-        )
-        .asBitmap()
+        ).asDrawable()
     private val downloadedPage = mutableSetOf<Int>()
 
     val bookFolder = File(context.getExternalFilesDir(null), bookId)
 
-    suspend fun getPicture (page: Int, loadListener: RequestListener<Bitmap>? = null): RequestBuilder<Bitmap>? {
+    suspend fun getPicture (page: Int, loadListener: RequestListener<Drawable>? = null): RequestBuilder<Drawable>? {
         assertPageInRange(page)
 
         val pictureFile = File(bookFolder, page.toString())
@@ -57,6 +60,7 @@ abstract class APictureFetcher (
                 return null
             }
         }
+
         return fileGlide.listener(loadListener).load(pictureFile.path)
     }
 
@@ -96,6 +100,4 @@ abstract class APictureFetcher (
         }
         return true
     }
-
-    abstract suspend fun savePicture (page: Int): Boolean
 }
