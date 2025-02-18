@@ -31,7 +31,10 @@ abstract class APictureFetcher (
 
     protected val pageNum: Int = History.getBookPageNum(bookId)
     private val fileGlide = Glide.with(context)
-        .setDefaultRequestOptions(RequestOptions().diskCacheStrategy(DiskCacheStrategy.NONE))
+        .setDefaultRequestOptions(RequestOptions()
+            .diskCacheStrategy(DiskCacheStrategy.NONE)
+            .skipMemoryCache(true)
+        )
         .asBitmap()
     private val downloadedPage = mutableSetOf<Int>()
 
