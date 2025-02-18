@@ -25,6 +25,11 @@ import java.io.File
 import kotlin.math.abs
 
 class ViewerActivity: AppCompatActivity() {
+    companion object {
+        private const val FLIP_THRESHOLD = 220
+        private const val SCROLL_THRESHOLD = 50
+    }
+
     private lateinit var photoView: ImageView
     private lateinit var progressBar: ProgressBar
     private lateinit var tmpImageView: ImageView
@@ -37,9 +42,9 @@ class ViewerActivity: AppCompatActivity() {
 
     @Volatile
     private var page = 0 // current page num, firstPage to lastPage
-
     private var firstPage = 0 // 0 to pageNum - 1
     private var lastPage = 0 // 0 to pageNum - 1
+
     private var nextBookFlag = false
     private var volumeDownKeyHeld = false
 
@@ -47,67 +52,20 @@ class ViewerActivity: AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.viewer)
 
-        photoView = findViewById(R.id.photoView)
+        bookId = intent.getStringExtra("bookId")!!
+        prepareBook(bookId)
+
+        photoView = findViewById<ImageView?>(R.id.photoView).apply {
+            setOnLongClickListener {
+                showImageDialog()
+                true
+            }
+        }
         progressBar = findViewById(R.id.viewer_progress_bar)
         tmpImageView = findViewById(R.id.viewer_tmp_image_vew)
-        pageTextView = findViewById(R.id.viewer_page_TextView)
-
-        bookId = intent.getStringExtra("bookId")!!
-        skipPageSet = History.getBookSkipPages(bookId).toSet()
-
-        updatePageNumRange() // first page and last page are updated here
-        page = firstPage
-
-        fetcher = APictureFetcher.getFetcher(this, bookId)
-
-        // open image dialog when long clicked on image
-        photoView.setOnLongClickListener {
-            showImageDialog()
-            true
-        }
-
-        // change page when swipe on page num
-        val pageTextGestureDetector = GestureDetector(
-            this,
-            object: GestureDetector.SimpleOnGestureListener () {
-                override fun onFling(
-                    e1: MotionEvent?, e2: MotionEvent,
-                    velocityX: Float, velocityY: Float
-                ): Boolean {
-                    if (e1 != null) {
-                        val diffX = e2.x - e1.x
-                        val diffY = e2.y - e1.y
-                        // Check if the swipe is horizontal
-                        if (abs(diffX) > abs(diffY)) {
-                            if (diffX > 0) {
-                                prevPage()
-                            } else {
-                                nextPage()
-                            }
-                            return true
-                        }
-                    }
-                    return false
-                }
-            }
-        )
-        pageTextView.setOnTouchListener { v, event ->
-            pageTextGestureDetector.onTouchEvent(event)
-            true
-        }
+        setupPageTextView()
 
         loadPage()
-    }
-
-    private fun updatePageNumRange () {
-        firstPage = 0
-        lastPage = History.getBookPageNum(bookId) - 1
-        while (skipPageSet.contains(firstPage)) {
-            firstPage++
-        }
-        while (skipPageSet.contains(lastPage)) {
-            lastPage--
-        }
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
@@ -151,6 +109,86 @@ class ViewerActivity: AppCompatActivity() {
         return super.onKeyDown(keyCode, event)
     }
 
+    private fun prepareBook (bookId: String) {
+        skipPageSet = History.getBookSkipPages(bookId).toSet()
+
+        firstPage = 0
+        lastPage = History.getBookPageNum(bookId) - 1
+        while (skipPageSet.contains(firstPage)) {
+            firstPage++
+        }
+        while (skipPageSet.contains(lastPage)) {
+            lastPage--
+        }
+
+        page = firstPage
+        fetcher = APictureFetcher.getFetcher(this, bookId)
+    }
+
+    private fun setupPageTextView () {
+        val simpleOnGestureListener = object: GestureDetector.SimpleOnGestureListener () {
+            var scrolledDistance = 0F
+
+            override fun onFling(
+                e1: MotionEvent?, e2: MotionEvent,
+                velocityX: Float, velocityY: Float
+            ): Boolean {
+                // change page on fling
+                if (e1 != null && isMotionHorizontal(e1, e2)) {
+                    if (abs(e2.x - e1.x) > FLIP_THRESHOLD) {
+                        return false
+                    }
+                    changePage(e1, e2)
+                    return true
+                }
+                return false
+            }
+
+            override fun onScroll(
+                e1: MotionEvent?, e2: MotionEvent,
+                distanceX: Float, distanceY: Float
+            ): Boolean {
+                // change page on scrolling
+                if (e1 != null && isMotionHorizontal(e1, e2)) {
+                    val dx = e2.x - e1.x
+                    if (abs(dx) <= FLIP_THRESHOLD) {
+                        return super.onScroll(e1, e2, distanceX, distanceY)
+                    }
+
+                    scrolledDistance += abs(distanceX)
+                    if (scrolledDistance >= SCROLL_THRESHOLD) {
+                        scrolledDistance = 0F
+                        changePage(e1, e2)
+                        return super.onScroll(e1, e2, distanceX, distanceY)
+                    }
+                }
+                return super.onScroll(e1, e2, distanceX, distanceY)
+            }
+
+            private fun isMotionHorizontal (e1: MotionEvent, e2: MotionEvent) = abs(e2.x - e1.x) > abs(e2.y - e1.y)
+
+            private fun changePage (e1: MotionEvent, e2: MotionEvent) {
+                if (e2.x - e1.x > 0) {
+                    prevPage()
+                } else {
+                    nextPage()
+                }
+            }
+        }
+        val gestureDetector = GestureDetector(this, simpleOnGestureListener)
+
+        pageTextView = findViewById<TextView?>(R.id.viewer_page_TextView).apply {
+            setOnTouchListener { v, event ->
+                gestureDetector.onTouchEvent(event)
+                if (event.action == MotionEvent.ACTION_UP) {
+                    simpleOnGestureListener.scrolledDistance = 0F
+                }
+                v.performClick()
+                true
+            }
+        }
+    }
+
     private fun showImageDialog () {
         val dialogView = LayoutInflater.from(this).inflate(R.layout.viewer_image_dialog, null)
         val dialog = AlertDialog.Builder(this).setView(dialogView).create()
@@ -167,16 +205,17 @@ class ViewerActivity: AppCompatActivity() {
         dialogView.findViewById<Button>(R.id.view_img_dialog_skip_button).apply {
             setOnClickListener {
                 History.setBookSkipPages(bookId, skipPageSet.toMutableList().also { it.add(page) })
+                skipPageSet = History.getBookSkipPages(bookId).toSet()
 
                 if (page == firstPage) {
+                    firstPage++
                     nextPage()
-                }
-                else {
+                } else {
+                    if (page == lastPage) {
+                        lastPage--
+                    }
                     prevPage()
                 }
-
-                skipPageSet = History.getBookSkipPages(bookId).toSet()
-                updatePageNumRange()
 
                 dialog.dismiss()
             }
@@ -199,6 +238,17 @@ class ViewerActivity: AppCompatActivity() {
         }
 
         dialog.show()
+    }
+
+    private fun toggleProgressBar (toggle: Boolean) {
+        if (toggle) {
+            progressBar.visibility = ProgressBar.VISIBLE
+            photoView.visibility = PhotoView.INVISIBLE
+        }
+        else {
+            progressBar.visibility = ProgressBar.GONE
+            photoView.visibility = PhotoView.VISIBLE
+        }
     }
 
     private fun nextPage () {
@@ -245,13 +295,13 @@ class ViewerActivity: AppCompatActivity() {
                         return false
                     }
                 }
-            ) ?: return@launch
-            if (page == myPage) {
+            )
+            if (pictureBuilder != null && page == myPage) {
                 pictureBuilder.into(photoView)
             }
         }
 
-        // load next page
+        // pre-load next next page
         CoroutineScope(Dispatchers.IO).launch {
             val nextPage = myPage + 1
             if (nextPage > lastPage || File(fetcher.bookFolder, nextPage.toString()).exists()) {
@@ -261,24 +311,10 @@ class ViewerActivity: AppCompatActivity() {
         }
     }
 
-    private fun toggleProgressBar (toggle: Boolean) {
-        if (toggle) {
-            progressBar.visibility = ProgressBar.VISIBLE
-            photoView.visibility = PhotoView.INVISIBLE
-        }
-        else {
-            progressBar.visibility = ProgressBar.GONE
-            photoView.visibility = PhotoView.VISIBLE
-        }
-    }
-
     private fun nextBook () {
         bookId = RandomBook.next(this, !Util.isInternetAvailable(this))
-        skipPageSet = History.getBookSkipPages(bookId).toSet()
-        updatePageNumRange()
-        page = firstPage
+        prepareBook(bookId)
 
-        fetcher = APictureFetcher.getFetcher(this, bookId)
         nextBookFlag = false
 
         History.updateBookLastViewTime(bookId)
