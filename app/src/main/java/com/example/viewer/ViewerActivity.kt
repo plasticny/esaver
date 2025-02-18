@@ -155,34 +155,47 @@ class ViewerActivity: AppCompatActivity() {
         val dialogView = LayoutInflater.from(this).inflate(R.layout.viewer_image_dialog, null)
         val dialog = AlertDialog.Builder(this).setView(dialogView).create()
 
-        val coverPageButton = dialogView.findViewById<Button>(R.id.view_img_dialog_coverPage_button)
-        val skipButton = dialogView.findViewById<Button>(R.id.view_img_dialog_skip_button)
-        val reloadButton = dialogView.findViewById<Button>(R.id.view_img_dialog_reload_button)
-
-        coverPageButton.setOnClickListener {
-            History.setBookCoverPage(bookId, page)
-            dialog.dismiss()
+        // set cover page
+        dialogView.findViewById<Button>(R.id.view_img_dialog_coverPage_button).apply {
+            setOnClickListener {
+                History.setBookCoverPage(bookId, page)
+                dialog.dismiss()
+            }
         }
 
-        skipButton.setOnClickListener {
-            History.setBookSkipPages(bookId, skipPageSet.toMutableList().also { it.add(page) })
+        // skip page button
+        dialogView.findViewById<Button>(R.id.view_img_dialog_skip_button).apply {
+            setOnClickListener {
+                History.setBookSkipPages(bookId, skipPageSet.toMutableList().also { it.add(page) })
 
-            if (page == firstPage) {
-                nextPage()
+                if (page == firstPage) {
+                    nextPage()
+                }
+                else {
+                    prevPage()
+                }
+
+                skipPageSet = History.getBookSkipPages(bookId).toSet()
+                updatePageNumRange()
+
+                dialog.dismiss()
             }
-            else {
-                prevPage()
-            }
-
-            skipPageSet = History.getBookSkipPages(bookId).toSet()
-            updatePageNumRange()
-
-            dialog.dismiss()
         }
 
-        reloadButton.setOnClickListener {
-            loadPage()
-            dialog.dismiss()
+        // reload page button
+        dialogView.findViewById<Button>(R.id.view_img_dialog_reload_button).apply {
+            setOnClickListener {
+                loadPage()
+                dialog.dismiss()
+            }
+        }
+
+        // next book button
+        dialogView.findViewById<Button>(R.id.view_img_dialog_next_book_button).apply {
+            setOnClickListener {
+                nextBook()
+                dialog.dismiss()
+            }
         }
 
         dialog.show()

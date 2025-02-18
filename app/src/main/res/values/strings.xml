@@ -14,4 +14,5 @@
     <string name="skip_page">跳過此頁</string>
     <string name="reload_page">重新加載</string>
     <string name="set_as_cover_page">設為封面</string>
+    <string name="next_book">下一本書</string>
 </resources>
