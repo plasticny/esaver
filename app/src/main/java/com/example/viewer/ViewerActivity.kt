@@ -1,6 +1,5 @@
 package com.example.viewer
 
-import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.view.GestureDetector
@@ -218,14 +217,6 @@ class ViewerActivity: AppCompatActivity() {
                     prevPage()
                 }
 
-                dialog.dismiss()
-            }
-        }
-
-        // reload page button
-        dialogView.findViewById<Button>(R.id.view_img_dialog_reload_button).apply {
-            setOnClickListener {
-                loadPage()
                 dialog.dismiss()
             }
         }
