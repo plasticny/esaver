@@ -1,21 +1,22 @@
-package com.example.viewer
+package com.example.viewer.fetcher
 
 import android.content.Context
-import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
 import com.bumptech.glide.Glide
 import com.bumptech.glide.RequestBuilder
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.RequestOptions
-import com.example.viewer.HiPictureFetcher.Companion.okHttpClient
+import com.example.viewer.BookSource
+import com.example.viewer.History
+import com.example.viewer.Util
+import com.example.viewer.fetcher.HiPictureFetcher.Companion.okHttpClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.withContext
 import okhttp3.Request
 import java.io.File
-import java.io.FileInputStream
 
 abstract class APictureFetcher (
     protected val context: Context, protected val bookId: String

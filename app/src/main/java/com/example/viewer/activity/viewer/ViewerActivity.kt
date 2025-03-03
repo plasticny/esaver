@@ -1,5 +1,8 @@
-package com.example.viewer
+package com.example.viewer.activity.viewer
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.view.GestureDetector
@@ -17,17 +20,26 @@ import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
+import com.example.viewer.fetcher.APictureFetcher
+import com.example.viewer.History
+import com.example.viewer.R
+import com.example.viewer.RandomBook
+import com.example.viewer.Util
 import com.github.chrisbanes.photoview.PhotoView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.File
+import java.io.FileOutputStream
 import kotlin.math.abs
 
 class ViewerActivity: AppCompatActivity() {
     companion object {
         private const val FLIP_THRESHOLD = 220
         private const val SCROLL_THRESHOLD = 50
+
+        private const val ROTATE_LEFT = -90F
+        private const val ROTATE_RIGHT = 90F
     }
 
     private lateinit var photoView: ImageView
@@ -48,9 +60,12 @@ class ViewerActivity: AppCompatActivity() {
     private var nextBookFlag = false
     private var volumeDownKeyHeld = false
 
+    private val bookFolder: File
+        get() = fetcher.bookFolder
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.viewer)
+        setContentView(R.layout.viewer_activity)
 
         bookId = intent.getStringExtra("bookId")!!
         prepareBook(bookId)
@@ -127,7 +142,8 @@ class ViewerActivity: AppCompatActivity() {
 
     private fun setupPageTextView () {
         val simpleOnGestureListener = object: GestureDetector.SimpleOnGestureListener () {
-            var scrolledDistance = 0F
+            private var scrolledDistance = 0F
+            private var lastScrollE2: MotionEvent? = null
 
             override fun onFling(
                 e1: MotionEvent?, e2: MotionEvent,
@@ -158,11 +174,16 @@ class ViewerActivity: AppCompatActivity() {
                     scrolledDistance += abs(distanceX)
                     if (scrolledDistance >= SCROLL_THRESHOLD) {
                         scrolledDistance = 0F
-                        changePage(e1, e2)
-                        return super.onScroll(e1, e2, distanceX, distanceY)
+                        changePage(lastScrollE2 ?: e1, e2)
+                        lastScrollE2 = MotionEvent.obtain(e2)
                     }
                 }
                 return super.onScroll(e1, e2, distanceX, distanceY)
+            }
+
+            fun reset () {
+                scrolledDistance = 0F
+                lastScrollE2 = null
             }
 
             private fun isMotionHorizontal (e1: MotionEvent, e2: MotionEvent) = abs(e2.x - e1.x) > abs(e2.y - e1.y)
@@ -181,7 +202,7 @@ class ViewerActivity: AppCompatActivity() {
             setOnTouchListener { v, event ->
                 gestureDetector.onTouchEvent(event)
                 if (event.action == MotionEvent.ACTION_UP) {
-                    simpleOnGestureListener.scrolledDistance = 0F
+                    simpleOnGestureListener.reset()
                 }
                 v.performClick()
                 true
@@ -225,6 +246,20 @@ class ViewerActivity: AppCompatActivity() {
         dialogView.findViewById<Button>(R.id.view_img_dialog_next_book_button).apply {
             setOnClickListener {
                 nextBook()
+                dialog.dismiss()
+            }
+        }
+
+        // rotate buttons
+        dialogView.findViewById<Button>(R.id.view_img_dialog_rotate_left_button).apply {
+            setOnClickListener {
+                rotatePage(ROTATE_LEFT)
+                dialog.dismiss()
+            }
+        }
+        dialogView.findViewById<Button>(R.id.view_img_dialog_rotate_right_button).apply {
+            setOnClickListener {
+                rotatePage(ROTATE_RIGHT)
                 dialog.dismiss()
             }
         }
@@ -296,7 +331,7 @@ class ViewerActivity: AppCompatActivity() {
         // pre-load next next page
         CoroutineScope(Dispatchers.IO).launch {
             val nextPage = myPage + 1
-            if (nextPage > lastPage || File(fetcher.bookFolder, nextPage.toString()).exists()) {
+            if (nextPage > lastPage || File(bookFolder, nextPage.toString()).exists()) {
                 return@launch
             }
             fetcher.savePicture(nextPage)
@@ -310,6 +345,39 @@ class ViewerActivity: AppCompatActivity() {
         nextBookFlag = false
 
         History.updateBookLastViewTime(bookId)
+        loadPage()
+    }
+
+    private fun rotatePage (rotation: Float) {
+        val imageFile = File(bookFolder, page.toString())
+
+        val matrix = if (rotation == ROTATE_LEFT || rotation == ROTATE_RIGHT) {
+            Matrix().apply { postRotate(rotation) }
+        } else {
+            throw Exception("[ViewerActivity.rotatePage] unexpected rotation $rotation")
+        }
+
+        if (Util.isGifFile(imageFile)) {
+            Toast.makeText(baseContext, "不支持旋轉GIF", Toast.LENGTH_SHORT).show()
+            return
+        }
+        else {
+            // handle static file rotation
+            val originImage = BitmapFactory.decodeFile(imageFile.path)
+            val rotatedImage = Bitmap.createBitmap(
+                originImage,
+                0, 0,
+                originImage.width, originImage.height,
+                matrix, true
+            )
+            FileOutputStream(imageFile).use {
+                rotatedImage.compress(Bitmap.CompressFormat.WEBP_LOSSLESS, 100, it)
+            }
+            originImage.recycle()
+            rotatedImage.recycle()
+        }
+
+        // refresh page
         loadPage()
     }
 }

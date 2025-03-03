@@ -1,18 +1,13 @@
-package com.example.viewer
+package com.example.viewer.fetcher
 
 import android.content.Context
-import android.graphics.Bitmap
-import com.bumptech.glide.RequestBuilder
-import com.bumptech.glide.request.RequestListener
+import com.example.viewer.Util
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
-import okhttp3.Request
-import java.io.File
 import java.net.URL
-import java.util.regex.Pattern
 
 class HiPictureFetcher (context: Context, bookId: String): APictureFetcher(context, bookId) {
     companion object {

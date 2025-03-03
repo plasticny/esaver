@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/main_navigation_menu"
+    app:startDestination="@id/main_nav_gallery">
+
+    <fragment
+        android:id="@+id/main_nav_gallery"
+        android:label="@string/book_gallery"
+        android:name="com.example.viewer.activity.main.GalleryFragment" />
+
+    <fragment
+        android:id="@+id/main_nav_search"
+        android:label="@string/search"
+        android:name="com.example.viewer.activity.main.SearchFragment" />
+
+</navigation>

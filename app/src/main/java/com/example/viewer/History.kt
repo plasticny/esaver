@@ -1,6 +1,8 @@
 package com.example.viewer
 
 import android.content.Context
+import android.os.Environment
+import android.widget.Toast
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.byteArrayPreferencesKey
@@ -14,6 +16,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 
@@ -160,11 +163,8 @@ class History {
         fun removeBookLastViewTime (bookId: String) = remove(storeKeys.bookLastViewTime(bookId))
 
         // authors
-        fun getAllAuthors (): List<String> {
-            val res = mutableListOf(NO_AUTHOR)
-            res.addAll(readList(storeKeys.allAuthors()) ?: listOf())
-            return res
-        }
+        fun getAllAuthors (): List<String> = mutableListOf(NO_AUTHOR).also { it.addAll(getUserAuthors()) }
+        fun getUserAuthors (): List<String> = readList(storeKeys.allAuthors()) ?: listOf() // get authors that user added (without No Author)
         fun addAuthor (name: String) {
             println("[History.addAuthor] $name")
             val authors = (readList<String>(storeKeys.allAuthors()) ?: listOf()).toMutableList()
@@ -230,6 +230,16 @@ class History {
         }
         private fun<T> remove (key: Preferences.Key<T>) {
             runBlocking { dataStore.edit { it.remove(key) } }
+        }
+
+        //
+        //  backup
+        //
+        private fun backup (context: Context) {
+            val datastore = File(context.filesDir, "datastore")
+            val target = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "eSaver.preferences_pb")
+            File(datastore, "history.preferences_pb").copyTo(target, true)
+            Toast.makeText(context, "存檔已另存至Documents", Toast.LENGTH_SHORT).show()
         }
     }
 }

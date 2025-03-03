@@ -1,6 +1,7 @@
-package com.example.viewer
+package com.example.viewer.fetcher
 
 import android.content.Context
+import com.example.viewer.History
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope

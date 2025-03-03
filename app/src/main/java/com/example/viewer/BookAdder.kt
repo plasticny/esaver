@@ -2,6 +2,9 @@ package com.example.viewer
 
 import android.content.Context
 import android.widget.Toast
+import com.example.viewer.fetcher.APictureFetcher
+import com.example.viewer.fetcher.EPictureFetcher
+import com.example.viewer.fetcher.HiPictureFetcher
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -39,20 +42,19 @@ abstract class BookAdder (protected val context: Context) {
 
         bookUrl = getUrl(url)
         bookId = getId()
-        println(bookId)
-
-        val bookFolder = File(context.getExternalFilesDir(null), bookId)
 
         // check if the book is already saved
         if (History.getAllBookIds().contains(bookId)) {
-            Toast.makeText(context, "the book is already saved", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "已經存有這本書", Toast.LENGTH_SHORT).show()
             onEnded(false)
             return
         }
 
         // create folder
-        if (!bookFolder.exists()) {
-            bookFolder.mkdirs()
+        File(context.getExternalFilesDir(null), bookId).let {
+            if (!it.exists()) {
+                it.mkdirs()
+            }
         }
 
         // add book record to history

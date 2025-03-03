@@ -18,7 +18,7 @@
         android:theme="@style/Theme.Viewer"
         tools:targetApi="31">
         <activity
-            android:name=".PassActivity"
+            android:name=".activity.pass.PassActivity"
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.Viewer">
@@ -27,8 +27,8 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".GalleryActivity"/>
-        <activity android:name=".ViewerActivity"/>
+        <activity android:name=".activity.main.MainActivity"/>
+        <activity android:name=".activity.viewer.ViewerActivity"/>
     </application>
 
 </manifest>

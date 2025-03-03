@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.ir.backend.js.compile
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
@@ -45,6 +47,7 @@ android {
     }
     buildFeatures {
         compose = true
+        viewBinding = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.1"
@@ -82,4 +85,9 @@ dependencies {
     implementation("androidx.constraintlayout:constraintlayout:2.0.4")
     implementation("com.google.code.gson:gson:2.11.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.google.android.flexbox:flexbox:3.0.0")
+    implementation("androidx.navigation:navigation-ui-ktx:2.8.8")
+    implementation("androidx.navigation:navigation-fragment-ktx:2.8.8")
+//    implementation("pl.droidsonroids.gif:android-gif-drawable:1.2.29")
+//    implementation("com.squareup:gifencoder:0.10.1")
 }

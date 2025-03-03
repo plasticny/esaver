@@ -2,7 +2,6 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:background="#EFEFEF">
@@ -29,12 +28,15 @@
         app:layout_constraintTop_toTopOf="parent"
         app:srcCompat="@android:drawable/ic_menu_delete" />
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <!--  author  -->
+    <LinearLayout
         android:id="@+id/constraintLayout"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         android:layout_marginTop="16dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/profile_dialog_bookId_textView">
 
@@ -44,23 +46,24 @@
             android:layout_height="wrap_content"
             android:text="@string/author"
             android:textColor="@color/black"
-            android:textSize="20sp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            android:textSize="20sp" />
+
+        <ImageButton
+            android:id="@+id/profile_dialog_search_author_imageButton"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:background="@color/transparent"
+            app:srcCompat="@android:drawable/ic_menu_search" />
 
         <EditText
             android:id="@+id/profile_dialog_author_editText"
-            android:layout_width="270dp"
+            android:layout_width="240dp"
             android:layout_height="48dp"
             android:layout_marginStart="8dp"
             android:autofillHints="Author name"
-            android:inputType="text"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toEndOf="@+id/profile_dialog_author_TextView"
-            app:layout_constraintTop_toTopOf="parent" />
+            android:inputType="text" />
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+    </LinearLayout>
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/constraintLayout2"

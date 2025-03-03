@@ -15,4 +15,9 @@
     <string name="reload_page">重新加載</string>
     <string name="set_as_cover_page">設為封面</string>
     <string name="next_book">下一本書</string>
+    <string name="rotate_left_90">左轉90°</string>
+    <string name="rotate_right_90">右轉90°</string>
+    <string name="select_author">選擇作者</string>
+    <string name="book_gallery">書庫</string>
+    <string name="search">搜尋</string>
 </resources>
