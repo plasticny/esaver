@@ -2,6 +2,8 @@ package com.example.viewer
 
 import android.content.Context
 import android.widget.Toast
+import com.example.viewer.dataset.BookDataset
+import com.example.viewer.dataset.BookSource
 import com.example.viewer.fetcher.APictureFetcher
 import com.example.viewer.fetcher.EPictureFetcher
 import com.example.viewer.fetcher.HiPictureFetcher
@@ -44,7 +46,7 @@ abstract class BookAdder (protected val context: Context) {
         bookId = getId()
 
         // check if the book is already saved
-        if (History.getAllBookIds().contains(bookId)) {
+        if (BookDataset.getAllBookIds().contains(bookId)) {
             Toast.makeText(context, "已經存有這本書", Toast.LENGTH_SHORT).show()
             onEnded(false)
             return
@@ -67,15 +69,15 @@ abstract class BookAdder (protected val context: Context) {
 
     protected open suspend fun addHistory () {
         // necessary history for every source
-        History.addBookId(bookId)
-        History.setBookUrl(bookId, bookUrl)
-        History.setBookSource(bookId, bookSource)
-        History.addAuthorBookId(History.NO_AUTHOR, bookId)
-        History.setBookCoverPage(bookId, 0)
+        BookDataset.addBookId(bookId)
+        BookDataset.setBookUrl(bookId, bookUrl)
+        BookDataset.setBookSource(bookId, bookSource)
+        BookDataset.addAuthorBookId(BookDataset.NO_AUTHOR, bookId)
+        BookDataset.setBookCoverPage(bookId, 0)
 
         val pageNum = fetchPageNum()
         withContext(Dispatchers.IO) {
-            History.setBookPageNum(bookId, pageNum)
+            BookDataset.setBookPageNum(bookId, pageNum)
         }
     }
 }
@@ -92,8 +94,8 @@ private class EBookAdder (context: Context): BookAdder(context) {
 
     override suspend fun addHistory() {
         super.addHistory()
-        History.setBookP(bookId, 0)
-        History.setBookPageUrls(bookId, listOf())
+        BookDataset.setBookP(bookId, 0)
+        BookDataset.setBookPageUrls(bookId, listOf())
     }
 
     override fun getFetcher(): APictureFetcher = EPictureFetcher(context, bookId)

@@ -1,5 +1,3 @@
-import org.jetbrains.kotlin.ir.backend.js.compile
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
@@ -88,6 +86,7 @@ dependencies {
     implementation("com.google.android.flexbox:flexbox:3.0.0")
     implementation("androidx.navigation:navigation-ui-ktx:2.8.8")
     implementation("androidx.navigation:navigation-fragment-ktx:2.8.8")
+    implementation("org.jsoup:jsoup:1.18.3")
 //    implementation("pl.droidsonroids.gif:android-gif-drawable:1.2.29")
 //    implementation("com.squareup:gifencoder:0.10.1")
 }

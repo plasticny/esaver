@@ -1,4 +1,4 @@
-package com.example.viewer
+package com.example.viewer.dataset
 
 import android.content.Context
 import android.os.Environment
@@ -19,6 +19,7 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
+import java.io.Serializable
 
 enum class BookSource (val keyString: String) {
     E("E"),
@@ -27,16 +28,34 @@ enum class BookSource (val keyString: String) {
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "history")
 
-class History {
+class BookDataset {
     companion object {
         const val NO_AUTHOR = "NoAuthor"
+
+        //
+        // dataclasses
+        //
+        data class SearchMark (
+            val name: String,
+            val categories: List<Category>,
+            val tags: List<Pair<String, String>>
+        ): Serializable {
+            companion object {
+                enum class Category {
+                    Doujinshi { override val value = 2 },
+                    Manga { override val value = 4 },
+                    ArtistCG { override val value = 8 };
+                    abstract val value: Int;
+                }
+            }
+        }
 
         //
         // set data store
         //
         private lateinit var dataStore: DataStore<Preferences>
         fun init (context: Context) {
-            if (!::dataStore.isInitialized) {
+            if (!Companion::dataStore.isInitialized) {
                 dataStore = context.dataStore
             }
         }
@@ -163,7 +182,9 @@ class History {
         fun removeBookLastViewTime (bookId: String) = remove(storeKeys.bookLastViewTime(bookId))
 
         // authors
-        fun getAllAuthors (): List<String> = mutableListOf(NO_AUTHOR).also { it.addAll(getUserAuthors()) }
+        fun getAllAuthors (): List<String> = mutableListOf(NO_AUTHOR).also { it.addAll(
+            getUserAuthors()
+        ) }
         fun getUserAuthors (): List<String> = readList(storeKeys.allAuthors()) ?: listOf() // get authors that user added (without No Author)
         fun addAuthor (name: String) {
             println("[History.addAuthor] $name")

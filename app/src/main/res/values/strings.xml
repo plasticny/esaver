@@ -20,4 +20,11 @@
     <string name="select_author">選擇作者</string>
     <string name="book_gallery">書庫</string>
     <string name="search">搜尋</string>
+    <string name="category">類別</string>
+    <string name="doujinshi">同人誌</string>
+    <string name="manga">漫畫</string>
+    <string name="artist_cg">畫冊</string>
+<!--  font awesome  -->
+    <string name="fa_floppy_disk">\uf0c7</string>
+    <string name="fa_plus">\u2b</string>
 </resources>

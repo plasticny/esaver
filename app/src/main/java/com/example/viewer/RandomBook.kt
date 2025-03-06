@@ -1,6 +1,7 @@
 package com.example.viewer
 
 import android.content.Context
+import com.example.viewer.dataset.BookDataset
 import java.util.PriorityQueue
 import kotlin.random.Random
 
@@ -36,8 +37,8 @@ class RandomBook private constructor() {
                 return Random.nextInt(-1, 2)
             }
         })
-        for (bookId in History.getAllBookIds()) {
-            pq.add(Pair(bookId, History.getBookLastViewTime(bookId)))
+        for (bookId in BookDataset.getAllBookIds()) {
+            pq.add(Pair(bookId, BookDataset.getBookLastViewTime(bookId)))
         }
 
         // store result
@@ -72,7 +73,7 @@ class RandomBook private constructor() {
         val res = mutableListOf<String>()
 
         // the returned book id is supposed to be sorted by added time, asc
-        val allBookIds = History.getAllBookIds()
+        val allBookIds = BookDataset.getAllBookIds()
         for (bookId in allBookIds.reversed()) {
             if (arrangedBookId.contains(bookId)) {
                 break

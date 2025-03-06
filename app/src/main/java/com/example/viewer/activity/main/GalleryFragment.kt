@@ -15,15 +15,15 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.example.viewer.BookAdder
 import com.example.viewer.BookGallery
-import com.example.viewer.BookSource
+import com.example.viewer.dataset.BookSource
 import com.example.viewer.R
 import com.example.viewer.Util
-import com.example.viewer.databinding.GalleryFragmentBinding
+import com.example.viewer.databinding.MainGalleryFragmentBinding
 import kotlinx.coroutines.launch
 
 class GalleryFragment: Fragment() {
     private lateinit var ctx: Context
-    private lateinit var binding: GalleryFragmentBinding
+    private lateinit var binding: MainGalleryFragmentBinding
     private lateinit var bookGallery: BookGallery
 
     override fun onCreateView(
@@ -32,7 +32,7 @@ class GalleryFragment: Fragment() {
         savedInstanceState: Bundle?
     ): View? {
         ctx = container!!.context
-        binding = GalleryFragmentBinding.inflate(layoutInflater, container, false)
+        binding = MainGalleryFragmentBinding.inflate(layoutInflater, container, false)
         bookGallery = BookGallery(ctx, binding.recyclerView)
 
         binding.addImageView.setOnClickListener {

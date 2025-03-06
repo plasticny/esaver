@@ -1,4 +1,4 @@
-package com.example.viewer.activity.viewer
+package com.example.viewer.activity
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -21,7 +21,7 @@ import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
 import com.example.viewer.fetcher.APictureFetcher
-import com.example.viewer.History
+import com.example.viewer.dataset.BookDataset
 import com.example.viewer.R
 import com.example.viewer.RandomBook
 import com.example.viewer.Util
@@ -125,10 +125,10 @@ class ViewerActivity: AppCompatActivity() {
     }
 
     private fun prepareBook (bookId: String) {
-        skipPageSet = History.getBookSkipPages(bookId).toSet()
+        skipPageSet = BookDataset.getBookSkipPages(bookId).toSet()
 
         firstPage = 0
-        lastPage = History.getBookPageNum(bookId) - 1
+        lastPage = BookDataset.getBookPageNum(bookId) - 1
         while (skipPageSet.contains(firstPage)) {
             firstPage++
         }
@@ -217,7 +217,7 @@ class ViewerActivity: AppCompatActivity() {
         // set cover page
         dialogView.findViewById<Button>(R.id.view_img_dialog_coverPage_button).apply {
             setOnClickListener {
-                History.setBookCoverPage(bookId, page)
+                BookDataset.setBookCoverPage(bookId, page)
                 dialog.dismiss()
             }
         }
@@ -225,8 +225,8 @@ class ViewerActivity: AppCompatActivity() {
         // skip page button
         dialogView.findViewById<Button>(R.id.view_img_dialog_skip_button).apply {
             setOnClickListener {
-                History.setBookSkipPages(bookId, skipPageSet.toMutableList().also { it.add(page) })
-                skipPageSet = History.getBookSkipPages(bookId).toSet()
+                BookDataset.setBookSkipPages(bookId, skipPageSet.toMutableList().also { it.add(page) })
+                skipPageSet = BookDataset.getBookSkipPages(bookId).toSet()
 
                 if (page == firstPage) {
                     firstPage++
@@ -344,7 +344,7 @@ class ViewerActivity: AppCompatActivity() {
 
         nextBookFlag = false
 
-        History.updateBookLastViewTime(bookId)
+        BookDataset.updateBookLastViewTime(bookId)
         loadPage()
     }
 

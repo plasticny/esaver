@@ -1,11 +1,14 @@
-package com.example.viewer.activity.pass
+package com.example.viewer.activity
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.example.viewer.Dev
 import com.example.viewer.activity.main.MainActivity
 import com.example.viewer.databinding.PassActivityBinding
+import kotlinx.coroutines.launch
 
 class PassActivity: AppCompatActivity() {
     companion object {
@@ -20,7 +23,9 @@ class PassActivity: AppCompatActivity() {
         val binding = PassActivityBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        Dev.run(this)
+        lifecycleScope.launch {
+            Dev.run(this@PassActivity)
+        }
 
         val passButtons = listOf(
             binding.pass0, binding.pass1, binding.pass2, binding.pass3,

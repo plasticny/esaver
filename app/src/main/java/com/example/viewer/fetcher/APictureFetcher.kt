@@ -7,8 +7,8 @@ import com.bumptech.glide.RequestBuilder
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.RequestOptions
-import com.example.viewer.BookSource
-import com.example.viewer.History
+import com.example.viewer.dataset.BookSource
+import com.example.viewer.dataset.BookDataset
 import com.example.viewer.Util
 import com.example.viewer.fetcher.HiPictureFetcher.Companion.okHttpClient
 import kotlinx.coroutines.CoroutineScope
@@ -23,7 +23,7 @@ abstract class APictureFetcher (
 ): CoroutineScope by MainScope() {
     companion object {
         fun getFetcher (context: Context, bookId: String): APictureFetcher {
-            val source = History.getBookSource(bookId)
+            val source = BookDataset.getBookSource(bookId)
             println("[APictureFetcher.getFetcher] $source")
             return when (source) {
                 BookSource.E -> EPictureFetcher(context, bookId)
@@ -34,7 +34,7 @@ abstract class APictureFetcher (
 
     abstract suspend fun savePicture (page: Int): Boolean
 
-    protected val pageNum: Int = History.getBookPageNum(bookId)
+    protected val pageNum: Int = BookDataset.getBookPageNum(bookId)
     private val fileGlide = Glide.with(context)
         .setDefaultRequestOptions(RequestOptions()
             .diskCacheStrategy(DiskCacheStrategy.NONE)

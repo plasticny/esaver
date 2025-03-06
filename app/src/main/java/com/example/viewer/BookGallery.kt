@@ -17,7 +17,9 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import com.example.viewer.activity.viewer.ViewerActivity
+import com.example.viewer.activity.ViewerActivity
+import com.example.viewer.dataset.BookDataset
+import com.example.viewer.dataset.BookSource
 import com.google.android.flexbox.FlexboxLayout
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -40,8 +42,8 @@ class BookGallery (private val context: Context, private val recyclerView: Recyc
     }
 
     fun notifyBookAdded () {
-        authorRecyclerViewAdapter.refreshAuthorBooks(History.NO_AUTHOR)
-        scrollToAuthor(History.NO_AUTHOR)
+        authorRecyclerViewAdapter.refreshAuthorBooks(BookDataset.NO_AUTHOR)
+        scrollToAuthor(BookDataset.NO_AUTHOR)
     }
 
     fun applyFilter (doDownloadComplete: Boolean? = null) {
@@ -56,12 +58,12 @@ class BookGallery (private val context: Context, private val recyclerView: Recyc
 
     private fun openBook (bookId: String) {
         val bookFolder = File(context.getExternalFilesDir(null), bookId)
-        if (!Util.isInternetAvailable(context) && History.getBookPageNum(bookId) > bookFolder.listFiles()!!.size) {
+        if (!Util.isInternetAvailable(context) && BookDataset.getBookPageNum(bookId) > bookFolder.listFiles()!!.size) {
             Toast.makeText(context, "未完成下載+沒有網絡", Toast.LENGTH_SHORT).show()
             return
         }
 
-        History.updateBookLastViewTime(bookId)
+        BookDataset.updateBookLastViewTime(bookId)
 
         val intent = Intent(context, ViewerActivity::class.java)
         intent.putExtra("bookId", bookId)
@@ -76,10 +78,10 @@ class BookGallery (private val context: Context, private val recyclerView: Recyc
             setText(author)
         }
         val coverPageEditText = dialogView.findViewById<EditText>(R.id.profile_dialog_coverPage_editText).apply {
-            setText((History.getBookCoverPage(bookId) + 1).toString())
+            setText((BookDataset.getBookCoverPage(bookId) + 1).toString())
         }
         val skipPageEditText = dialogView.findViewById<EditText>(R.id.profile_dialog_skipPages_editText).apply {
-            setText(History.getBookSkipPages(bookId).joinToString(",") { (it + 1).toString() })
+            setText(BookDataset.getBookSkipPages(bookId).joinToString(",") { (it + 1).toString() })
         }
 
         dialogView.findViewById<TextView>(R.id.profile_dialog_bookId_textView).apply {
@@ -104,7 +106,7 @@ class BookGallery (private val context: Context, private val recyclerView: Recyc
 
         dialogView.findViewById<ImageButton>(R.id.profile_dialog_search_author_imageButton).apply {
             setOnClickListener {
-                if (History.getUserAuthors().isEmpty()) {
+                if (BookDataset.getUserAuthors().isEmpty()) {
                     Toast.makeText(context, "沒有作者可以選擇", Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
@@ -137,8 +139,8 @@ class BookGallery (private val context: Context, private val recyclerView: Recyc
                     refreshAuthorSet.add(author)
                     refreshAuthorSet.add(authorText)
                 }
-                if (coverPage != History.getBookCoverPage(bookId) + 1) {
-                    History.setBookCoverPage(bookId, coverPage - 1)
+                if (coverPage != BookDataset.getBookCoverPage(bookId) + 1) {
+                    BookDataset.setBookCoverPage(bookId, coverPage - 1)
                     refreshAuthorSet.add(authorText)
                 }
 
@@ -159,7 +161,7 @@ class BookGallery (private val context: Context, private val recyclerView: Recyc
                         println("[reading skip page] token '$token' cannot convert into int")
                     }
                 }
-                History.setBookSkipPages(bookId, newSkipPages)
+                BookDataset.setBookSkipPages(bookId, newSkipPages)
 
                 dialog.dismiss()
             }
@@ -169,18 +171,18 @@ class BookGallery (private val context: Context, private val recyclerView: Recyc
     }
 
     private fun deleteBook (author: String, bookId: String) {
-        History.removeAuthorBookId(author, bookId)
-        History.removeBookPageNum(bookId)
-        History.removeBookUrl(bookId)
-        History.removeBookCoverPage(bookId)
-        History.removeBookSkipPages(bookId)
-        History.removeBookLastViewTime(bookId)
+        BookDataset.removeAuthorBookId(author, bookId)
+        BookDataset.removeBookPageNum(bookId)
+        BookDataset.removeBookUrl(bookId)
+        BookDataset.removeBookCoverPage(bookId)
+        BookDataset.removeBookSkipPages(bookId)
+        BookDataset.removeBookLastViewTime(bookId)
 
-        if (History.getBookSource(bookId) == BookSource.E) {
-            History.removeBookPageUrls(bookId)
-            History.removeBookP(bookId)
+        if (BookDataset.getBookSource(bookId) == BookSource.E) {
+            BookDataset.removeBookPageUrls(bookId)
+            BookDataset.removeBookP(bookId)
         }
-        History.removeBookSource(bookId)
+        BookDataset.removeBookSource(bookId)
 
         val bookFolder = File(context.getExternalFilesDir(null), bookId)
         for (file in bookFolder.listFiles()!!) {
@@ -188,19 +190,19 @@ class BookGallery (private val context: Context, private val recyclerView: Recyc
         }
         bookFolder.delete()
 
-        History.removeBookId(bookId)
+        BookDataset.removeBookId(bookId)
     }
 
     private fun changeAuthor (bookId: String, oldAuthor: String, newAuthor: String) {
-        if (!History.getAllAuthors().contains(newAuthor)) {
-            History.addAuthor(newAuthor)
+        if (!BookDataset.getAllAuthors().contains(newAuthor)) {
+            BookDataset.addAuthor(newAuthor)
         }
 
-        History.addAuthorBookId(newAuthor, bookId)
-        History.removeAuthorBookId(oldAuthor, bookId)
+        BookDataset.addAuthorBookId(newAuthor, bookId)
+        BookDataset.removeAuthorBookId(oldAuthor, bookId)
 
-        if (oldAuthor != History.NO_AUTHOR && History.getAuthorBookIds(oldAuthor).isEmpty()) {
-            History.removeAuthor(oldAuthor)
+        if (oldAuthor != BookDataset.NO_AUTHOR && BookDataset.getAuthorBookIds(oldAuthor).isEmpty()) {
+            BookDataset.removeAuthor(oldAuthor)
         }
     }
 
@@ -235,7 +237,7 @@ private class AuthorRecyclerViewAdapter (
         private const val MARGIN_HEIGHT = 8F + 14F
     }
 
-    private var authors: List<String> = History.getAllAuthors()
+    private var authors: List<String> = BookDataset.getAllAuthors()
     private val authorHolderMap: MutableMap<String, AuthorRecyclerViewHolder> = mutableMapOf()
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): AuthorRecyclerViewHolder {
@@ -250,7 +252,7 @@ private class AuthorRecyclerViewAdapter (
         println("[AuthorRecyclerViewAdapter.onBindViewHolder] $author")
 
         holder.authorTextView.apply {
-            text = if (author == History.NO_AUTHOR) ContextCompat.getString(context, R.string.noName) else author
+            text = if (author == BookDataset.NO_AUTHOR) ContextCompat.getString(context, R.string.noName) else author
             setOnClickListener { adapterEventHandler.onAuthorClicked() }
         }
 
@@ -268,7 +270,7 @@ private class AuthorRecyclerViewAdapter (
     }
 
     fun refreshAuthor () {
-        authors = History.getAllAuthors()
+        authors = BookDataset.getAllAuthors()
         notifyDataSetChanged()
 
         val notExistAuthors = authorHolderMap.keys.minus(authors.toSet())
@@ -334,7 +336,7 @@ private class BookRecyclerViewAdapter (
                 }
                 val bookFolder = File(context.getExternalFilesDir(null), bookId)
                 val downloadedPageNum = bookFolder.listFiles()!!.size
-                return (downloadedPageNum == History.getBookPageNum(bookId)) == doDownloadComplete
+                return (downloadedPageNum == BookDataset.getBookPageNum(bookId)) == doDownloadComplete
             }
         }
         val filter = Filter()
@@ -354,7 +356,7 @@ private class BookRecyclerViewAdapter (
     override fun onBindViewHolder(holder: BookRecyclerViewHolder, position: Int) {
         val id = bookIds[position]
         val bookFolder = File(context.getExternalFilesDir(null), id)
-        val coverPage = History.getBookCoverPage(id)
+        val coverPage = BookDataset.getBookCoverPage(id)
         val coverPageFile = File(bookFolder, coverPage.toString())
 
         Glide.with(context).load(
@@ -376,7 +378,7 @@ private class BookRecyclerViewAdapter (
         notifyDataSetChanged()
     }
 
-    private fun getBookIds (): List<String> = History.getAuthorBookIds(author).filter { filter.isFiltered(context, it) }
+    private fun getBookIds (): List<String> = BookDataset.getAuthorBookIds(author).filter { filter.isFiltered(context, it) }
 }
 
 private class SelectAuthorDialog (val context: Context) {
@@ -385,7 +387,7 @@ private class SelectAuthorDialog (val context: Context) {
 
     fun show (cb: (String) -> Unit) {
         dialogView.findViewById<FlexboxLayout>(R.id.select_author_dialog_flexboxLayout).apply {
-            for (author in History.getUserAuthors()) {
+            for (author in BookDataset.getUserAuthors()) {
                 addView(Button(context).apply {
                     text = author
                     layoutParams = ViewGroup.LayoutParams(
