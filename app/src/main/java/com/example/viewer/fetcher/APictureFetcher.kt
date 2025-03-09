@@ -23,7 +23,7 @@ abstract class APictureFetcher (
 ): CoroutineScope by MainScope() {
     companion object {
         fun getFetcher (context: Context, bookId: String): APictureFetcher {
-            val source = BookDataset.getBookSource(bookId)
+            val source = BookDataset.getInstance(context).getBookSource(bookId)
             println("[APictureFetcher.getFetcher] $source")
             return when (source) {
                 BookSource.E -> EPictureFetcher(context, bookId)
@@ -34,7 +34,7 @@ abstract class APictureFetcher (
 
     abstract suspend fun savePicture (page: Int): Boolean
 
-    protected val pageNum: Int = BookDataset.getBookPageNum(bookId)
+    protected val pageNum: Int = BookDataset.getInstance(context).getBookPageNum(bookId)
     private val fileGlide = Glide.with(context)
         .setDefaultRequestOptions(RequestOptions()
             .diskCacheStrategy(DiskCacheStrategy.NONE)

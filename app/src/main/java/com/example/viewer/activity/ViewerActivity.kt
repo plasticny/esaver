@@ -42,6 +42,8 @@ class ViewerActivity: AppCompatActivity() {
         private const val ROTATE_RIGHT = 90F
     }
 
+    private lateinit var bookDataset: BookDataset
+
     private lateinit var photoView: ImageView
     private lateinit var progressBar: ProgressBar
     private lateinit var tmpImageView: ImageView
@@ -65,6 +67,9 @@ class ViewerActivity: AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        bookDataset = BookDataset.getInstance(baseContext)
+
         setContentView(R.layout.viewer_activity)
 
         bookId = intent.getStringExtra("bookId")!!
@@ -125,10 +130,10 @@ class ViewerActivity: AppCompatActivity() {
     }
 
     private fun prepareBook (bookId: String) {
-        skipPageSet = BookDataset.getBookSkipPages(bookId).toSet()
+        skipPageSet = bookDataset.getBookSkipPages(bookId).toSet()
 
         firstPage = 0
-        lastPage = BookDataset.getBookPageNum(bookId) - 1
+        lastPage = bookDataset.getBookPageNum(bookId) - 1
         while (skipPageSet.contains(firstPage)) {
             firstPage++
         }
@@ -217,7 +222,7 @@ class ViewerActivity: AppCompatActivity() {
         // set cover page
         dialogView.findViewById<Button>(R.id.view_img_dialog_coverPage_button).apply {
             setOnClickListener {
-                BookDataset.setBookCoverPage(bookId, page)
+                bookDataset.setBookCoverPage(bookId, page)
                 dialog.dismiss()
             }
         }
@@ -225,8 +230,8 @@ class ViewerActivity: AppCompatActivity() {
         // skip page button
         dialogView.findViewById<Button>(R.id.view_img_dialog_skip_button).apply {
             setOnClickListener {
-                BookDataset.setBookSkipPages(bookId, skipPageSet.toMutableList().also { it.add(page) })
-                skipPageSet = BookDataset.getBookSkipPages(bookId).toSet()
+                bookDataset.setBookSkipPages(bookId, skipPageSet.toMutableList().also { it.add(page) })
+                skipPageSet = bookDataset.getBookSkipPages(bookId).toSet()
 
                 if (page == firstPage) {
                     firstPage++
@@ -344,7 +349,7 @@ class ViewerActivity: AppCompatActivity() {
 
         nextBookFlag = false
 
-        BookDataset.updateBookLastViewTime(bookId)
+        bookDataset.updateBookLastViewTime(bookId)
         loadPage()
     }
 

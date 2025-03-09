@@ -26,7 +26,7 @@ class Util {
 
         fun isBookDownloaded (context: Context, bookId: String): Boolean {
             val folder = File(context.getExternalFilesDir(null), bookId)
-            return BookDataset.getBookPageNum(bookId) <= folder.listFiles()!!.size
+            return BookDataset.getInstance(context).getBookPageNum(bookId) <= folder.listFiles()!!.size
         }
 
         fun isGifFile (file: File): Boolean = FileInputStream(file).use { fis ->

@@ -32,10 +32,14 @@ abstract class BookAdder (protected val context: Context) {
     protected abstract fun getId (): String
     protected abstract suspend fun fetchPageNum(): Int
     protected abstract fun getFetcher (): APictureFetcher
+    protected abstract fun storeToDataSet ()
 
     // init in addBook
     protected lateinit var bookId: String
     protected lateinit var bookUrl: String
+    protected var pageNum: Int = -1
+
+    protected val bookDataset = BookDataset.getInstance(context)
 
     suspend fun addBook (url: String, onEnded: (doAdded: Boolean) -> Unit) {
         if (!Util.isInternetAvailable(context)) {
@@ -44,9 +48,10 @@ abstract class BookAdder (protected val context: Context) {
 
         bookUrl = getUrl(url)
         bookId = getId()
+        pageNum = fetchPageNum()
 
         // check if the book is already saved
-        if (BookDataset.getAllBookIds().contains(bookId)) {
+        if (bookDataset.getAllBookIds().contains(bookId)) {
             Toast.makeText(context, "已經存有這本書", Toast.LENGTH_SHORT).show()
             onEnded(false)
             return
@@ -59,26 +64,11 @@ abstract class BookAdder (protected val context: Context) {
             }
         }
 
-        // add book record to history
-        addHistory()
+        storeToDataSet()
 
         // save cover picture
         val retFlag = getFetcher().savePicture(0)
         onEnded(retFlag)
-    }
-
-    protected open suspend fun addHistory () {
-        // necessary history for every source
-        BookDataset.addBookId(bookId)
-        BookDataset.setBookUrl(bookId, bookUrl)
-        BookDataset.setBookSource(bookId, bookSource)
-        BookDataset.addAuthorBookId(BookDataset.NO_AUTHOR, bookId)
-        BookDataset.setBookCoverPage(bookId, 0)
-
-        val pageNum = fetchPageNum()
-        withContext(Dispatchers.IO) {
-            BookDataset.setBookPageNum(bookId, pageNum)
-        }
     }
 }
 
@@ -92,12 +82,6 @@ private class EBookAdder (context: Context): BookAdder(context) {
         return urlTokens[urlTokens.size - 2]
     }
 
-    override suspend fun addHistory() {
-        super.addHistory()
-        BookDataset.setBookP(bookId, 0)
-        BookDataset.setBookPageUrls(bookId, listOf())
-    }
-
     override fun getFetcher(): APictureFetcher = EPictureFetcher(context, bookId)
 
     override suspend fun fetchPageNum(): Int {
@@ -107,6 +91,10 @@ private class EBookAdder (context: Context): BookAdder(context) {
         val pageText = Regex(">(\\d+) pages<").find(html)!!.value
         return pageText.substring(1, pageText.length - 7).toInt()
     }
+
+    override fun storeToDataSet() = bookDataset.addBook(
+        bookId, bookUrl, BookSource.E, pageNum
+    )
 }
 
 private class HiBookAdder (context: Context): BookAdder(context) {
@@ -140,4 +128,8 @@ private class HiBookAdder (context: Context): BookAdder(context) {
         val galleryInfo = Gson().fromJson(bookIdJs, GalleryInfo::class.java)!!
         return galleryInfo.files.size
     }
+
+    override fun storeToDataSet() = bookDataset.addBook(
+        bookId, bookUrl, BookSource.Hi, pageNum
+    )
 }
