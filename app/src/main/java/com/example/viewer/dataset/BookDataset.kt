@@ -26,44 +26,25 @@ enum class BookSource (val keyString: String) {
     Hi("Hi")
 }
 
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "history")
-
 class BookDataset {
     companion object {
         const val NO_AUTHOR = "NoAuthor"
 
         //
-        // dataclasses
-        //
-        data class SearchMark (
-            val name: String,
-            val categories: List<Category>,
-            val tags: List<Pair<String, String>>
-        ): Serializable {
-            companion object {
-                enum class Category {
-                    Doujinshi { override val value = 2 },
-                    Manga { override val value = 4 },
-                    ArtistCG { override val value = 8 };
-                    abstract val value: Int;
-                }
-            }
-        }
-
-        //
         // set data store
         //
+        private val Context.bookDataStore: DataStore<Preferences> by preferencesDataStore(name = "book")
         private lateinit var dataStore: DataStore<Preferences>
         fun init (context: Context) {
             if (!Companion::dataStore.isInitialized) {
-                dataStore = context.dataStore
+                dataStore = context.bookDataStore
             }
         }
 
         //
         // store keys
         //
-        private class StoreKeys {
+        private val storeKeys = object {
             // --------------
             // books
             fun allBookIds () = byteArrayPreferencesKey("bookIds")
@@ -113,7 +94,6 @@ class BookDataset {
                 return byteArrayPreferencesKey("${author}_bookIds")
             }
         }
-        private val storeKeys = StoreKeys()
 
         //
         // getters and setters
