@@ -4,7 +4,7 @@ import android.content.Context
 import android.widget.Toast
 import com.example.viewer.dataset.BookDataset
 import com.example.viewer.dataset.BookSource
-import com.example.viewer.fetcher.APictureFetcher
+import com.example.viewer.fetcher.BasePictureFetcher
 import com.example.viewer.fetcher.EPictureFetcher
 import com.example.viewer.fetcher.HiPictureFetcher
 import com.google.gson.Gson
@@ -31,7 +31,7 @@ abstract class BookAdder (protected val context: Context) {
     protected abstract fun getUrl (url: String): String
     protected abstract fun getId (): String
     protected abstract suspend fun fetchPageNum(): Int
-    protected abstract fun getFetcher (): APictureFetcher
+    protected abstract fun getFetcher (): BasePictureFetcher
     protected abstract fun storeToDataSet ()
 
     // init in addBook
@@ -82,7 +82,7 @@ private class EBookAdder (context: Context): BookAdder(context) {
         return urlTokens[urlTokens.size - 2]
     }
 
-    override fun getFetcher(): APictureFetcher = EPictureFetcher(context, bookId)
+    override fun getFetcher(): BasePictureFetcher = EPictureFetcher(context, bookId)
 
     override suspend fun fetchPageNum(): Int {
         val html = withContext(Dispatchers.IO) {
@@ -116,7 +116,7 @@ private class HiBookAdder (context: Context): BookAdder(context) {
         return bookUrl.substring(idSrtIdx, bookUrl.length - 5)
     }
 
-    override fun getFetcher(): APictureFetcher = HiPictureFetcher(context, bookId)
+    override fun getFetcher(): BasePictureFetcher = HiPictureFetcher(context, bookId)
 
     override suspend fun fetchPageNum(): Int {
         var bookIdJs: String

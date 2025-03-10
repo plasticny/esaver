@@ -25,6 +25,7 @@ import com.example.viewer.databinding.SearchMarkDialogTagBinding
 import com.example.viewer.dataset.SearchDataset
 import com.example.viewer.dataset.SearchDataset.Companion.SearchMark
 import com.example.viewer.dataset.SearchDataset.Companion.SearchMark.Companion.Category
+import com.example.viewer.dialog.ConfirmDialog
 
 data class SearchMarkEntry (
     val id: Int,
@@ -92,9 +93,14 @@ class SearchFragment: Fragment() {
 
         binding.toolBarDeleteButton.setOnClickListener {
             focusedSearchMark!!.let {
-                searchDataset.removeSearchMark(it.id)
-                deFocusSearchMark(doModifyBindingStyle = false)
-                refreshSearchMarkWrapper()
+                ConfirmDialog(parent.context, inflater).show(
+                    "要刪除${it.searchMark.name}嗎？",
+                    positiveCallback = {
+                        searchDataset.removeSearchMark(it.id)
+                        deFocusSearchMark(doModifyBindingStyle = false)
+                        refreshSearchMarkWrapper()
+                    }
+                )
             }
         }
 
@@ -120,6 +126,8 @@ class SearchFragment: Fragment() {
                         context.startActivity(intent)
                     } else if (focusedSearchMark!!.id != id) {
                         changeFocusSearchMark(id, searchMark, searchMarkBinding)
+                    } else {
+                        deFocusSearchMark()
                     }
                 }
 

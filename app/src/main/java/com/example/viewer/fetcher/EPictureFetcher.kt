@@ -8,7 +8,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import java.net.URL
 
-class EPictureFetcher (context: Context, bookId: String): APictureFetcher(context, bookId) {
+class EPictureFetcher (context: Context, bookId: String): BasePictureFetcher(context, bookId) {
     companion object {
         private const val I3_TAG = "<div id=\"i3\">"
         private const val URL_START_TAG = "src=\""

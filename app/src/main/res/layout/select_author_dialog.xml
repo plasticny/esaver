@@ -27,6 +27,10 @@
         app:justifyContent="flex_start"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/select_author_dialog_textView" />
+        app:layout_constraintTop_toBottomOf="@+id/select_author_dialog_textView">
+
+        <!--  some author names will be added here  -->
+
+    </com.google.android.flexbox.FlexboxLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -25,6 +25,9 @@
     <string name="manga">漫畫</string>
     <string name="artist_cg">畫冊</string>
     <string name="search_mark">搜尋標籤</string>
+    <string name="read">閱讀</string>
+    <string name="save_to_gallery">存至書庫</string>
+    <string name="n_page">%1$d頁</string>
 <!--  font awesome  -->
     <string name="fa_floppy_disk">\uf0c7</string>
     <string name="fa_plus">\u2b</string>
@@ -33,4 +36,5 @@
     <string name="fa_xmark">\uf00d</string>
     <string name="fa_pen_to_square">\uf044</string>
     <string name="fa_trash">\uf1f8</string>
+    <string name="fa_check">\uf00c</string>
 </resources>

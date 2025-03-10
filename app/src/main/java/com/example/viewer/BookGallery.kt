@@ -17,7 +17,7 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import com.example.viewer.activity.ViewerActivity
+import com.example.viewer.activity.viewer.LocalViewerActivity
 import com.example.viewer.dataset.BookDataset
 import com.google.android.flexbox.FlexboxLayout
 import kotlinx.coroutines.CoroutineScope
@@ -68,13 +68,13 @@ class BookGallery (private val context: Context, private val recyclerView: Recyc
 
         bookDataset.updateBookLastViewTime(bookId)
 
-        val intent = Intent(context, ViewerActivity::class.java)
+        val intent = Intent(context, LocalViewerActivity::class.java)
         intent.putExtra("bookId", bookId)
         context.startActivity(intent)
     }
 
     private fun showProfileDialog (author: String, bookId: String) {
-        val dialogView = LayoutInflater.from(context).inflate(R.layout.profile_dialog, null)
+        val dialogView = LayoutInflater.from(context).inflate(R.layout.local_book_profile_dialog, null)
         val dialog = AlertDialog.Builder(context).setView(dialogView).create()
 
         val authorEditText = dialogView.findViewById<EditText>(R.id.profile_dialog_author_editText).apply {

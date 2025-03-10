@@ -18,11 +18,11 @@ import kotlinx.coroutines.withContext
 import okhttp3.Request
 import java.io.File
 
-abstract class APictureFetcher (
+abstract class BasePictureFetcher (
     protected val context: Context, protected val bookId: String
 ): CoroutineScope by MainScope() {
     companion object {
-        fun getFetcher (context: Context, bookId: String): APictureFetcher {
+        fun getFetcher (context: Context, bookId: String): BasePictureFetcher {
             val source = BookDataset.getInstance(context).getBookSource(bookId)
             println("[APictureFetcher.getFetcher] $source")
             return when (source) {
@@ -88,13 +88,13 @@ abstract class APictureFetcher (
         withContext(Dispatchers.IO) {
             okHttpClient.newCall(request).execute().use { response ->
                 if (response.code == 403) {
-                    throw Exception("[HiPictureFetcher.savePicture] code 403 when downloading picture")
+                    throw Exception("[BasePictureFetcher.downloadPicture] code 403 when downloading picture")
                 }
                 if (response.code == 404) {
-                    throw Exception("[HiPictureFetcher.savePicture] code 404 when downloading picture")
+                    throw Exception("[BasePictureFetcher.downloadPicture] code 404 when downloading picture")
                 }
                 if (!response.isSuccessful) {
-                    throw Exception("[HiPictureFetcher.savePicture] unexpected response code ${response.code} when downloading picture")
+                    throw Exception("[BasePictureFetcher.downloadPicture] unexpected response code ${response.code} when downloading picture")
                 }
                 file.outputStream().use { response.body!!.byteStream().copyTo(it) }
             }

@@ -1,4 +1,4 @@
-package com.example.viewer.activity
+package com.example.viewer.activity.viewer
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -20,7 +20,7 @@ import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
-import com.example.viewer.fetcher.APictureFetcher
+import com.example.viewer.fetcher.BasePictureFetcher
 import com.example.viewer.dataset.BookDataset
 import com.example.viewer.R
 import com.example.viewer.RandomBook
@@ -33,9 +33,9 @@ import java.io.File
 import java.io.FileOutputStream
 import kotlin.math.abs
 
-class ViewerActivity: AppCompatActivity() {
+class LocalViewerActivity: AppCompatActivity() {
     companion object {
-        private const val FLIP_THRESHOLD = 220
+        private const val FLIP_THRESHOLD = 240
         private const val SCROLL_THRESHOLD = 50
 
         private const val ROTATE_LEFT = -90F
@@ -49,7 +49,7 @@ class ViewerActivity: AppCompatActivity() {
     private lateinit var tmpImageView: ImageView
     private lateinit var pageTextView: TextView
 
-    private lateinit var fetcher: APictureFetcher
+    private lateinit var fetcher: BasePictureFetcher
 
     private lateinit var bookId: String
     private lateinit var skipPageSet: Set<Int>
@@ -142,7 +142,7 @@ class ViewerActivity: AppCompatActivity() {
         }
 
         page = firstPage
-        fetcher = APictureFetcher.getFetcher(this, bookId)
+        fetcher = BasePictureFetcher.getFetcher(this, bookId)
     }
 
     private fun setupPageTextView () {

@@ -59,7 +59,7 @@
             android:maxLines="1"
             android:paddingHorizontal="8dp"
             android:textColor="@color/grey"
-            android:textSize="24sp" />
+            android:textSize="18sp" />
 
         <Button
             android:id="@+id/next_search_mark_button"
