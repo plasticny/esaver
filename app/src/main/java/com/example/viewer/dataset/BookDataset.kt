@@ -100,6 +100,10 @@ class BookDataset (context: Context): BaseDataset() {
         }
     }
 
+    //
+    // public methods
+    //
+
     fun addBook (
         id: String,
         url: String,
@@ -167,14 +171,14 @@ class BookDataset (context: Context): BaseDataset() {
     //
     // books
     fun getAllBookIds () = readFromByteArray<List<String>>(storeKeys.allBookIds()) ?: listOf()
-    fun addBookId (id: String) {
+    private fun addBookId (id: String) {
         val ids = getAllBookIds().toMutableList()
         if (ids.contains(id)) {
             throw Exception("bookId $id already exist")
         }
         storeAsByteArray(storeKeys.allBookIds(), ids.also { it.add(id) })
     }
-    fun removeBookId (id: String) {
+    private fun removeBookId (id: String) {
         val ids = getAllBookIds().toMutableSet().also { it.remove(id) }
         storeAsByteArray(storeKeys.allBookIds(), ids.toList())
     }

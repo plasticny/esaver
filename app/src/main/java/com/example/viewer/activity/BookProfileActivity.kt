@@ -6,9 +6,7 @@ import android.os.Bundle
 import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.view.ContextThemeWrapper
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.example.viewer.BookAdder
@@ -18,14 +16,10 @@ import com.example.viewer.activity.SearchActivity.Companion.BookRecord
 import com.example.viewer.activity.viewer.OnlineViewerActivity
 import com.example.viewer.databinding.BookProfileActivityBinding
 import com.example.viewer.databinding.BookProfileTagBinding
-import com.example.viewer.databinding.ConfirmDialogBinding
 import com.example.viewer.dataset.BookSource
 import com.example.viewer.dataset.SearchDataset
 import com.example.viewer.dialog.ConfirmDialog
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import org.jsoup.Jsoup
 
 class BookProfileActivity: AppCompatActivity() {
     private lateinit var searchDataset: SearchDataset
@@ -69,9 +63,11 @@ class BookProfileActivity: AppCompatActivity() {
                 val bookAdder = BookAdder.getBookAdder(baseContext, BookSource.E)
                 lifecycleScope.launch {
                     toggleProgressBar(true)
-                    bookAdder.addBook(bookRecord.url) {
+                    bookAdder.addBook(bookRecord.url) { doAdded ->
                         toggleProgressBar(false)
-                        Toast.makeText(baseContext, "已加入到書庫", Toast.LENGTH_SHORT).show()
+                        if (doAdded) {
+                            Toast.makeText(baseContext, "已加入到書庫", Toast.LENGTH_SHORT).show()
+                        }
                     }
                 }
             }
@@ -115,7 +111,9 @@ class BookProfileActivity: AppCompatActivity() {
 
     private fun addFilterOutTag (cat: String, value: String) {
         searchDataset.getExcludeTag().toMutableMap().apply {
-            set(cat, getValue(cat).toMutableList().also { it.add(value) })
+            val values = get(cat)?.toMutableList() ?: mutableListOf()
+            values.add(value)
+            set(cat, values)
         }.also {
             searchDataset.storeExcludeTag(it)
         }

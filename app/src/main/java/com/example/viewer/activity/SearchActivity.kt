@@ -82,6 +82,8 @@ class SearchActivity: AppCompatActivity() {
     private var searchMarkId = -1
     private var position = -1
     private var next: String? = null
+    private var paused = false // for detecting user went to other page and came back
+    private var bookRecords = mutableListOf<BookRecord>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -104,8 +106,7 @@ class SearchActivity: AppCompatActivity() {
                     return@setOnClickListener
                 }
                 searchMark = searchDataSet.getSearchMark(allSearchMarkIds[--position])
-                next = null
-                lifecycleScope.launch { resetUI() }
+                lifecycleScope.launch { reset() }
             }
         }
         binding.nextSearchMarkButton.apply {
@@ -114,8 +115,7 @@ class SearchActivity: AppCompatActivity() {
                     return@setOnClickListener
                 }
                 searchMark = searchDataSet.getSearchMark(allSearchMarkIds[++position])
-                next = null
-                lifecycleScope.launch { resetUI() }
+                lifecycleScope.launch { reset() }
             }
         }
 
@@ -130,10 +130,30 @@ class SearchActivity: AppCompatActivity() {
             }
         }
 
-        lifecycleScope.launch { resetUI() }
+        lifecycleScope.launch { reset() }
     }
 
-    private suspend fun resetUI () {
+    override fun onPause() {
+        super.onPause()
+        paused = true
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // after paused, the exclude tags may updated, do the filter again
+        if (paused) {
+            println("[SearchActivity.onResume] re-filter books")
+            binding.searchBookWrapper.removeAllViews()
+            bookRecords = excludeTagFilter(bookRecords).toMutableList()
+            addBookViews(bookRecords)
+            paused = false
+        }
+    }
+
+    private suspend fun reset () {
+        next = null
+        bookRecords.clear()
+
         binding.searchMarkName.text = searchMark.name
 
         binding.prevSearchMarkButton.visibility = if (position == 0) Button.INVISIBLE else Button.VISIBLE
@@ -150,10 +170,11 @@ class SearchActivity: AppCompatActivity() {
 
     private suspend fun loadMoreBooks () {
         binding.searchProgressBar.visibility = ProgressBar.VISIBLE
-        fetchBooks().let {
-            binding.searchProgressBar.visibility = ProgressBar.GONE
-            addBookViews(excludeTagFilter(it))
-        }
+        val books = excludeTagFilter(fetchBooks())
+        binding.searchProgressBar.visibility = ProgressBar.GONE
+
+        addBookViews(books)
+        bookRecords.addAll(books)
     }
 
     private fun addBookViews (books: List<BookRecord>) {
