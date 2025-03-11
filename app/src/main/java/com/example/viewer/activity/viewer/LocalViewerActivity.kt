@@ -29,6 +29,7 @@ import com.github.chrisbanes.photoview.PhotoView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import okhttp3.Response
 import java.io.File
 import java.io.FileOutputStream
 import kotlin.math.abs
@@ -142,7 +143,9 @@ class LocalViewerActivity: AppCompatActivity() {
         }
 
         page = firstPage
-        fetcher = BasePictureFetcher.getFetcher(this, bookId)
+        fetcher = BasePictureFetcher.getFetcher(this, bookId).apply {
+            setDownloadFailureCallback { res -> onPictureDownloadFailure(res) }
+        }
     }
 
     private fun setupPageTextView () {
@@ -384,5 +387,16 @@ class LocalViewerActivity: AppCompatActivity() {
 
         // refresh page
         loadPage()
+    }
+
+    private fun onPictureDownloadFailure (response: Response) {
+        toggleProgressBar(false)
+        runOnUiThread {
+            Toast.makeText(
+                baseContext,
+                "圖片下載失敗，響應代碼﹕${response.code}",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
     }
 }

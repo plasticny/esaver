@@ -16,6 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.withContext
 import okhttp3.Request
+import okhttp3.Response
 import java.io.File
 
 abstract class BasePictureFetcher (
@@ -34,13 +35,15 @@ abstract class BasePictureFetcher (
 
     abstract suspend fun savePicture (page: Int): Boolean
 
-    protected val pageNum: Int = BookDataset.getInstance(context).getBookPageNum(bookId)
     private val fileGlide = Glide.with(context)
         .setDefaultRequestOptions(RequestOptions()
             .diskCacheStrategy(DiskCacheStrategy.NONE)
             .skipMemoryCache(true)
         ).asDrawable()
     private val downloadedPage = mutableSetOf<Int>()
+    private var downloadFailureCallback: ((Response) -> Unit)? = null
+
+    protected val pageNum: Int = BookDataset.getInstance(context).getBookPageNum(bookId)
 
     val bookFolder = File(context.getExternalFilesDir(null), bookId)
 
@@ -65,13 +68,21 @@ abstract class BasePictureFetcher (
         return fileGlide.listener(loadListener).load(pictureFile.path)
     }
 
+    fun setDownloadFailureCallback (cb: (Response) -> Unit) {
+        downloadFailureCallback = cb
+    }
+
     protected fun assertPageInRange (page: Int) {
         if (page < 0 || page >= pageNum) {
             throw Exception("page out of range")
         }
     }
 
-    protected suspend fun downloadPicture (page: Int, url: String, headers: Map<String, String> = mapOf()): Boolean {
+    protected suspend fun downloadPicture (
+        page: Int,
+        url: String,
+        headers: Map<String, String> = mapOf()
+    ): Boolean {
         println("[BasePictureFetcher.downloadPicture] $url")
 
         if(!Util.isInternetAvailable(context)) {
@@ -87,16 +98,11 @@ abstract class BasePictureFetcher (
         val request = requestBuilder.build()
         withContext(Dispatchers.IO) {
             okHttpClient.newCall(request).execute().use { response ->
-                if (response.code == 403) {
-                    throw Exception("[BasePictureFetcher.downloadPicture] code 403 when downloading picture")
+                if (response.isSuccessful) {
+                    file.outputStream().use { response.body!!.byteStream().copyTo(it) }
+                } else {
+                    downloadFailureCallback?.invoke(response)
                 }
-                if (response.code == 404) {
-                    throw Exception("[BasePictureFetcher.downloadPicture] code 404 when downloading picture")
-                }
-                if (!response.isSuccessful) {
-                    throw Exception("[BasePictureFetcher.downloadPicture] unexpected response code ${response.code} when downloading picture")
-                }
-                file.outputStream().use { response.body!!.byteStream().copyTo(it) }
             }
         }
         return true
