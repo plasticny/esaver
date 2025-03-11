@@ -87,6 +87,7 @@ dependencies {
     implementation("androidx.navigation:navigation-ui-ktx:2.8.8")
     implementation("androidx.navigation:navigation-fragment-ktx:2.8.8")
     implementation("org.jsoup:jsoup:1.18.3")
+    implementation("com.jaredrummler:material-spinner:1.3.1")
 //    implementation("pl.droidsonroids.gif:android-gif-drawable:1.2.29")
 //    implementation("com.squareup:gifencoder:0.10.1")
 }

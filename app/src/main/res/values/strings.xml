@@ -37,4 +37,6 @@
     <string name="fa_pen_to_square">\uf044</string>
     <string name="fa_trash">\uf1f8</string>
     <string name="fa_check">\uf00c</string>
+    <string name="fa_filter_circle_xmark">\ue17b</string>
+    <string name="filter_out_tag">濾除標籤</string>
 </resources>

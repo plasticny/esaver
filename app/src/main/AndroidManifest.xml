@@ -30,7 +30,9 @@
         <activity android:name=".activity.main.MainActivity"/>
         <activity android:name=".activity.viewer.LocalViewerActivity"/>
         <activity android:name=".activity.SearchActivity"/>
-        <activity android:name=".activity.BookProfileActivity"/>
+        <activity
+            android:name=".activity.BookProfileActivity"
+            android:theme="@style/Theme.Viewer" />
         <activity android:name=".activity.viewer.OnlineViewerActivity"/>
     </application>
 

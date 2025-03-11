@@ -5,19 +5,18 @@ import android.content.ClipData
 import android.content.ClipDescription
 import android.content.Intent
 import android.content.res.ColorStateList
-import android.graphics.PorterDuff
-import android.graphics.PorterDuffColorFilter
 import android.os.Bundle
 import android.view.DragEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import com.example.viewer.R
+import com.example.viewer.Util
 import com.example.viewer.activity.SearchActivity
+import com.example.viewer.databinding.FilterOutDialogBinding
 import com.example.viewer.databinding.MainSearchFragmentBinding
 import com.example.viewer.databinding.SearchMarkBinding
 import com.example.viewer.databinding.SearchMarkDialogBinding
@@ -33,14 +32,10 @@ data class SearchMarkEntry (
     val binding: SearchMarkBinding
 )
 
-class SearchFragment: Fragment() {
+class SearchMarkFragment: Fragment() {
     companion object {
-        private val TAGS = listOf(
-            "-", "female", "parody", "artist", "group", "other"
-        )
-        private val TAGS_DISPLAY = listOf(
-            "-", "女性", "原作", "作者", "組別", "其他"
-        )
+        private val TAGS = mutableListOf("-").also { it.addAll(Util.TAG_TRANSLATION_MAP.keys) }.toList()
+        private val TAGS_DISPLAY = mutableListOf("-").also { it.addAll(Util.TAG_TRANSLATION_MAP.values) }.toList()
     }
 
     private lateinit var parent: ViewGroup
@@ -79,6 +74,10 @@ class SearchFragment: Fragment() {
             }
         }
 
+        binding.toolBarFilterOutButton.setOnClickListener {
+            openFilterOutDialog()
+        }
+
         binding.toolBarCloseButton.setOnClickListener { deFocusSearchMark() }
 
         binding.toolBarEditButton.setOnClickListener {
@@ -94,7 +93,7 @@ class SearchFragment: Fragment() {
         binding.toolBarDeleteButton.setOnClickListener {
             focusedSearchMark!!.let {
                 ConfirmDialog(parent.context, inflater).show(
-                    "要刪除${it.searchMark.name}嗎？",
+                    "刪除${it.searchMark.name}嗎？",
                     positiveCallback = {
                         searchDataset.removeSearchMark(it.id)
                         deFocusSearchMark(doModifyBindingStyle = false)
@@ -113,7 +112,7 @@ class SearchFragment: Fragment() {
     private fun refreshSearchMarkWrapper () {
         binding.searchMarkWrapper.removeAllViews()
 
-        for ((id, searchMark) in readSearchMarkEntries()) {
+        for ((id, searchMark) in getSearchMarkEntries()) {
             val searchMarkBinding = SearchMarkBinding.inflate(layoutInflater, binding.searchMarkWrapper, true)
 
             searchMarkBinding.name.text = searchMark.name
@@ -170,14 +169,16 @@ class SearchFragment: Fragment() {
     }
 
     private fun focusSearchMark (id: Int, searchMark: SearchMark, searchMarkBinding: SearchMarkBinding) {
-        binding.toolBarWrapper.visibility = View.VISIBLE
+        binding.notFocusedToolBarWrapper.visibility = View.GONE
+        binding.focusedToolBarWrapper.visibility = View.VISIBLE
         searchMarkBinding.name.setTextColor(parent.context.getColor(R.color.black))
         searchMarkBinding.root.backgroundTintList = ColorStateList.valueOf(parent.context.getColor(R.color.grey))
         focusedSearchMark = SearchMarkEntry(id, searchMark, searchMarkBinding)
     }
 
     private fun deFocusSearchMark (doModifyBindingStyle: Boolean = true) {
-        binding.toolBarWrapper.visibility = View.GONE
+        binding.notFocusedToolBarWrapper.visibility = View.VISIBLE
+        binding.focusedToolBarWrapper.visibility = View.GONE
         if (doModifyBindingStyle) {
             focusedSearchMark!!.binding.let {
                 it.name.setTextColor(parent.context.getColor(R.color.white))
@@ -251,10 +252,13 @@ class SearchFragment: Fragment() {
         }
 
         // tags
-        searchMark?.tags?.forEach { tag ->
-            val tagBinding = createSearchMarkDialogTag(dialogBinding.tagWrapper, tag)
-            tagBindings.add(tagBinding)
-            dialogBinding.tagWrapper.addView(tagBinding.root)
+        searchMark?.tags?.forEach { entry ->
+            val cat = entry.key
+            for (value in entry.value) {
+                val tagBinding = createSearchMarkDialogTag(dialogBinding.tagWrapper, cat, value)
+                tagBindings.add(tagBinding)
+                dialogBinding.tagWrapper.addView(tagBinding.root)
+            }
         }
         dialogBinding.addTagButton.apply {
             setOnClickListener {
@@ -277,11 +281,11 @@ class SearchFragment: Fragment() {
                         name = dialogBinding.nameEditText.text.toString(),
                         categories = selectedCats.toList(),
                         tags = tagBindings.mapNotNull {
-                            if (it.spinner.selectedItemPosition == 0) {
+                            if (it.spinner.selectedIndex == 0) {
                                 return@mapNotNull null
                             }
-                            TAGS[it.spinner.selectedItemPosition] to it.editText.text.toString()
-                        }
+                            TAGS[it.spinner.selectedIndex] to it.editText.text.toString()
+                        }.groupBy({it.first}, {it.second})
                     )
                     saveCb(retSearchMark)
                 }
@@ -293,24 +297,60 @@ class SearchFragment: Fragment() {
         dialog.show()
     }
 
-    private fun createSearchMarkDialogTag (parent: ViewGroup, tag: Pair<String, String>? = null) =
+    private fun openFilterOutDialog () {
+        val dialogBinding = FilterOutDialogBinding.inflate(layoutInflater, parent, false)
+        val dialog = AlertDialog.Builder(parent.context).setView(dialogBinding.root).create()
+
+        val tagBindings = mutableListOf<SearchMarkDialogTagBinding>()
+
+        // tags
+        searchDataset.getExcludeTag().forEach { entry ->
+            val cat = entry.key
+            for (value in entry.value) {
+                val tagBinding = createSearchMarkDialogTag(dialogBinding.tagWrapper, cat, value)
+                tagBindings.add(tagBinding)
+                dialogBinding.tagWrapper.addView(tagBinding.root)
+            }
+        }
+        dialogBinding.addTagButton.apply {
+            setOnClickListener {
+                val tagBinding = createSearchMarkDialogTag(dialogBinding.tagWrapper)
+                tagBindings.add(tagBinding)
+                dialogBinding.tagWrapper.addView(tagBinding.root, 0)
+            }
+        }
+
+        // save button
+        dialogBinding.saveButton.apply {
+            setOnClickListener {
+                searchDataset.storeExcludeTag(
+                    tagBindings.mapNotNull {
+                        if (it.spinner.selectedIndex == 0) {
+                            return@mapNotNull null
+                        }
+                        TAGS[it.spinner.selectedIndex] to it.editText.text.toString()
+                    }.groupBy({it.first}, {it.second})
+                )
+                dialog.dismiss()
+            }
+        }
+
+        dialog.show()
+    }
+
+    private fun createSearchMarkDialogTag (parent: ViewGroup, cat: String? = null, value: String? = null) =
         SearchMarkDialogTagBinding.inflate(layoutInflater, parent, false).apply {
             spinner.apply {
-                adapter = ArrayAdapter(context, R.layout.white_spinner_item, TAGS_DISPLAY).apply {
-                    setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-                }
-                // make the small triangle white
-                background.colorFilter = PorterDuffColorFilter(context.getColor(R.color.white), PorterDuff.Mode.SRC_ATOP)
-
-                tag?.first?.let { setSelection(TAGS.indexOf(it)) }
+                setItems(TAGS_DISPLAY)
+                cat?.let { selectedIndex = TAGS.indexOf(it) }
             }
-            tag?.second?.let { editText.setText(it) }
+            value?.let { editText.setText(it) }
         }
 
     /**
      * @return list of pair, first of pair is id, second is search mark instance
      */
-    private fun readSearchMarkEntries (): List<Pair<Int, SearchMark>> =
+    private fun getSearchMarkEntries (): List<Pair<Int, SearchMark>> =
        searchDataset.getAllSearchMarkIds().map { id ->
            Pair(id, searchDataset.getSearchMark(id))
        }

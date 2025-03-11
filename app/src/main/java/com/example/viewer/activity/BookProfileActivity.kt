@@ -4,37 +4,41 @@ import android.content.Intent
 import android.content.res.ColorStateList
 import android.os.Bundle
 import android.widget.Button
+import android.widget.ProgressBar
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.view.ContextThemeWrapper
+import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
+import com.example.viewer.BookAdder
 import com.example.viewer.R
+import com.example.viewer.Util
 import com.example.viewer.activity.SearchActivity.Companion.BookRecord
 import com.example.viewer.activity.viewer.OnlineViewerActivity
 import com.example.viewer.databinding.BookProfileActivityBinding
 import com.example.viewer.databinding.BookProfileTagBinding
+import com.example.viewer.databinding.ConfirmDialogBinding
+import com.example.viewer.dataset.BookSource
+import com.example.viewer.dataset.SearchDataset
+import com.example.viewer.dialog.ConfirmDialog
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.jsoup.Jsoup
 
 class BookProfileActivity: AppCompatActivity() {
-    companion object {
-        private val TAG_CAT_TRANSLATION_MAP = mapOf(
-            "artist" to "作者",
-            "character" to "角色",
-            "female" to "女性",
-            "group" to "組別",
-            "language" to "語言",
-            "male" to "男性",
-            "mixed" to "混合",
-            "other" to "其他",
-            "parody" to "原作"
-        )
-    }
-
+    private lateinit var searchDataset: SearchDataset
     private lateinit var bookRecord: BookRecord
+    private lateinit var rootBinding: BookProfileActivityBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        searchDataset = SearchDataset.getInstance(baseContext)
         bookRecord = intent.getParcelableExtra("book_record", BookRecord::class.java)!!
 
-        val binding = BookProfileActivityBinding.inflate(layoutInflater).apply {
+        rootBinding = BookProfileActivityBinding.inflate(layoutInflater).apply {
             Glide.with(baseContext).load(bookRecord.coverUrl).into(coverImageView)
 
             idTextView.text = bookRecord.id
@@ -56,31 +60,64 @@ class BookProfileActivity: AppCompatActivity() {
             }
 
             readButton.setOnClickListener {
-                val intent = Intent(baseContext, OnlineViewerActivity::class.java)
-                intent.putExtra("book_record", bookRecord)
-                startActivity(intent)
+                startActivity(Intent(baseContext, OnlineViewerActivity::class.java).apply {
+                    putExtra("book_record", bookRecord)
+                })
+            }
+
+            saveButton.setOnClickListener {
+                val bookAdder = BookAdder.getBookAdder(baseContext, BookSource.E)
+                lifecycleScope.launch {
+                    toggleProgressBar(true)
+                    bookAdder.addBook(bookRecord.url) {
+                        toggleProgressBar(false)
+                        Toast.makeText(baseContext, "已加入到書庫", Toast.LENGTH_SHORT).show()
+                    }
+                }
             }
 
             tagWrapper.apply {
-                val groupedTags = bookRecord.tags.groupBy({it.cat}, {it.value})
-                for (entry in groupedTags.entries) {
-                    addView(createTagRow(entry.key, entry.value).root)
+                lifecycleScope.launch {
+                    for (entry in bookRecord.tags.entries) {
+                        addView(createTagRow(entry.key, entry.value).root)
+                    }
                 }
             }
         }
 
-        setContentView(binding.root)
+        setContentView(rootBinding.root)
     }
 
     private fun createTagRow (tagCat: String, tagValues: List<String>) =
         BookProfileTagBinding.inflate(layoutInflater).apply {
-            tagCategoryTextView.text = TAG_CAT_TRANSLATION_MAP[tagCat] ?: tagCat
+            tagCategoryTextView.text = Util.TAG_TRANSLATION_MAP[tagCat] ?: tagCat
             for (value in tagValues) {
                 Button(baseContext).apply {
                     text = value
                     backgroundTintList = ColorStateList.valueOf(baseContext.getColor(R.color.darkgrey))
                     setTextColor(baseContext.getColor(R.color.grey))
+                    setOnClickListener {
+                        ConfirmDialog(this@BookProfileActivity, layoutInflater).show(
+                            "濾除 $tagCat:$value ?",
+                            positiveCallback = {
+                                addFilterOutTag(tagCat, value)
+                                this@BookProfileActivity.finish()
+                            }
+                        )
+                    }
                 }.also { tagValueWrapper.addView(it) }
             }
         }
+
+    private fun toggleProgressBar (toggle: Boolean) {
+        rootBinding.progressBar.visibility = if (toggle) ProgressBar.VISIBLE else ProgressBar.GONE
+    }
+
+    private fun addFilterOutTag (cat: String, value: String) {
+        searchDataset.getExcludeTag().toMutableMap().apply {
+            set(cat, getValue(cat).toMutableList().also { it.add(value) })
+        }.also {
+            searchDataset.storeExcludeTag(it)
+        }
+    }
 }

@@ -1,6 +1,8 @@
 package com.example.viewer.dataset
 
 import android.content.Context
+import android.nfc.Tag
+import androidx.compose.runtime.key
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.byteArrayPreferencesKey
@@ -8,6 +10,8 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import java.io.Serializable
+
+typealias Tags = Map<String, List<String>>
 
 private val Context.searchDataStore: DataStore<Preferences> by preferencesDataStore(name = "search")
 
@@ -24,7 +28,7 @@ class SearchDataset (context: Context): BaseDataset() {
         data class SearchMark (
             val name: String,
             val categories: List<Category>,
-            val tags: List<Pair<String, String>>
+            val tags: Tags
         ) {
             companion object {
                 enum class Category {
@@ -42,6 +46,7 @@ class SearchDataset (context: Context): BaseDataset() {
         fun searchMarkName (id: Int) = stringPreferencesKey("${TAG}_searchMarkName_$id")
         fun searchMarkCats (id: Int) = byteArrayPreferencesKey("${TAG}_searchMarkCats_$id")
         fun searchMarkTags (id: Int) = byteArrayPreferencesKey("${TAG}_searchMarkTags_$id")
+        fun excludeTags () = byteArrayPreferencesKey("${TAG}_excludeTags")
     }
 
     private fun getNextId (): Int {
@@ -68,6 +73,9 @@ class SearchDataset (context: Context): BaseDataset() {
         storeAsByteArray(keys.allSearchMarkIds(), ids)
     }
 
+    //
+    // search mark
+    //
     private fun storeSearchMark (id: Int, searchMark: SearchMark) {
         store(keys.searchMarkName(id), searchMark.name)
         storeAsByteArray(keys.searchMarkCats(id), searchMark.categories)
@@ -82,7 +90,7 @@ class SearchDataset (context: Context): BaseDataset() {
     fun getSearchMark (id: Int): SearchMark = SearchMark(
         name = read(keys.searchMarkName(id))!!,
         categories = readFromByteArray<List<SearchMark.Companion.Category>>(keys.searchMarkCats(id))!!,
-        tags = readFromByteArray<List<Pair<String, String>>>(keys.searchMarkTags(id))!!
+        tags = readFromByteArray<Tags>(keys.searchMarkTags(id))!!
     )
     fun modifySearchMark (id: Int, searchMark: SearchMark) {
         if (!isKeyExist(keys.searchMarkName(id))) {
@@ -102,4 +110,10 @@ class SearchDataset (context: Context): BaseDataset() {
             getAllSearchMarkIds().toMutableList().also { it.remove(id) }
         )
     }
+
+    //
+    // exclude tag
+    //
+    fun getExcludeTag () = readFromByteArray<Tags>(keys.excludeTags()) ?: mapOf()
+    fun storeExcludeTag (v: Tags) = storeAsByteArray(keys.excludeTags(), v)
 }

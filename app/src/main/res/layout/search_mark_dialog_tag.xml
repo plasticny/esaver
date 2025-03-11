@@ -1,18 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:layout_marginTop="4dp">
 
-    <Spinner
+    <com.jaredrummler.materialspinner.MaterialSpinner
         android:id="@+id/spinner"
-        android:layout_width="100dp"
-        android:layout_height="wrap_content" />
+        android:layout_width="70dp"
+        android:layout_height="40dp"
+        android:textColor="@color/black"
+        android:textSize="16sp"
+        app:ms_padding_top="0dp"
+        app:ms_padding_bottom="0dp"
+        app:ms_padding_left="8dp"
+        app:ms_padding_right="0dp"
+        app:ms_popup_padding_top="0dp"
+        app:ms_popup_padding_bottom="0dp"
+        app:ms_popup_padding_left="8dp"
+        app:ms_popup_padding_right="0dp"
+        app:ms_arrow_tint="@color/black"
+        app:ms_background_color="@color/grey"
+        app:ms_dropdown_max_height="200dp"/>
 
     <EditText
         android:id="@+id/editText"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
         android:textColor="@color/white"
         android:backgroundTint="@color/grey"
         android:layout_weight="1" />

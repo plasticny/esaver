@@ -24,7 +24,7 @@ abstract class BasePictureFetcher (
     companion object {
         fun getFetcher (context: Context, bookId: String): BasePictureFetcher {
             val source = BookDataset.getInstance(context).getBookSource(bookId)
-            println("[APictureFetcher.getFetcher] $source")
+            println("[BasePictureFetcher.getFetcher] $source")
             return when (source) {
                 BookSource.E -> EPictureFetcher(context, bookId)
                 BookSource.Hi -> HiPictureFetcher(context, bookId)
@@ -48,7 +48,7 @@ abstract class BasePictureFetcher (
         assertPageInRange(page)
 
         val pictureFile = File(bookFolder, page.toString())
-        println("[APictureFetcher.getPicture]\n${pictureFile.path}")
+        println("[BasePictureFetcher.getPicture]\n${pictureFile.path}")
 
         if (!pictureFile.exists()) {
             if (downloadedPage.contains(page)) {
@@ -72,7 +72,7 @@ abstract class BasePictureFetcher (
     }
 
     protected suspend fun downloadPicture (page: Int, url: String, headers: Map<String, String> = mapOf()): Boolean {
-        println("[APictureFetcher.downloadPicture] $url")
+        println("[BasePictureFetcher.downloadPicture] $url")
 
         if(!Util.isInternetAvailable(context)) {
             return false

@@ -70,57 +70,6 @@ class GalleryFragment: Fragment() {
         return binding.root
     }
 
-//    override fun onCreate(savedInstanceState: Bundle?) {
-//        super.onCreate(savedInstanceState)
-//        setContentView(R.layout.gallery_fragment)
-//
-//        History.init(this)
-//
-//        bookGallery = BookGallery(this, this.findViewById(R.id.recycler_view))
-//
-//        addImgView = findViewById(R.id.add_image_view)
-//        addImgView.setOnClickListener {
-//            if (Util.isInternetAvailable(this)) {
-//                showAddDialog()
-//            }
-//            else {
-//                Toast.makeText(this, "沒有連接網絡", Toast.LENGTH_SHORT).show()
-//            }
-//        }
-//
-//        randomOpenImgView = findViewById(R.id.random_open_imageView)
-//        randomOpenImgView.setOnClickListener {
-//            bookGallery.openRandomBook()
-//        }
-//
-//        tmpImgView = findViewById(R.id.tmp_image_vew)
-//        progressBar = findViewById(R.id.gallery_progress_bar)
-//
-//        textViewAll = findViewById(R.id.gallery_text_all)
-//        textViewAll.setOnClickListener {
-//            bookGallery.applyFilter()
-//            textViewAll.setTextColor(ContextCompat.getColor(this, R.color.white))
-//            textViewDownloaded.setTextColor(ContextCompat.getColor(this, R.color.grey))
-//            textViewNotDownloaded.setTextColor(ContextCompat.getColor(this, R.color.grey))
-//        }
-//
-//        textViewDownloaded = findViewById(R.id.gallery_text_downloaded)
-//        textViewDownloaded.setOnClickListener {
-//            bookGallery.applyFilter(true)
-//            textViewAll.setTextColor(ContextCompat.getColor(this, R.color.grey))
-//            textViewDownloaded.setTextColor(ContextCompat.getColor(this, R.color.white))
-//            textViewNotDownloaded.setTextColor(ContextCompat.getColor(this, R.color.grey))
-//        }
-//
-//        textViewNotDownloaded = findViewById(R.id.gallery_text_not_downloaded)
-//        textViewNotDownloaded.setOnClickListener {
-//            bookGallery.applyFilter(false)
-//            textViewAll.setTextColor(ContextCompat.getColor(this, R.color.grey))
-//            textViewDownloaded.setTextColor(ContextCompat.getColor(this, R.color.grey))
-//            textViewNotDownloaded.setTextColor(ContextCompat.getColor(this, R.color.white))
-//        }
-//    }
-
     override fun onResume() {
         super.onResume()
         bookGallery.refresh()

@@ -12,6 +12,18 @@ import java.io.FileInputStream
 
 class Util {
     companion object {
+        val TAG_TRANSLATION_MAP = mapOf(
+            "artist" to "作者",
+            "character" to "角色",
+            "female" to "女性",
+            "group" to "組別",
+            "language" to "語言",
+            "male" to "男性",
+            "mixed" to "混合",
+            "other" to "其他",
+            "parody" to "原作"
+        )
+
         fun dp2px (context: Context, dp: Float): Int {
             val displayMetrics = context.resources.displayMetrics
             return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, displayMetrics).toInt()

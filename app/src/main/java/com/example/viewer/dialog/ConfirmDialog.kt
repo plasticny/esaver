@@ -16,7 +16,6 @@ class ConfirmDialog (
     ) {
         val binding = ConfirmDialogBinding.inflate(inflater)
 
-
         val dialog = AlertDialog.Builder(context).setView(binding.root).create()
         binding.messageTextView.text = message
         binding.positiveButton.setOnClickListener {
