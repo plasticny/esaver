@@ -3,21 +3,17 @@ package com.example.viewer.activity.viewer
 import android.annotation.SuppressLint
 import android.os.Bundle
 import android.view.GestureDetector
-import android.view.KeyEvent
 import android.view.MotionEvent
 import android.widget.ProgressBar
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.example.viewer.activity.viewer.BaseViewerActivity.Companion.FLIP_THRESHOLD
-import com.example.viewer.activity.viewer.BaseViewerActivity.Companion.SCROLL_THRESHOLD
 import com.example.viewer.databinding.ViewerActivityBinding
 import com.github.chrisbanes.photoview.PhotoView
 import kotlin.math.abs
 
 abstract class BaseViewerActivity: AppCompatActivity() {
     companion object {
-        private const val FLIP_THRESHOLD = 220
-        private const val SCROLL_THRESHOLD = 50
+        const val FLIP_THRESHOLD = 220
+        const val SCROLL_THRESHOLD = 50
     }
 
     protected abstract fun onImageLongClicked(): Boolean
