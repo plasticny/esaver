@@ -7,6 +7,7 @@ import android.os.Parcelable
 import android.widget.Button
 import android.widget.ProgressBar
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.children
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.example.viewer.R
@@ -80,6 +81,7 @@ class SearchActivity: AppCompatActivity() {
 
     private var searchMarkId = -1
     private var position = -1
+    private var next: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -102,7 +104,8 @@ class SearchActivity: AppCompatActivity() {
                     return@setOnClickListener
                 }
                 searchMark = searchDataSet.getSearchMark(allSearchMarkIds[--position])
-                lifecycleScope.launch { refreshUi() }
+                next = null
+                lifecycleScope.launch { resetUI() }
             }
         }
         binding.nextSearchMarkButton.apply {
@@ -111,60 +114,94 @@ class SearchActivity: AppCompatActivity() {
                     return@setOnClickListener
                 }
                 searchMark = searchDataSet.getSearchMark(allSearchMarkIds[++position])
-                lifecycleScope.launch { refreshUi() }
+                next = null
+                lifecycleScope.launch { resetUI() }
             }
         }
 
-        lifecycleScope.launch { refreshUi() }
+        binding.loadMoreButton.apply {
+            setOnClickListener {
+                lifecycleScope.launch {
+                    loadMoreBooks()
+                    if (next == null){
+                        visibility = Button.INVISIBLE
+                    }
+                }
+            }
+        }
+
+        lifecycleScope.launch { resetUI() }
     }
 
-    private suspend fun refreshUi () {
+    private suspend fun resetUI () {
         binding.searchMarkName.text = searchMark.name
 
         binding.prevSearchMarkButton.visibility = if (position == 0) Button.INVISIBLE else Button.VISIBLE
         binding.nextSearchMarkButton.visibility = if (position == allSearchMarkIds.lastIndex) Button.INVISIBLE else Button.VISIBLE
 
-        binding.searchBookWrapper.apply {
-            removeAllViews()
+        binding.searchBookWrapper.removeAllViews()
 
-            binding.searchProgressBar.visibility = ProgressBar.VISIBLE
-            val books = excludeTagFilter(fetchBooks())
-            binding.searchProgressBar.visibility = ProgressBar.GONE
-
-            books.forEach { bookRecord ->
-                addView(
-                    SearchBookBinding.inflate(layoutInflater, binding.searchBookWrapper, false).apply {
-                        Glide.with(this.root).load(bookRecord.coverUrl).into(searchBookImageView)
-                        searchBookTitleTextView.text = bookRecord.title
-                        pageNumTextView.text = baseContext.getString(R.string.n_page, bookRecord.pageNum)
-                        searchBookCatTextView.apply {
-                            text = bookRecord.cat
-                            setTextColor(context.getColor(
-                                when (bookRecord.cat) {
-                                    "Doujinshi" -> R.color.doujinshi_red
-                                    "Manga" -> R.color.manga_orange
-                                    "Artist CG" -> R.color.artistCG_yellow
-                                    else -> throw Exception("Unexpected category ${bookRecord.cat}")
-                                }
-                            ))
-                        }
-                        root.setOnClickListener {
-                            val intent = Intent(baseContext, BookProfileActivity::class.java)
-                            intent.putExtra("book_record", bookRecord)
-                            startActivity(intent)
-                        }
-                    }.root
-                )
-            }
+        binding.loadMoreButton.visibility = Button.INVISIBLE
+        loadMoreBooks()
+        if (next != null) {
+            binding.loadMoreButton.visibility = Button.VISIBLE
         }
     }
 
+    private suspend fun loadMoreBooks () {
+        binding.searchProgressBar.visibility = ProgressBar.VISIBLE
+        fetchBooks().let {
+            binding.searchProgressBar.visibility = ProgressBar.GONE
+            addBookViews(excludeTagFilter(it))
+        }
+    }
+
+    private fun addBookViews (books: List<BookRecord>) {
+        books.forEach { bookRecord ->
+            binding.searchBookWrapper.addView(
+                SearchBookBinding.inflate(layoutInflater, binding.searchBookWrapper, false).apply {
+                    Glide.with(this.root).load(bookRecord.coverUrl).into(searchBookImageView)
+                    searchBookTitleTextView.text = bookRecord.title
+                    pageNumTextView.text = baseContext.getString(R.string.n_page, bookRecord.pageNum)
+                    searchBookCatTextView.apply {
+                        text = bookRecord.cat
+                        setTextColor(context.getColor(
+                            when (bookRecord.cat) {
+                                "Doujinshi" -> R.color.doujinshi_red
+                                "Manga" -> R.color.manga_orange
+                                "Artist CG" -> R.color.artistCG_yellow
+                                else -> throw Exception("Unexpected category ${bookRecord.cat}")
+                            }
+                        ))
+                    }
+                    root.setOnClickListener {
+                        val intent = Intent(baseContext, BookProfileActivity::class.java)
+                        intent.putExtra("book_record", bookRecord)
+                        startActivity(intent)
+                    }
+                }.root
+            )
+        }
+    }
+
+    /**
+     * This method will access and change the private variable next
+     */
     private suspend fun fetchBooks (): List<BookRecord> {
         val doc = withContext(Dispatchers.IO) {
             Jsoup.connect(
-                searchMark.url().also { println("[SearchActivity.fetchBooks] $it") }
+                searchMark.url(next).also { println("[SearchActivity.fetchBooks] $it") }
             ).get()
         }
+
+        next = doc.selectFirst("#unext")!!.attribute("href")?.let { attr ->
+            val tokens = attr.value.split("next=")
+            if (tokens.size == 1) {
+                return@let null
+            }
+            return@let tokens.last().trim()
+        }
+
         val books = doc.select(".itg.glte > tbody > tr")
         return books.mapNotNull { book ->
             if (book.select(".itd").isNotEmpty()) {
@@ -202,7 +239,7 @@ class SearchActivity: AppCompatActivity() {
         }
     }
 
-    private fun SearchMark.url (): String {
+    private fun SearchMark.url (next: String?): String {
         val fCatsValue = if (categories.isNotEmpty()) {
             1023 - categories.sumOf { getCategoryValue(it) }
         } else null
@@ -228,7 +265,8 @@ class SearchActivity: AppCompatActivity() {
         }
         fCatsValue?.let { ret += "f_cats=$it&" }
         fSearchValue?.let { ret += "f_search=$fSearchValue&" }
-        ret += "inline_set=dm_e"
+        ret += "inline_set=dm_e&"
+        next?.let { ret += "next=$next" }
 
         return ret
     }

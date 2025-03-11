@@ -39,4 +39,5 @@
     <string name="fa_check">\uf00c</string>
     <string name="fa_filter_circle_xmark">\ue17b</string>
     <string name="filter_out_tag">濾除標籤</string>
+    <string name="load_more">加載更多</string>
 </resources>
