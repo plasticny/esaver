@@ -40,4 +40,6 @@
     <string name="fa_filter_circle_xmark">\ue17b</string>
     <string name="filter_out_tag">濾除標籤</string>
     <string name="load_more">加載更多</string>
+    <string name="keyword">關鍵字</string>
+    <string name="non_h">非H</string>
 </resources>

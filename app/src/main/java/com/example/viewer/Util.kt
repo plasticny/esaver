@@ -1,11 +1,9 @@
 package com.example.viewer
 
 import android.content.Context
-import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.util.TypedValue
-import com.example.viewer.activity.PassActivity
 import com.example.viewer.dataset.BookDataset
 import java.io.File
 import java.io.FileInputStream

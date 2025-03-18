@@ -7,7 +7,6 @@ import android.os.Parcelable
 import android.widget.Button
 import android.widget.ProgressBar
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.children
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.example.viewer.R
@@ -15,7 +14,7 @@ import com.example.viewer.databinding.SearchActivityBinding
 import com.example.viewer.databinding.SearchBookBinding
 import com.example.viewer.dataset.SearchDataset
 import com.example.viewer.dataset.SearchDataset.Companion.SearchMark
-import com.example.viewer.dataset.SearchDataset.Companion.SearchMark.Companion.Category
+import com.example.viewer.dataset.SearchDataset.Companion.Category
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -186,14 +185,7 @@ class SearchActivity: AppCompatActivity() {
                     pageNumTextView.text = baseContext.getString(R.string.n_page, bookRecord.pageNum)
                     searchBookCatTextView.apply {
                         text = bookRecord.cat
-                        setTextColor(context.getColor(
-                            when (bookRecord.cat) {
-                                "Doujinshi" -> R.color.doujinshi_red
-                                "Manga" -> R.color.manga_orange
-                                "Artist CG" -> R.color.artistCG_yellow
-                                else -> throw Exception("Unexpected category ${bookRecord.cat}")
-                            }
-                        ))
+                        setTextColor(context.getColor(Category.fromString(bookRecord.cat).color))
                     }
                     root.setOnClickListener {
                         val intent = Intent(baseContext, BookProfileActivity::class.java)
@@ -262,10 +254,15 @@ class SearchActivity: AppCompatActivity() {
 
     private fun SearchMark.url (next: String?): String {
         val fCatsValue = if (categories.isNotEmpty()) {
-            1023 - categories.sumOf { getCategoryValue(it) }
+            1023 - categories.sumOf { it.value }
         } else null
 
-        val fSearchValue = if (tags.isNotEmpty()) {
+        // f search
+        var fSearch = ""
+        if (keyword.isNotEmpty()) {
+            fSearch += "$keyword+"
+        }
+        if (tags.isNotEmpty()) {
             val tokens = mutableListOf<String>()
             tags.forEach { entry ->
                 val cat = entry.key
@@ -277,25 +274,21 @@ class SearchActivity: AppCompatActivity() {
                     }
                 }
             }
-            tokens.joinToString(" ")
-        } else null
+            fSearch += tokens.joinToString(" ")
+        }
 
         var ret = "https://e-hentai.org/"
-        if (fCatsValue != null || fSearchValue != null) {
+        if (fCatsValue != null || fSearch.isNotEmpty()) {
             ret += "?"
         }
         fCatsValue?.let { ret += "f_cats=$it&" }
-        fSearchValue?.let { ret += "f_search=$fSearchValue&" }
+        if (fSearch.isNotEmpty()) {
+            ret += "f_search=$fSearch&"
+        }
         ret += "inline_set=dm_e&"
         next?.let { ret += "next=$next" }
 
         return ret
-    }
-
-    private fun getCategoryValue (cat: Category): Int = when(cat) {
-        Category.Doujinshi -> 2
-        Category.Manga -> 4
-        Category.ArtistCG -> 8
     }
 
     private fun excludeTagFilter (books: List<BookRecord>): List<BookRecord> {

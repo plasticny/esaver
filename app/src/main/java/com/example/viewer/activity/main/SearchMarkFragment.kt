@@ -23,7 +23,7 @@ import com.example.viewer.databinding.SearchMarkDialogBinding
 import com.example.viewer.databinding.SearchMarkDialogTagBinding
 import com.example.viewer.dataset.SearchDataset
 import com.example.viewer.dataset.SearchDataset.Companion.SearchMark
-import com.example.viewer.dataset.SearchDataset.Companion.SearchMark.Companion.Category
+import com.example.viewer.dataset.SearchDataset.Companion.Category
 import com.example.viewer.dialog.ConfirmDialog
 
 data class SearchMarkEntry (
@@ -213,43 +213,28 @@ class SearchMarkFragment: Fragment() {
         dialogBinding.nameEditText.setText(searchMark?.name ?: "")
 
         // category buttons
-        dialogBinding.catDoujinshi.apply {
-            val selectedColor = context.getColor(R.color.doujinshi_red)
-            val deselectedColor = context.getColor(R.color.grey)
-            setBackgroundColor(
-                if (selectedCats.contains(Category.Doujinshi)) selectedColor else deselectedColor
-            )
-            setOnClickListener {
+        listOf(
+            Pair(dialogBinding.catDoujinshi, Category.Doujinshi),
+            Pair(dialogBinding.catManga, Category.Manga),
+            Pair(dialogBinding.catArtistCg, Category.ArtistCG),
+            Pair(dialogBinding.catNonH, Category.NonH)
+        ).forEach { (view, category) ->
+            view.apply {
+                val selectedColor = context.getColor(category.color)
+                val deselectedColor = context.getColor(R.color.grey)
                 setBackgroundColor(
-                    if (selectedCats.toggle(Category.Doujinshi)) selectedColor else deselectedColor
+                    if (selectedCats.contains(category)) selectedColor else deselectedColor
                 )
+                setOnClickListener {
+                    setBackgroundColor(
+                        if (selectedCats.toggle(category)) selectedColor else deselectedColor
+                    )
+                }
             }
         }
-        dialogBinding.catManga.apply {
-            val selectedColor = context.getColor(R.color.manga_orange)
-            val deselectedColor = context.getColor(R.color.grey)
-            setBackgroundColor(
-                if (selectedCats.contains(Category.Manga)) selectedColor else deselectedColor
-            )
-            setOnClickListener {
-                setBackgroundColor(
-                    if (selectedCats.toggle(Category.Manga)) selectedColor else deselectedColor
-                )
-            }
-        }
-        dialogBinding.catArtistCg.apply {
-            val selectedColor = context.getColor(R.color.artistCG_yellow)
-            val deselectedColor = context.getColor(R.color.grey)
 
-            setBackgroundColor(
-                if (selectedCats.contains(Category.ArtistCG)) selectedColor else deselectedColor
-            )
-            setOnClickListener {
-                setBackgroundColor(
-                    if (selectedCats.toggle(Category.ArtistCG)) selectedColor else deselectedColor
-                )
-            }
-        }
+        // keyword
+        dialogBinding.keywordEditText.setText(searchMark?.keyword ?: "")
 
         // tags
         searchMark?.tags?.forEach { entry ->
@@ -280,6 +265,7 @@ class SearchMarkFragment: Fragment() {
                     val retSearchMark = SearchMark(
                         name = dialogBinding.nameEditText.text.toString(),
                         categories = selectedCats.toList(),
+                        keyword = dialogBinding.keywordEditText.text.toString(),
                         tags = tagBindings.mapNotNull {
                             if (it.spinner.selectedIndex == 0) {
                                 return@mapNotNull null

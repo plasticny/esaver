@@ -18,6 +18,7 @@ import com.example.viewer.databinding.BookProfileActivityBinding
 import com.example.viewer.databinding.BookProfileTagBinding
 import com.example.viewer.dataset.BookSource
 import com.example.viewer.dataset.SearchDataset
+import com.example.viewer.dataset.SearchDataset.Companion.Category
 import com.example.viewer.dialog.ConfirmDialog
 import kotlinx.coroutines.launch
 
@@ -43,14 +44,7 @@ class BookProfileActivity: AppCompatActivity() {
 
             categoryTextView.apply {
                 text = bookRecord.cat
-                setTextColor(context.getColor(
-                    when (bookRecord.cat) {
-                        "Doujinshi" -> R.color.doujinshi_red
-                        "Manga" -> R.color.manga_orange
-                        "Artist CG" -> R.color.artistCG_yellow
-                        else -> throw Exception("Unexpected category ${bookRecord.cat}")
-                    }
-                ))
+                setTextColor(context.getColor(Category.fromString(bookRecord.cat).color))
             }
 
             readButton.setOnClickListener {
