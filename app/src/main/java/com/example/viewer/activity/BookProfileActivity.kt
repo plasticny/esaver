@@ -13,6 +13,7 @@ import com.example.viewer.BookAdder
 import com.example.viewer.R
 import com.example.viewer.Util
 import com.example.viewer.activity.SearchActivity.Companion.BookRecord
+import com.example.viewer.activity.main.MainActivity
 import com.example.viewer.activity.viewer.OnlineViewerActivity
 import com.example.viewer.databinding.BookProfileActivityBinding
 import com.example.viewer.databinding.BookProfileTagBinding
@@ -59,9 +60,19 @@ class BookProfileActivity: AppCompatActivity() {
                     toggleProgressBar(true)
                     bookAdder.addBook(bookRecord.url) { doAdded ->
                         toggleProgressBar(false)
-                        if (doAdded) {
-                            Toast.makeText(baseContext, "已加入到書庫", Toast.LENGTH_SHORT).show()
+                        if (!doAdded) {
+                            return@addBook
                         }
+                        ConfirmDialog(this@BookProfileActivity, layoutInflater).show(
+                            "已加入到書庫，返回書庫？",
+                            positiveCallback = {
+                                startActivity(
+                                    Intent(baseContext, MainActivity::class.java).apply {
+                                        addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                                    }
+                                )
+                            }
+                        )
                     }
                 }
             }
