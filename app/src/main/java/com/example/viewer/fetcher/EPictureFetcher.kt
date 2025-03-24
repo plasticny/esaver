@@ -1,6 +1,7 @@
-package com.example.viewer
+package com.example.viewer.fetcher
 
 import android.content.Context
+import com.example.viewer.dataset.BookDataset
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -13,8 +14,8 @@ class EPictureFetcher (context: Context, bookId: String): APictureFetcher(contex
         private const val URL_START_TAG = "src=\""
     }
 
-    private val bookUrl: String = History.getBookUrl(bookId)
-    private var pageUrls: MutableList<String> = History.getBookPageUrls(bookId).toMutableList()
+    private val bookUrl: String = BookDataset.getBookUrl(bookId)
+    private var pageUrls: MutableList<String> = BookDataset.getBookPageUrls(bookId).toMutableList()
 
     override suspend fun savePicture(page: Int): Boolean {
         println("[EPictureFetcher.savePicture] $page")
@@ -44,7 +45,7 @@ class EPictureFetcher (context: Context, bookId: String): APictureFetcher(contex
         if (page > pageUrls.lastIndex) {
             println("[EPictureFetcher.getPageUrl]\nload next p")
 
-            val p = History.getBookP(bookId)
+            val p = BookDataset.getBookP(bookId)
             val html = coroutineScope {
                 withContext(Dispatchers.IO) {
                     async { URL("${bookUrl}/?p=${p}").readText() }.await()
@@ -54,8 +55,8 @@ class EPictureFetcher (context: Context, bookId: String): APictureFetcher(contex
             val pageUrlSegment = Regex("https://e-hentai.org/s/(.*?)/${bookId}-(\\d+)").findAll(html).map { it.value }.toList()
             pageUrls.addAll(pageUrlSegment)
 
-            History.increaseBookP(bookId)
-            History.setBookPageUrls(bookId, pageUrls)
+            BookDataset.increaseBookP(bookId)
+            BookDataset.setBookPageUrls(bookId, pageUrls)
         }
         return pageUrls[page]
     }

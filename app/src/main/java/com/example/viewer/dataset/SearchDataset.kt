@@ -1,0 +1,105 @@
+package com.example.viewer.dataset
+
+import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.byteArrayPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
+import java.io.Serializable
+
+private val Context.searchDataStore: DataStore<Preferences> by preferencesDataStore(name = "search")
+
+class SearchDataset (context: Context): BaseDataset() {
+    companion object {
+        const val TAG = "searchDB"
+
+        @Volatile
+        private var instance: SearchDataset? = null
+        fun getInstance (context: Context) = instance ?: synchronized(this) {
+            instance ?: SearchDataset(context).also { instance = it }
+        }
+
+        data class SearchMark (
+            val name: String,
+            val categories: List<Category>,
+            val tags: List<Pair<String, String>>
+        ) {
+            companion object {
+                enum class Category {
+                    Doujinshi, Manga, ArtistCG
+                }
+            }
+        }
+    }
+
+    override val dataStore = context.searchDataStore
+
+    private val keys = object {
+        fun nextId () = intPreferencesKey("${TAG}_nextSearchMarkId")
+        fun allSearchMarkIds () = byteArrayPreferencesKey("${TAG}_searchMarkIds")
+        fun searchMarkName (id: Int) = stringPreferencesKey("${TAG}_searchMarkName_$id")
+        fun searchMarkCats (id: Int) = byteArrayPreferencesKey("${TAG}_searchMarkCats_$id")
+        fun searchMarkTags (id: Int) = byteArrayPreferencesKey("${TAG}_searchMarkTags_$id")
+    }
+
+    private fun getNextId (): Int {
+        val id = read(keys.nextId()) ?: 1
+        store(keys.nextId(), id + 1)
+        return id
+    }
+
+    /**
+     * get all search mark id in the dataset
+     *
+     * @return a list of search mark id which also reflects the sorting arrangement of user
+     */
+    fun getAllSearchMarkIds () = readFromByteArray<List<Int>>(keys.allSearchMarkIds()) ?: listOf()
+    fun moveSearchMarkPosition (id: Int, toId: Int) {
+        val ids = getAllSearchMarkIds().toMutableList()
+        val from = ids.indexOf(id)
+        val to = ids.indexOf(toId)
+        if (from == -1 || to == -1) {
+            throw Exception("invalid search mark id $id")
+        }
+        ids.removeAt(from)
+        ids.add(to, id)
+        storeAsByteArray(keys.allSearchMarkIds(), ids)
+    }
+
+    private fun storeSearchMark (id: Int, searchMark: SearchMark) {
+        store(keys.searchMarkName(id), searchMark.name)
+        storeAsByteArray(keys.searchMarkCats(id), searchMark.categories)
+        storeAsByteArray(keys.searchMarkTags(id), searchMark.tags)
+    }
+    fun addSearchMark (searchMark: SearchMark): Int {
+        val id = getNextId()
+        storeSearchMark(id, searchMark)
+        storeAsByteArray(keys.allSearchMarkIds(), getAllSearchMarkIds().toMutableList().apply { add(id) })
+        return id
+    }
+    fun getSearchMark (id: Int): SearchMark = SearchMark(
+        name = read(keys.searchMarkName(id))!!,
+        categories = readFromByteArray<List<SearchMark.Companion.Category>>(keys.searchMarkCats(id))!!,
+        tags = readFromByteArray<List<Pair<String, String>>>(keys.searchMarkTags(id))!!
+    )
+    fun modifySearchMark (id: Int, searchMark: SearchMark) {
+        if (!isKeyExist(keys.searchMarkName(id))) {
+            throw Exception("no search mark with id $id")
+        }
+        storeSearchMark(id, searchMark)
+    }
+    fun removeSearchMark (id: Int) {
+        if (!isKeyExist(keys.searchMarkName(id))) {
+            throw Exception("no search mark with id $id")
+        }
+        remove(keys.searchMarkName(id))
+        remove(keys.searchMarkCats(id))
+        remove(keys.searchMarkTags(id))
+        storeAsByteArray(
+            keys.allSearchMarkIds(),
+            getAllSearchMarkIds().toMutableList().also { it.remove(id) }
+        )
+    }
+}

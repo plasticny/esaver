@@ -1,0 +1,383 @@
+package com.example.viewer.activity
+
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.graphics.drawable.Drawable
+import android.os.Bundle
+import android.view.GestureDetector
+import android.view.KeyEvent
+import android.view.LayoutInflater
+import android.view.MotionEvent
+import android.widget.Button
+import android.widget.ImageView
+import android.widget.ProgressBar
+import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
+import com.bumptech.glide.load.DataSource
+import com.bumptech.glide.load.engine.GlideException
+import com.bumptech.glide.request.RequestListener
+import com.bumptech.glide.request.target.Target
+import com.example.viewer.fetcher.APictureFetcher
+import com.example.viewer.dataset.BookDataset
+import com.example.viewer.R
+import com.example.viewer.RandomBook
+import com.example.viewer.Util
+import com.github.chrisbanes.photoview.PhotoView
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import java.io.File
+import java.io.FileOutputStream
+import kotlin.math.abs
+
+class ViewerActivity: AppCompatActivity() {
+    companion object {
+        private const val FLIP_THRESHOLD = 220
+        private const val SCROLL_THRESHOLD = 50
+
+        private const val ROTATE_LEFT = -90F
+        private const val ROTATE_RIGHT = 90F
+    }
+
+    private lateinit var photoView: ImageView
+    private lateinit var progressBar: ProgressBar
+    private lateinit var tmpImageView: ImageView
+    private lateinit var pageTextView: TextView
+
+    private lateinit var fetcher: APictureFetcher
+
+    private lateinit var bookId: String
+    private lateinit var skipPageSet: Set<Int>
+
+    @Volatile
+    private var page = 0 // current page num, firstPage to lastPage
+    private var firstPage = 0 // 0 to pageNum - 1
+    private var lastPage = 0 // 0 to pageNum - 1
+
+    private var nextBookFlag = false
+    private var volumeDownKeyHeld = false
+
+    private val bookFolder: File
+        get() = fetcher.bookFolder
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.viewer_activity)
+
+        bookId = intent.getStringExtra("bookId")!!
+        prepareBook(bookId)
+
+        photoView = findViewById<ImageView?>(R.id.photoView).apply {
+            setOnLongClickListener {
+                showImageDialog()
+                true
+            }
+        }
+        progressBar = findViewById(R.id.viewer_progress_bar)
+        tmpImageView = findViewById(R.id.viewer_tmp_image_vew)
+        setupPageTextView()
+
+        loadPage()
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (event != null) {
+            when (keyCode) {
+                KeyEvent.KEYCODE_VOLUME_UP -> {
+                    nextBookFlag = false
+                    prevPage()
+                    return true
+                }
+                KeyEvent.KEYCODE_VOLUME_DOWN -> {
+                    if (page < lastPage) {
+                        nextPage()
+                    } else if (!nextBookFlag) {
+                        nextBookFlag = true
+                        Toast.makeText(this, "尾頁，再按一次到下一本", Toast.LENGTH_SHORT).show()
+                    } else if (!volumeDownKeyHeld) {
+                        nextBook()
+                    }
+                    volumeDownKeyHeld = true
+                    return true
+                }
+            }
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
+        if (event != null) {
+            when (keyCode) {
+                KeyEvent.KEYCODE_VOLUME_DOWN -> {
+                    volumeDownKeyHeld = false
+                    return true
+                }
+                KeyEvent.KEYCODE_BACK -> {
+                    finish()
+                    return true
+                }
+            }
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    private fun prepareBook (bookId: String) {
+        skipPageSet = BookDataset.getBookSkipPages(bookId).toSet()
+
+        firstPage = 0
+        lastPage = BookDataset.getBookPageNum(bookId) - 1
+        while (skipPageSet.contains(firstPage)) {
+            firstPage++
+        }
+        while (skipPageSet.contains(lastPage)) {
+            lastPage--
+        }
+
+        page = firstPage
+        fetcher = APictureFetcher.getFetcher(this, bookId)
+    }
+
+    private fun setupPageTextView () {
+        val simpleOnGestureListener = object: GestureDetector.SimpleOnGestureListener () {
+            private var scrolledDistance = 0F
+            private var lastScrollE2: MotionEvent? = null
+
+            override fun onFling(
+                e1: MotionEvent?, e2: MotionEvent,
+                velocityX: Float, velocityY: Float
+            ): Boolean {
+                // change page on fling
+                if (e1 != null && isMotionHorizontal(e1, e2)) {
+                    if (abs(e2.x - e1.x) > FLIP_THRESHOLD) {
+                        return false
+                    }
+                    changePage(e1, e2)
+                    return true
+                }
+                return false
+            }
+
+            override fun onScroll(
+                e1: MotionEvent?, e2: MotionEvent,
+                distanceX: Float, distanceY: Float
+            ): Boolean {
+                // change page on scrolling
+                if (e1 != null && isMotionHorizontal(e1, e2)) {
+                    val dx = e2.x - e1.x
+                    if (abs(dx) <= FLIP_THRESHOLD) {
+                        return super.onScroll(e1, e2, distanceX, distanceY)
+                    }
+
+                    scrolledDistance += abs(distanceX)
+                    if (scrolledDistance >= SCROLL_THRESHOLD) {
+                        scrolledDistance = 0F
+                        changePage(lastScrollE2 ?: e1, e2)
+                        lastScrollE2 = MotionEvent.obtain(e2)
+                    }
+                }
+                return super.onScroll(e1, e2, distanceX, distanceY)
+            }
+
+            fun reset () {
+                scrolledDistance = 0F
+                lastScrollE2 = null
+            }
+
+            private fun isMotionHorizontal (e1: MotionEvent, e2: MotionEvent) = abs(e2.x - e1.x) > abs(e2.y - e1.y)
+
+            private fun changePage (e1: MotionEvent, e2: MotionEvent) {
+                if (e2.x - e1.x > 0) {
+                    prevPage()
+                } else {
+                    nextPage()
+                }
+            }
+        }
+        val gestureDetector = GestureDetector(this, simpleOnGestureListener)
+
+        pageTextView = findViewById<TextView?>(R.id.viewer_page_TextView).apply {
+            setOnTouchListener { v, event ->
+                gestureDetector.onTouchEvent(event)
+                if (event.action == MotionEvent.ACTION_UP) {
+                    simpleOnGestureListener.reset()
+                }
+                v.performClick()
+                true
+            }
+        }
+    }
+
+    private fun showImageDialog () {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.viewer_image_dialog, null)
+        val dialog = AlertDialog.Builder(this).setView(dialogView).create()
+
+        // set cover page
+        dialogView.findViewById<Button>(R.id.view_img_dialog_coverPage_button).apply {
+            setOnClickListener {
+                BookDataset.setBookCoverPage(bookId, page)
+                dialog.dismiss()
+            }
+        }
+
+        // skip page button
+        dialogView.findViewById<Button>(R.id.view_img_dialog_skip_button).apply {
+            setOnClickListener {
+                BookDataset.setBookSkipPages(bookId, skipPageSet.toMutableList().also { it.add(page) })
+                skipPageSet = BookDataset.getBookSkipPages(bookId).toSet()
+
+                if (page == firstPage) {
+                    firstPage++
+                    nextPage()
+                } else {
+                    if (page == lastPage) {
+                        lastPage--
+                    }
+                    prevPage()
+                }
+
+                dialog.dismiss()
+            }
+        }
+
+        // next book button
+        dialogView.findViewById<Button>(R.id.view_img_dialog_next_book_button).apply {
+            setOnClickListener {
+                nextBook()
+                dialog.dismiss()
+            }
+        }
+
+        // rotate buttons
+        dialogView.findViewById<Button>(R.id.view_img_dialog_rotate_left_button).apply {
+            setOnClickListener {
+                rotatePage(ROTATE_LEFT)
+                dialog.dismiss()
+            }
+        }
+        dialogView.findViewById<Button>(R.id.view_img_dialog_rotate_right_button).apply {
+            setOnClickListener {
+                rotatePage(ROTATE_RIGHT)
+                dialog.dismiss()
+            }
+        }
+
+        dialog.show()
+    }
+
+    private fun toggleProgressBar (toggle: Boolean) {
+        if (toggle) {
+            progressBar.visibility = ProgressBar.VISIBLE
+            photoView.visibility = PhotoView.INVISIBLE
+        }
+        else {
+            progressBar.visibility = ProgressBar.GONE
+            photoView.visibility = PhotoView.VISIBLE
+        }
+    }
+
+    private fun nextPage () {
+        if (page < lastPage) {
+            page++
+            while (skipPageSet.contains(page)) {
+                page++
+            }
+            loadPage()
+        }
+    }
+
+    private fun prevPage () {
+        if (page > firstPage) {
+            page--
+            while (skipPageSet.contains(page)) {
+                page--
+            }
+            loadPage()
+        }
+    }
+
+    private fun loadPage () {
+        val myPage = page
+
+        pageTextView.text = (myPage + 1).toString()
+        toggleProgressBar(true)
+
+        // load this page
+        CoroutineScope(Dispatchers.Main).launch {
+            val pictureBuilder = fetcher.getPicture(
+                myPage,
+                object: RequestListener<Drawable> {
+                    override fun onLoadFailed(
+                        e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean
+                    ): Boolean = loadEnded()
+
+                    override fun onResourceReady(
+                        resource: Drawable?, model: Any?, target: Target<Drawable>?, dataSource: DataSource?, isFirstResource: Boolean
+                    ): Boolean = loadEnded()
+
+                    private fun loadEnded (): Boolean {
+                        toggleProgressBar(false)
+                        return false
+                    }
+                }
+            )
+            if (pictureBuilder != null && page == myPage) {
+                pictureBuilder.into(photoView)
+            }
+        }
+
+        // pre-load next next page
+        CoroutineScope(Dispatchers.IO).launch {
+            val nextPage = myPage + 1
+            if (nextPage > lastPage || File(bookFolder, nextPage.toString()).exists()) {
+                return@launch
+            }
+            fetcher.savePicture(nextPage)
+        }
+    }
+
+    private fun nextBook () {
+        bookId = RandomBook.next(this, !Util.isInternetAvailable(this))
+        prepareBook(bookId)
+
+        nextBookFlag = false
+
+        BookDataset.updateBookLastViewTime(bookId)
+        loadPage()
+    }
+
+    private fun rotatePage (rotation: Float) {
+        val imageFile = File(bookFolder, page.toString())
+
+        val matrix = if (rotation == ROTATE_LEFT || rotation == ROTATE_RIGHT) {
+            Matrix().apply { postRotate(rotation) }
+        } else {
+            throw Exception("[ViewerActivity.rotatePage] unexpected rotation $rotation")
+        }
+
+        if (Util.isGifFile(imageFile)) {
+            Toast.makeText(baseContext, "不支持旋轉GIF", Toast.LENGTH_SHORT).show()
+            return
+        }
+        else {
+            // handle static file rotation
+            val originImage = BitmapFactory.decodeFile(imageFile.path)
+            val rotatedImage = Bitmap.createBitmap(
+                originImage,
+                0, 0,
+                originImage.width, originImage.height,
+                matrix, true
+            )
+            FileOutputStream(imageFile).use {
+                rotatedImage.compress(Bitmap.CompressFormat.WEBP_LOSSLESS, 100, it)
+            }
+            originImage.recycle()
+            rotatedImage.recycle()
+        }
+
+        // refresh page
+        loadPage()
+    }
+}

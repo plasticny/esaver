@@ -2,6 +2,11 @@ package com.example.viewer
 
 import android.content.Context
 import android.widget.Toast
+import com.example.viewer.dataset.BookDataset
+import com.example.viewer.dataset.BookSource
+import com.example.viewer.fetcher.APictureFetcher
+import com.example.viewer.fetcher.EPictureFetcher
+import com.example.viewer.fetcher.HiPictureFetcher
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -39,20 +44,19 @@ abstract class BookAdder (protected val context: Context) {
 
         bookUrl = getUrl(url)
         bookId = getId()
-        println(bookId)
-
-        val bookFolder = File(context.getExternalFilesDir(null), bookId)
 
         // check if the book is already saved
-        if (History.getAllBookIds().contains(bookId)) {
-            Toast.makeText(context, "the book is already saved", Toast.LENGTH_SHORT).show()
+        if (BookDataset.getAllBookIds().contains(bookId)) {
+            Toast.makeText(context, "已經存有這本書", Toast.LENGTH_SHORT).show()
             onEnded(false)
             return
         }
 
         // create folder
-        if (!bookFolder.exists()) {
-            bookFolder.mkdirs()
+        File(context.getExternalFilesDir(null), bookId).let {
+            if (!it.exists()) {
+                it.mkdirs()
+            }
         }
 
         // add book record to history
@@ -65,15 +69,15 @@ abstract class BookAdder (protected val context: Context) {
 
     protected open suspend fun addHistory () {
         // necessary history for every source
-        History.addBookId(bookId)
-        History.setBookUrl(bookId, bookUrl)
-        History.setBookSource(bookId, bookSource)
-        History.addAuthorBookId(History.NO_AUTHOR, bookId)
-        History.setBookCoverPage(bookId, 0)
+        BookDataset.addBookId(bookId)
+        BookDataset.setBookUrl(bookId, bookUrl)
+        BookDataset.setBookSource(bookId, bookSource)
+        BookDataset.addAuthorBookId(BookDataset.NO_AUTHOR, bookId)
+        BookDataset.setBookCoverPage(bookId, 0)
 
         val pageNum = fetchPageNum()
         withContext(Dispatchers.IO) {
-            History.setBookPageNum(bookId, pageNum)
+            BookDataset.setBookPageNum(bookId, pageNum)
         }
     }
 }
@@ -90,8 +94,8 @@ private class EBookAdder (context: Context): BookAdder(context) {
 
     override suspend fun addHistory() {
         super.addHistory()
-        History.setBookP(bookId, 0)
-        History.setBookPageUrls(bookId, listOf())
+        BookDataset.setBookP(bookId, 0)
+        BookDataset.setBookPageUrls(bookId, listOf())
     }
 
     override fun getFetcher(): APictureFetcher = EPictureFetcher(context, bookId)

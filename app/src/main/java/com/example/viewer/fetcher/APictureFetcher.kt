@@ -1,13 +1,16 @@
-package com.example.viewer
+package com.example.viewer.fetcher
 
 import android.content.Context
-import android.graphics.Bitmap
+import android.graphics.drawable.Drawable
 import com.bumptech.glide.Glide
 import com.bumptech.glide.RequestBuilder
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.RequestOptions
-import com.example.viewer.HiPictureFetcher.Companion.okHttpClient
+import com.example.viewer.dataset.BookSource
+import com.example.viewer.dataset.BookDataset
+import com.example.viewer.Util
+import com.example.viewer.fetcher.HiPictureFetcher.Companion.okHttpClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
@@ -20,7 +23,7 @@ abstract class APictureFetcher (
 ): CoroutineScope by MainScope() {
     companion object {
         fun getFetcher (context: Context, bookId: String): APictureFetcher {
-            val source = History.getBookSource(bookId)
+            val source = BookDataset.getBookSource(bookId)
             println("[APictureFetcher.getFetcher] $source")
             return when (source) {
                 BookSource.E -> EPictureFetcher(context, bookId)
@@ -29,15 +32,19 @@ abstract class APictureFetcher (
         }
     }
 
-    protected val pageNum: Int = History.getBookPageNum(bookId)
+    abstract suspend fun savePicture (page: Int): Boolean
+
+    protected val pageNum: Int = BookDataset.getBookPageNum(bookId)
     private val fileGlide = Glide.with(context)
-        .setDefaultRequestOptions(RequestOptions().diskCacheStrategy(DiskCacheStrategy.NONE))
-        .asBitmap()
+        .setDefaultRequestOptions(RequestOptions()
+            .diskCacheStrategy(DiskCacheStrategy.NONE)
+            .skipMemoryCache(true)
+        ).asDrawable()
     private val downloadedPage = mutableSetOf<Int>()
 
     val bookFolder = File(context.getExternalFilesDir(null), bookId)
 
-    suspend fun getPicture (page: Int, loadListener: RequestListener<Bitmap>? = null): RequestBuilder<Bitmap>? {
+    suspend fun getPicture (page: Int, loadListener: RequestListener<Drawable>? = null): RequestBuilder<Drawable>? {
         assertPageInRange(page)
 
         val pictureFile = File(bookFolder, page.toString())
@@ -54,6 +61,7 @@ abstract class APictureFetcher (
                 return null
             }
         }
+
         return fileGlide.listener(loadListener).load(pictureFile.path)
     }
 
@@ -93,6 +101,4 @@ abstract class APictureFetcher (
         }
         return true
     }
-
-    abstract suspend fun savePicture (page: Int): Boolean
 }

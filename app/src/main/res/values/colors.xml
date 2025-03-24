@@ -8,5 +8,9 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="grey">#9F9F9F</color>
+    <color name="darkgrey">#333333</color>
     <color name="transparent">#00FFFFFF</color>
+    <color name="doujinshi_red">#EB5656</color>
+    <color name="manga_orange">#DC9741</color>
+    <color name="artistCG_yellow">#D3CD41</color>
 </resources>

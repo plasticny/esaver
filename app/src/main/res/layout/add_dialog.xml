@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:background="#EFEFEF">
+    android:background="@color/darkgrey">
 
     <TextView
         android:id="@+id/add_dialog_text"
@@ -12,7 +12,7 @@
         android:layout_marginStart="16dp"
         android:layout_marginTop="16dp"
         android:text="@string/enter_url"
-        android:textColor="@color/black"
+        android:textColor="@color/grey"
         android:textSize="20sp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -25,6 +25,8 @@
         android:layout_marginEnd="16dp"
         android:inputType="textUri"
         android:autofillHints="url"
+        android:textColor="@color/white"
+        android:backgroundTint="@color/grey"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/add_dialog_text" />

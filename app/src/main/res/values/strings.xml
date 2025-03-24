@@ -14,4 +14,23 @@
     <string name="skip_page">跳過此頁</string>
     <string name="reload_page">重新加載</string>
     <string name="set_as_cover_page">設為封面</string>
+    <string name="next_book">下一本書</string>
+    <string name="rotate_left_90">左轉90°</string>
+    <string name="rotate_right_90">右轉90°</string>
+    <string name="select_author">選擇作者</string>
+    <string name="book_gallery">書庫</string>
+    <string name="search">搜尋</string>
+    <string name="category">類別</string>
+    <string name="doujinshi">同人誌</string>
+    <string name="manga">漫畫</string>
+    <string name="artist_cg">畫冊</string>
+    <string name="search_mark">搜尋標籤</string>
+<!--  font awesome  -->
+    <string name="fa_floppy_disk">\uf0c7</string>
+    <string name="fa_plus">\u2b</string>
+    <string name="fa_caret_right">\uf0da</string>
+    <string name="fa_caret_left">\uf0d9</string>
+    <string name="fa_xmark">\uf00d</string>
+    <string name="fa_pen_to_square">\uf044</string>
+    <string name="fa_trash">\uf1f8</string>
 </resources>
