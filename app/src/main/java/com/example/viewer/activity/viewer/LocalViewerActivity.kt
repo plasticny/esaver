@@ -26,6 +26,9 @@ import okhttp3.Response
 import java.io.File
 import java.io.FileOutputStream
 
+/**
+ * string extra: bookId
+ */
 class LocalViewerActivity: BaseViewerActivity() {
     companion object {
         private const val ROTATE_LEFT = -90F

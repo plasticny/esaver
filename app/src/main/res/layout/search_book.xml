@@ -36,6 +36,7 @@
             android:layout_marginTop="8dp"
             android:ellipsize="end"
             android:maxLines="2"
+            android:minLines="2"
             android:textColor="@color/white"/>
 
         <LinearLayout

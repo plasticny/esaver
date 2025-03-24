@@ -5,7 +5,6 @@ import android.content.res.ColorStateList
 import android.os.Bundle
 import android.widget.Button
 import android.widget.ProgressBar
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
@@ -14,9 +13,11 @@ import com.example.viewer.R
 import com.example.viewer.Util
 import com.example.viewer.activity.SearchActivity.Companion.BookRecord
 import com.example.viewer.activity.main.MainActivity
+import com.example.viewer.activity.viewer.LocalViewerActivity
 import com.example.viewer.activity.viewer.OnlineViewerActivity
 import com.example.viewer.databinding.BookProfileActivityBinding
 import com.example.viewer.databinding.BookProfileTagBinding
+import com.example.viewer.dataset.BookDataset
 import com.example.viewer.dataset.BookSource
 import com.example.viewer.dataset.SearchDataset
 import com.example.viewer.dataset.SearchDataset.Companion.Category
@@ -24,14 +25,12 @@ import com.example.viewer.dialog.ConfirmDialog
 import kotlinx.coroutines.launch
 
 class BookProfileActivity: AppCompatActivity() {
-    private lateinit var searchDataset: SearchDataset
     private lateinit var bookRecord: BookRecord
     private lateinit var rootBinding: BookProfileActivityBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        searchDataset = SearchDataset.getInstance(baseContext)
         bookRecord = intent.getParcelableExtra("book_record", BookRecord::class.java)!!
 
         rootBinding = BookProfileActivityBinding.inflate(layoutInflater).apply {
@@ -49,9 +48,16 @@ class BookProfileActivity: AppCompatActivity() {
             }
 
             readButton.setOnClickListener {
-                startActivity(Intent(baseContext, OnlineViewerActivity::class.java).apply {
-                    putExtra("book_record", bookRecord)
-                })
+                val bookDataset = BookDataset.getInstance(baseContext)
+                if (bookDataset.getAllBookIds().contains(bookRecord.id)) {
+                    startActivity(Intent(baseContext, LocalViewerActivity::class.java).apply {
+                        putExtra("bookId", bookRecord.id)
+                    })
+                } else {
+                    startActivity(Intent(baseContext, OnlineViewerActivity::class.java).apply {
+                        putExtra("book_record", bookRecord)
+                    })
+                }
             }
 
             saveButton.setOnClickListener {
@@ -115,6 +121,7 @@ class BookProfileActivity: AppCompatActivity() {
     }
 
     private fun addFilterOutTag (cat: String, value: String) {
+        val searchDataset = SearchDataset.getInstance(baseContext)
         searchDataset.getExcludeTag().toMutableMap().apply {
             val values = get(cat)?.toMutableList() ?: mutableListOf()
             values.add(value)
