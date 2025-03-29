@@ -2,6 +2,7 @@ package com.example.viewer.dataset
 
 import android.content.Context
 import android.nfc.Tag
+import android.os.Environment
 import androidx.compose.runtime.key
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -10,11 +11,13 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.viewer.R
+import java.io.File
 import java.io.Serializable
 
 typealias Tags = Map<String, List<String>>
 
-private val Context.searchDataStore: DataStore<Preferences> by preferencesDataStore(name = "search")
+private const val DB_NAME = "search"
+private val Context.searchDataStore: DataStore<Preferences> by preferencesDataStore(name = DB_NAME)
 
 class SearchDataset (context: Context): BaseDataset() {
     companion object {
@@ -153,4 +156,21 @@ class SearchDataset (context: Context): BaseDataset() {
     //
     fun getExcludeTag () = readFromByteArray<Tags>(keys.excludeTags()) ?: mapOf()
     fun storeExcludeTag (v: Tags) = storeAsByteArray(keys.excludeTags(), v)
+
+    //
+    // backup
+    //
+    fun backup (context: Context) {
+        val dbFile = File("${context.filesDir}/datastore", "${DB_NAME}.preferences_pb")
+        val backupFolder = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "eSaver")
+        if (!backupFolder.exists()) {
+            backupFolder.mkdirs()
+        }
+
+        val backupFile = File(backupFolder, "search")
+        if (backupFile.exists()) {
+            backupFile.delete()
+        }
+        dbFile.copyTo(backupFile)
+    }
 }

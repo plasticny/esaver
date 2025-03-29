@@ -44,4 +44,6 @@
     <string name="load_more">加載更多</string>
     <string name="keyword">關鍵字</string>
     <string name="non_h">非H</string>
+    <string name="backup">備份</string>
+    <string name="other">其他</string>
 </resources>

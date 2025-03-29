@@ -11,4 +11,8 @@
         android:id="@+id/main_nav_search"
         android:title="@string/search" />
 
+    <item
+        android:id="@+id/main_nav_other"
+        android:title="@string/other" />
+
 </menu>
