@@ -20,6 +20,7 @@
 
     <TextView
         android:id="@+id/gallery_text_all"
+        android:visibility="gone"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
@@ -32,6 +33,7 @@
 
     <TextView
         android:id="@+id/gallery_text_downloaded"
+        android:visibility="gone"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
@@ -44,6 +46,7 @@
 
     <TextView
         android:id="@+id/gallery_text_not_downloaded"
+        android:visibility="gone"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"

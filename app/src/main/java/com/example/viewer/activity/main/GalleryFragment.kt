@@ -47,24 +47,24 @@ class GalleryFragment: Fragment() {
             bookGallery.openRandomBook()
         }
 
-        binding.galleryTextAll.setOnClickListener {
-            bookGallery.applyFilter()
-            binding.galleryTextAll.setTextColor(ContextCompat.getColor(ctx, R.color.white))
-            binding.galleryTextDownloaded.setTextColor(ContextCompat.getColor(ctx, R.color.grey))
-            binding.galleryTextNotDownloaded.setTextColor(ContextCompat.getColor(ctx, R.color.grey))
-        }
-        binding.galleryTextDownloaded.setOnClickListener {
-            bookGallery.applyFilter(true)
-            binding.galleryTextAll.setTextColor(ContextCompat.getColor(ctx, R.color.grey))
-            binding.galleryTextDownloaded.setTextColor(ContextCompat.getColor(ctx, R.color.white))
-            binding.galleryTextNotDownloaded.setTextColor(ContextCompat.getColor(ctx, R.color.grey))
-        }
-        binding.galleryTextNotDownloaded.setOnClickListener {
-            bookGallery.applyFilter(false)
-            binding.galleryTextAll.setTextColor(ContextCompat.getColor(ctx, R.color.grey))
-            binding.galleryTextDownloaded.setTextColor(ContextCompat.getColor(ctx, R.color.grey))
-            binding.galleryTextNotDownloaded.setTextColor(ContextCompat.getColor(ctx, R.color.white))
-        }
+//        binding.galleryTextAll.setOnClickListener {
+//            bookGallery.applyFilter()
+//            binding.galleryTextAll.setTextColor(ContextCompat.getColor(ctx, R.color.white))
+//            binding.galleryTextDownloaded.setTextColor(ContextCompat.getColor(ctx, R.color.grey))
+//            binding.galleryTextNotDownloaded.setTextColor(ContextCompat.getColor(ctx, R.color.grey))
+//        }
+//        binding.galleryTextDownloaded.setOnClickListener {
+//            bookGallery.applyFilter(true)
+//            binding.galleryTextAll.setTextColor(ContextCompat.getColor(ctx, R.color.grey))
+//            binding.galleryTextDownloaded.setTextColor(ContextCompat.getColor(ctx, R.color.white))
+//            binding.galleryTextNotDownloaded.setTextColor(ContextCompat.getColor(ctx, R.color.grey))
+//        }
+//        binding.galleryTextNotDownloaded.setOnClickListener {
+//            bookGallery.applyFilter(false)
+//            binding.galleryTextAll.setTextColor(ContextCompat.getColor(ctx, R.color.grey))
+//            binding.galleryTextDownloaded.setTextColor(ContextCompat.getColor(ctx, R.color.grey))
+//            binding.galleryTextNotDownloaded.setTextColor(ContextCompat.getColor(ctx, R.color.white))
+//        }
 
         return binding.root
     }
