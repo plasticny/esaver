@@ -60,9 +60,8 @@ class BookGallery (private val context: Context, private val recyclerView: Recyc
     fun openRandomBook () = openBook(RandomBook.next(context, !Util.isInternetAvailable(context)))
 
     private fun openBook (bookId: String) {
-        val bookFolder = File(context.getExternalFilesDir(null), bookId)
-        if (!Util.isInternetAvailable(context) && bookDataset.getBookPageNum(bookId) > bookFolder.listFiles()!!.size) {
-            Toast.makeText(context, "未完成下載+沒有網絡", Toast.LENGTH_SHORT).show()
+        if (!Util.isInternetAvailable(context) && File(context.getExternalFilesDir(null), bookId).listFiles()!!.isEmpty()) {
+            Toast.makeText(context, "沒有網絡+未下載任何一頁", Toast.LENGTH_SHORT).show()
             return
         }
 

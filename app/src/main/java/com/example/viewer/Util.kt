@@ -34,6 +34,9 @@ class Util {
             return cap.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
         }
 
+        /**
+         * @return boolean represent all pages of the book is downloaded
+         */
         fun isBookDownloaded (context: Context, bookId: String): Boolean {
             val folder = File(context.getExternalFilesDir(null), bookId)
             return BookDataset.getInstance(context).getBookPageNum(bookId) <= folder.listFiles()!!.size

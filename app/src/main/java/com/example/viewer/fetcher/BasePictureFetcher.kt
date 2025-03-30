@@ -2,6 +2,7 @@ package com.example.viewer.fetcher
 
 import android.content.Context
 import android.graphics.drawable.Drawable
+import android.widget.Toast
 import com.bumptech.glide.Glide
 import com.bumptech.glide.RequestBuilder
 import com.bumptech.glide.load.engine.DiskCacheStrategy
@@ -54,14 +55,21 @@ abstract class BasePictureFetcher (
         println("[BasePictureFetcher.getPicture]\n${pictureFile.path}")
 
         if (!pictureFile.exists()) {
+            // prevent multiple download
             if (downloadedPage.contains(page)) {
                 return null
             }
             downloadedPage.add(page)
 
-            val retFlag = savePicture(page)
-            if (!retFlag) {
+            if (!Util.isInternetAvailable(context)) {
+                Toast.makeText(context, "沒有網絡，無法下載", Toast.LENGTH_SHORT).show()
                 return null
+            }
+
+            savePicture(page).let { retFlag ->
+                if (!retFlag) {
+                    return null
+                }
             }
         }
 

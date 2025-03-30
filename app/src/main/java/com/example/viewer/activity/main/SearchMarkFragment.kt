@@ -120,9 +120,15 @@ class SearchMarkFragment: Fragment() {
             searchMarkBinding.root.apply {
                 setOnClickListener {
                     if (focusedSearchMark == null) {
-                        val intent = Intent(context, SearchActivity::class.java)
-                        intent.putExtra("searchMarkId", id)
-                        context.startActivity(intent)
+                        if (!Util.isInternetAvailable(context)) {
+                            Toast.makeText(context, "沒有網絡", Toast.LENGTH_SHORT).show()
+                            return@setOnClickListener
+                        }
+                        context.startActivity(
+                            Intent(context, SearchActivity::class.java).apply {
+                                putExtra("searchMarkId", id)
+                            }
+                        )
                     } else if (focusedSearchMark!!.id != id) {
                         changeFocusSearchMark(id, searchMark, searchMarkBinding)
                     } else {

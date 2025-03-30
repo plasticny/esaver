@@ -7,6 +7,7 @@ import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.LayoutInflater
+import android.view.View
 import android.widget.Button
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -147,8 +148,15 @@ class LocalViewerActivity: BaseViewerActivity() {
                     }
                 }
             )
-            if (pictureBuilder != null && page == myPage) {
-                pictureBuilder.into(viewerActivityBinding.photoView)
+            if (page == myPage) {
+                if (pictureBuilder != null) {
+                    viewerActivityBinding.photoView.imageAlpha = 255
+                    pictureBuilder.into(viewerActivityBinding.photoView)
+                } else {
+                    println("[${this@LocalViewerActivity::class.simpleName}.loadPage] get picture failed")
+                    viewerActivityBinding.photoView.imageAlpha = 0
+                    toggleProgressBar(false)
+                }
             }
         }
 
@@ -158,7 +166,9 @@ class LocalViewerActivity: BaseViewerActivity() {
             if (nextPage > lastPage || File(bookFolder, nextPage.toString()).exists()) {
                 return@launch
             }
-            fetcher.savePicture(nextPage)
+            if (Util.isInternetAvailable(baseContext)) {
+                fetcher.savePicture(nextPage)
+            }
         }
     }
 

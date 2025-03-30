@@ -30,7 +30,7 @@ class GalleryFragment: Fragment() {
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
+    ): View {
         ctx = container!!.context
         binding = MainGalleryFragmentBinding.inflate(layoutInflater, container, false)
         bookGallery = BookGallery(ctx, binding.recyclerView)
@@ -38,9 +38,8 @@ class GalleryFragment: Fragment() {
         binding.addImageView.setOnClickListener {
             if (Util.isInternetAvailable(ctx)) {
                 showAddDialog()
-            }
-            else {
-                Toast.makeText(ctx, "沒有連接網絡", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(ctx, "沒有網絡", Toast.LENGTH_SHORT).show()
             }
         }
 

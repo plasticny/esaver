@@ -16,6 +16,9 @@ class RandomBook private constructor(context: Context) {
             instance ?: RandomBook(context).also { instance = it }
         }
 
+        /**
+         * @param onlyDownloaded only return complete downloaded book
+         */
         fun next (context: Context, onlyDownloaded: Boolean = false) = getInstance(context).next(context, onlyDownloaded)
     }
 
@@ -58,7 +61,7 @@ class RandomBook private constructor(context: Context) {
             }
         }
 
-        return drawId(context, onlyDownloaded).also {
+        return pullId(context, onlyDownloaded).also {
             randomPool.remove(it)
             randomPool.add(bookIdSequence[position])
             movePosition()
@@ -85,7 +88,7 @@ class RandomBook private constructor(context: Context) {
         return res
     }
 
-    private fun drawId (context: Context, onlyDownloaded: Boolean): String {
+    private fun pullId (context: Context, onlyDownloaded: Boolean): String {
         // WARNING: this function supposed some book is downloaded
         println("[RandomBook.drawId] $randomPool")
 
