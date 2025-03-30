@@ -1,4 +1,16 @@
 <resources>
+<!--  font awesome  -->
+    <string name="fa_floppy_disk">\uf0c7</string>
+    <string name="fa_plus">\u2b</string>
+    <string name="fa_caret_right">\uf0da</string>
+    <string name="fa_caret_left">\uf0d9</string>
+    <string name="fa_xmark">\uf00d</string>
+    <string name="fa_pen_to_square">\uf044</string>
+    <string name="fa_trash">\uf1f8</string>
+    <string name="fa_check">\uf00c</string>
+    <string name="fa_filter_circle_xmark">\ue17b</string>
+    <string name="fa_play">\uf04b</string>
+<!--  strings  -->
     <string name="app_name">eSaver</string>
     <string name="enter_url">輸入URL</string>
     <string name="all">全部</string>
@@ -28,16 +40,6 @@
     <string name="read">閱讀</string>
     <string name="save_to_gallery">存至書庫</string>
     <string name="n_page">%1$d頁</string>
-<!--  font awesome  -->
-    <string name="fa_floppy_disk">\uf0c7</string>
-    <string name="fa_plus">\u2b</string>
-    <string name="fa_caret_right">\uf0da</string>
-    <string name="fa_caret_left">\uf0d9</string>
-    <string name="fa_xmark">\uf00d</string>
-    <string name="fa_pen_to_square">\uf044</string>
-    <string name="fa_trash">\uf1f8</string>
-    <string name="fa_check">\uf00c</string>
-    <string name="fa_filter_circle_xmark">\ue17b</string>
     <string name="filter_out_tag">濾除標籤</string>
     <string name="load_more">加載更多</string>
     <string name="keyword">關鍵字</string>
