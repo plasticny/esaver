@@ -20,6 +20,7 @@ import com.example.viewer.dataset.BookDataset
 import com.example.viewer.R
 import com.example.viewer.RandomBook
 import com.example.viewer.Util
+import com.example.viewer.databinding.ViewerImageDialogBinding
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -191,11 +192,11 @@ class LocalViewerActivity: BaseViewerActivity() {
     }
 
     private fun showImageDialog () {
-        val dialogView = LayoutInflater.from(this).inflate(R.layout.viewer_image_dialog, null)
-        val dialog = AlertDialog.Builder(this).setView(dialogView).create()
+        val dialogViewBinding = ViewerImageDialogBinding.inflate(layoutInflater)
+        val dialog = AlertDialog.Builder(this).setView(dialogViewBinding.root).create()
 
         // set cover page
-        dialogView.findViewById<Button>(R.id.view_img_dialog_coverPage_button).apply {
+        dialogViewBinding.viewImgDialogCoverPageButton.apply {
             setOnClickListener {
                 bookDataset.setBookCoverPage(bookId, page)
                 dialog.dismiss()
@@ -203,7 +204,7 @@ class LocalViewerActivity: BaseViewerActivity() {
         }
 
         // skip page button
-        dialogView.findViewById<Button>(R.id.view_img_dialog_skip_button).apply {
+        dialogViewBinding.viewImgDialogSkipButton.apply {
             setOnClickListener {
                 bookDataset.setBookSkipPages(bookId, skipPageSet.toMutableList().also { it.add(page) })
                 skipPageSet = bookDataset.getBookSkipPages(bookId).toSet()
@@ -223,7 +224,7 @@ class LocalViewerActivity: BaseViewerActivity() {
         }
 
         // next book button
-        dialogView.findViewById<Button>(R.id.view_img_dialog_next_book_button).apply {
+        dialogViewBinding.viewImgDialogNextBookButton.apply {
             setOnClickListener {
                 nextBook()
                 dialog.dismiss()
@@ -231,13 +232,13 @@ class LocalViewerActivity: BaseViewerActivity() {
         }
 
         // rotate buttons
-        dialogView.findViewById<Button>(R.id.view_img_dialog_rotate_left_button).apply {
+        dialogViewBinding.viewImgDialogRotateLeftButton.apply {
             setOnClickListener {
                 rotatePage(ROTATE_LEFT)
                 dialog.dismiss()
             }
         }
-        dialogView.findViewById<Button>(R.id.view_img_dialog_rotate_right_button).apply {
+        dialogViewBinding.viewImgDialogRotateRightButton.apply {
             setOnClickListener {
                 rotatePage(ROTATE_RIGHT)
                 dialog.dismiss()

@@ -33,17 +33,17 @@ class GalleryFragment: Fragment() {
     ): View {
         ctx = container!!.context
         binding = MainGalleryFragmentBinding.inflate(layoutInflater, container, false)
-        bookGallery = BookGallery(ctx, binding.recyclerView)
+        bookGallery = BookGallery(ctx, layoutInflater, binding.recyclerView)
 
-        binding.addImageView.setOnClickListener {
-            if (Util.isInternetAvailable(ctx)) {
-                showAddDialog()
-            } else {
-                Toast.makeText(ctx, "沒有網絡", Toast.LENGTH_SHORT).show()
-            }
-        }
+//        binding.addImageView.setOnClickListener {
+//            if (Util.isInternetAvailable(ctx)) {
+//                showAddDialog()
+//            } else {
+//                Toast.makeText(ctx, "沒有網絡", Toast.LENGTH_SHORT).show()
+//            }
+//        }
 
-        binding.randomOpenImageView.setOnClickListener {
+        binding.randomOpenButton.setOnClickListener {
             bookGallery.openRandomBook()
         }
 
