@@ -9,7 +9,10 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import java.net.URL
 
-class HiPictureFetcher (context: Context, bookId: String): APictureFetcher(context, bookId) {
+/**
+ * Note: this fetcher always fetch for a stored book
+ */
+class HiPictureFetcher (context: Context, bookId: String): BasePictureFetcher(context, bookId) {
     companion object {
         private data class PictureInfo (
             val hash: String,
@@ -65,7 +68,7 @@ class HiPictureFetcher (context: Context, bookId: String): APictureFetcher(conte
     private var base: String? = null
 
     init {
-        if (pageNum > bookFolder.listFiles()!!.size) {
+        if (pageNum > bookFolder!!.listFiles()!!.size) {
             println("[HiPictureFetcher] get data for constructing url")
 
             if (!Util.isInternetAvailable(context)) {
@@ -91,7 +94,7 @@ class HiPictureFetcher (context: Context, bookId: String): APictureFetcher(conte
             "sec-fetch-mode" to "no-cors",
             "sec-fetch-site" to "same-site",
             "user-agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 OPR/114.0.0.0 (Edition GX-CN)",
-            "referer" to "https://hitomi.la/reader/$bookId.html"
+            "referer" to "https://hitomi.la/reader/${bookId!!}.html"
         )
         return downloadPicture(page, url, headers)
     }
@@ -104,7 +107,7 @@ class HiPictureFetcher (context: Context, bookId: String): APictureFetcher(conte
         var bookIdJs: String
         runBlocking {
             withContext(Dispatchers.IO) {
-                bookIdJs = URL("https://ltn.hitomi.la/galleries/${bookId}.js").readText().substring(18)
+                bookIdJs = URL("https://ltn.hitomi.la/galleries/${bookId!!}.js").readText().substring(18)
             }
         }
         val galleryInfo = Gson().fromJson(bookIdJs, GalleryInfo::class.java)!!

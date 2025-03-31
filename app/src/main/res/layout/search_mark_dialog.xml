@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="@color/darkgrey"
@@ -21,6 +20,7 @@
         android:text="@string/fa_floppy_disk"/>
 
 <!--  name  -->
+
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -67,7 +67,30 @@
             style="@style/SearchMarkCategoryStyle"
             android:text="@string/artist_cg"/>
 
+        <Button
+            android:id="@+id/cat_non_h"
+            style="@style/SearchMarkCategoryStyle"
+            android:text="@string/non_h"/>
+
     </GridLayout>
+
+<!--  keyword  -->
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/keyword"
+        android:textSize="16sp"
+        android:textColor="@color/grey"
+        android:layout_marginTop="8dp"/>
+
+    <EditText
+        android:id="@+id/keyword_editText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="18sp"
+        android:backgroundTint="@color/grey"
+        android:textColor="@color/white"/>
 
 <!--  tags  -->
 

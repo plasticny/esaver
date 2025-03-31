@@ -5,19 +5,24 @@ import com.example.viewer.dataset.BookDataset
 import java.util.PriorityQueue
 import kotlin.random.Random
 
-class RandomBook private constructor() {
+class RandomBook private constructor(context: Context) {
     companion object {
         private const val INIT_POOL_SIZE = 5
 
         @Volatile
         private var instance: RandomBook? = null
 
-        private fun getInstance (): RandomBook = synchronized(this) {
-            instance ?: RandomBook().also { instance = it }
+        private fun getInstance (context: Context): RandomBook = synchronized(this) {
+            instance ?: RandomBook(context).also { instance = it }
         }
 
-        fun next (context: Context, onlyDownloaded: Boolean = false) = getInstance().next(context, onlyDownloaded)
+        /**
+         * @param onlyDownloaded only return complete downloaded book
+         */
+        fun next (context: Context, onlyDownloaded: Boolean = false) = getInstance(context).next(context, onlyDownloaded)
     }
+
+    private val bookDataset = BookDataset.getInstance(context)
 
     private val bookIdSequence: MutableList<String>
     private val arrangedBookId: MutableSet<String>
@@ -37,8 +42,8 @@ class RandomBook private constructor() {
                 return Random.nextInt(-1, 2)
             }
         })
-        for (bookId in BookDataset.getAllBookIds()) {
-            pq.add(Pair(bookId, BookDataset.getBookLastViewTime(bookId)))
+        for (bookId in bookDataset.getAllBookIds()) {
+            pq.add(Pair(bookId, bookDataset.getBookLastViewTime(bookId)))
         }
 
         // store result
@@ -56,7 +61,7 @@ class RandomBook private constructor() {
             }
         }
 
-        return drawId(context, onlyDownloaded).also {
+        return pullId(context, onlyDownloaded).also {
             randomPool.remove(it)
             randomPool.add(bookIdSequence[position])
             movePosition()
@@ -73,7 +78,7 @@ class RandomBook private constructor() {
         val res = mutableListOf<String>()
 
         // the returned book id is supposed to be sorted by added time, asc
-        val allBookIds = BookDataset.getAllBookIds()
+        val allBookIds = bookDataset.getAllBookIds()
         for (bookId in allBookIds.reversed()) {
             if (arrangedBookId.contains(bookId)) {
                 break
@@ -83,7 +88,7 @@ class RandomBook private constructor() {
         return res
     }
 
-    private fun drawId (context: Context, onlyDownloaded: Boolean): String {
+    private fun pullId (context: Context, onlyDownloaded: Boolean): String {
         // WARNING: this function supposed some book is downloaded
         println("[RandomBook.drawId] $randomPool")
 

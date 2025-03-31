@@ -12,6 +12,6 @@
     <fragment
         android:id="@+id/main_nav_search"
         android:label="@string/search"
-        android:name="com.example.viewer.activity.main.SearchFragment" />
+        android:name="com.example.viewer.activity.main.SearchMarkFragment" />
 
 </navigation>

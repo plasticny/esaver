@@ -8,14 +8,15 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import java.net.URL
 
-class EPictureFetcher (context: Context, bookId: String): APictureFetcher(context, bookId) {
+class EPictureFetcher (context: Context, bookId: String): BasePictureFetcher(context, bookId) {
     companion object {
         private const val I3_TAG = "<div id=\"i3\">"
         private const val URL_START_TAG = "src=\""
     }
 
-    private val bookUrl: String = BookDataset.getBookUrl(bookId)
-    private var pageUrls: MutableList<String> = BookDataset.getBookPageUrls(bookId).toMutableList()
+    private val bookDataset = BookDataset.getInstance(context)
+    private val bookUrl: String = bookDataset.getBookUrl(bookId)
+    private var pageUrls: MutableList<String> = bookDataset.getBookPageUrls(bookId).toMutableList()
 
     override suspend fun savePicture(page: Int): Boolean {
         println("[EPictureFetcher.savePicture] $page")
@@ -45,7 +46,7 @@ class EPictureFetcher (context: Context, bookId: String): APictureFetcher(contex
         if (page > pageUrls.lastIndex) {
             println("[EPictureFetcher.getPageUrl]\nload next p")
 
-            val p = BookDataset.getBookP(bookId)
+            val p = bookDataset.getBookP(bookId)
             val html = coroutineScope {
                 withContext(Dispatchers.IO) {
                     async { URL("${bookUrl}/?p=${p}").readText() }.await()
@@ -55,8 +56,8 @@ class EPictureFetcher (context: Context, bookId: String): APictureFetcher(contex
             val pageUrlSegment = Regex("https://e-hentai.org/s/(.*?)/${bookId}-(\\d+)").findAll(html).map { it.value }.toList()
             pageUrls.addAll(pageUrlSegment)
 
-            BookDataset.increaseBookP(bookId)
-            BookDataset.setBookPageUrls(bookId, pageUrls)
+            bookDataset.increaseBookP(bookId)
+            bookDataset.setBookPageUrls(bookId, pageUrls)
         }
         return pageUrls[page]
     }

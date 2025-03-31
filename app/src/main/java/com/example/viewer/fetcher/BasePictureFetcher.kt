@@ -2,6 +2,7 @@ package com.example.viewer.fetcher
 
 import android.content.Context
 import android.graphics.drawable.Drawable
+import android.widget.Toast
 import com.bumptech.glide.Glide
 import com.bumptech.glide.RequestBuilder
 import com.bumptech.glide.load.engine.DiskCacheStrategy
@@ -16,15 +17,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.withContext
 import okhttp3.Request
+import okhttp3.Response
 import java.io.File
 
-abstract class APictureFetcher (
+abstract class BasePictureFetcher (
     protected val context: Context, protected val bookId: String
 ): CoroutineScope by MainScope() {
     companion object {
-        fun getFetcher (context: Context, bookId: String): APictureFetcher {
-            val source = BookDataset.getBookSource(bookId)
-            println("[APictureFetcher.getFetcher] $source")
+        fun getFetcher (context: Context, bookId: String): BasePictureFetcher {
+            val source = BookDataset.getInstance(context).getBookSource(bookId)
+            println("[BasePictureFetcher.getFetcher] $source")
             return when (source) {
                 BookSource.E -> EPictureFetcher(context, bookId)
                 BookSource.Hi -> HiPictureFetcher(context, bookId)
@@ -34,13 +36,15 @@ abstract class APictureFetcher (
 
     abstract suspend fun savePicture (page: Int): Boolean
 
-    protected val pageNum: Int = BookDataset.getBookPageNum(bookId)
     private val fileGlide = Glide.with(context)
         .setDefaultRequestOptions(RequestOptions()
             .diskCacheStrategy(DiskCacheStrategy.NONE)
             .skipMemoryCache(true)
         ).asDrawable()
     private val downloadedPage = mutableSetOf<Int>()
+    private var downloadFailureCallback: ((Response) -> Unit)? = null
+
+    protected val pageNum: Int = BookDataset.getInstance(context).getBookPageNum(bookId)
 
     val bookFolder = File(context.getExternalFilesDir(null), bookId)
 
@@ -48,21 +52,32 @@ abstract class APictureFetcher (
         assertPageInRange(page)
 
         val pictureFile = File(bookFolder, page.toString())
-        println("[APictureFetcher.getPicture]\n${pictureFile.path}")
+        println("[BasePictureFetcher.getPicture]\n${pictureFile.path}")
 
         if (!pictureFile.exists()) {
+            // prevent multiple download
             if (downloadedPage.contains(page)) {
                 return null
             }
             downloadedPage.add(page)
 
-            val retFlag = savePicture(page)
-            if (!retFlag) {
+            if (!Util.isInternetAvailable(context)) {
+                Toast.makeText(context, "沒有網絡，無法下載", Toast.LENGTH_SHORT).show()
                 return null
+            }
+
+            savePicture(page).let { retFlag ->
+                if (!retFlag) {
+                    return null
+                }
             }
         }
 
         return fileGlide.listener(loadListener).load(pictureFile.path)
+    }
+
+    fun setDownloadFailureCallback (cb: (Response) -> Unit) {
+        downloadFailureCallback = cb
     }
 
     protected fun assertPageInRange (page: Int) {
@@ -71,8 +86,12 @@ abstract class APictureFetcher (
         }
     }
 
-    protected suspend fun downloadPicture (page: Int, url: String, headers: Map<String, String> = mapOf()): Boolean {
-        println("[APictureFetcher.downloadPicture] $url")
+    protected suspend fun downloadPicture (
+        page: Int,
+        url: String,
+        headers: Map<String, String> = mapOf()
+    ): Boolean {
+        println("[BasePictureFetcher.downloadPicture] $url")
 
         if(!Util.isInternetAvailable(context)) {
             return false
@@ -87,16 +106,11 @@ abstract class APictureFetcher (
         val request = requestBuilder.build()
         withContext(Dispatchers.IO) {
             okHttpClient.newCall(request).execute().use { response ->
-                if (response.code == 403) {
-                    throw Exception("[HiPictureFetcher.savePicture] code 403 when downloading picture")
+                if (response.isSuccessful) {
+                    file.outputStream().use { response.body!!.byteStream().copyTo(it) }
+                } else {
+                    downloadFailureCallback?.invoke(response)
                 }
-                if (response.code == 404) {
-                    throw Exception("[HiPictureFetcher.savePicture] code 404 when downloading picture")
-                }
-                if (!response.isSuccessful) {
-                    throw Exception("[HiPictureFetcher.savePicture] unexpected response code ${response.code} when downloading picture")
-                }
-                file.outputStream().use { response.body!!.byteStream().copyTo(it) }
             }
         }
         return true

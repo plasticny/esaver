@@ -4,7 +4,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:background="#EFEFEF">
+    android:background="@color/darkgrey">
 
     <TextView
         android:id="@+id/profile_dialog_bookId_textView"
@@ -45,7 +45,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/author"
-            android:textColor="@color/black"
+            android:textColor="@color/grey"
             android:textSize="20sp" />
 
         <ImageButton
@@ -60,6 +60,8 @@
             android:layout_width="240dp"
             android:layout_height="48dp"
             android:layout_marginStart="8dp"
+            android:textColor="@color/white"
+            android:backgroundTint="@color/grey"
             android:autofillHints="Author name"
             android:inputType="text" />
 
@@ -78,7 +80,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/cover_page"
-            android:textColor="@color/black"
+            android:textColor="@color/grey"
             android:textSize="20sp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -90,6 +92,8 @@
             android:layout_height="48dp"
             android:layout_marginStart="8dp"
             android:inputType="number"
+            android:textColor="@color/white"
+            android:backgroundTint="@color/grey"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toEndOf="@+id/profile_dialog_coverPage_textView"
             app:layout_constraintTop_toTopOf="parent" />
@@ -109,7 +113,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/skip_pages"
-            android:textColor="@color/black"
+            android:textColor="@color/grey"
             android:textSize="20sp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -121,22 +125,27 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:inputType="text"
+            android:textColor="@color/white"
+            android:backgroundTint="@color/grey"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toEndOf="@+id/profile_dialog_skipPage_TextView"
             app:layout_constraintTop_toTopOf="parent" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <Button
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/profile_dialog_apply_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="8dp"
-        android:text="@string/apply"
+        android:fontFamily="@font/font_awesome"
+        android:text="@string/fa_check"
+        android:textColor="@color/black"
+        android:theme="@style/Theme.MaterialComponents.Light"
+        android:backgroundTint="@color/grey"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/constraintLayout3"
-        app:layout_constraintVertical_bias="0.0" />
+        app:layout_constraintTop_toBottomOf="@+id/constraintLayout3"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

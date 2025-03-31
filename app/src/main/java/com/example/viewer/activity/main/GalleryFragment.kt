@@ -30,96 +30,44 @@ class GalleryFragment: Fragment() {
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
+    ): View {
         ctx = container!!.context
         binding = MainGalleryFragmentBinding.inflate(layoutInflater, container, false)
-        bookGallery = BookGallery(ctx, binding.recyclerView)
+        bookGallery = BookGallery(ctx, layoutInflater, binding.recyclerView)
 
-        binding.addImageView.setOnClickListener {
-            if (Util.isInternetAvailable(ctx)) {
-                showAddDialog()
-            }
-            else {
-                Toast.makeText(ctx, "沒有連接網絡", Toast.LENGTH_SHORT).show()
-            }
-        }
+//        binding.addImageView.setOnClickListener {
+//            if (Util.isInternetAvailable(ctx)) {
+//                showAddDialog()
+//            } else {
+//                Toast.makeText(ctx, "沒有網絡", Toast.LENGTH_SHORT).show()
+//            }
+//        }
 
-        binding.randomOpenImageView.setOnClickListener {
+        binding.randomOpenButton.setOnClickListener {
             bookGallery.openRandomBook()
         }
 
-        binding.galleryTextAll.setOnClickListener {
-            bookGallery.applyFilter()
-            binding.galleryTextAll.setTextColor(ContextCompat.getColor(ctx, R.color.white))
-            binding.galleryTextDownloaded.setTextColor(ContextCompat.getColor(ctx, R.color.grey))
-            binding.galleryTextNotDownloaded.setTextColor(ContextCompat.getColor(ctx, R.color.grey))
-        }
-        binding.galleryTextDownloaded.setOnClickListener {
-            bookGallery.applyFilter(true)
-            binding.galleryTextAll.setTextColor(ContextCompat.getColor(ctx, R.color.grey))
-            binding.galleryTextDownloaded.setTextColor(ContextCompat.getColor(ctx, R.color.white))
-            binding.galleryTextNotDownloaded.setTextColor(ContextCompat.getColor(ctx, R.color.grey))
-        }
-        binding.galleryTextNotDownloaded.setOnClickListener {
-            bookGallery.applyFilter(false)
-            binding.galleryTextAll.setTextColor(ContextCompat.getColor(ctx, R.color.grey))
-            binding.galleryTextDownloaded.setTextColor(ContextCompat.getColor(ctx, R.color.grey))
-            binding.galleryTextNotDownloaded.setTextColor(ContextCompat.getColor(ctx, R.color.white))
-        }
+//        binding.galleryTextAll.setOnClickListener {
+//            bookGallery.applyFilter()
+//            binding.galleryTextAll.setTextColor(ContextCompat.getColor(ctx, R.color.white))
+//            binding.galleryTextDownloaded.setTextColor(ContextCompat.getColor(ctx, R.color.grey))
+//            binding.galleryTextNotDownloaded.setTextColor(ContextCompat.getColor(ctx, R.color.grey))
+//        }
+//        binding.galleryTextDownloaded.setOnClickListener {
+//            bookGallery.applyFilter(true)
+//            binding.galleryTextAll.setTextColor(ContextCompat.getColor(ctx, R.color.grey))
+//            binding.galleryTextDownloaded.setTextColor(ContextCompat.getColor(ctx, R.color.white))
+//            binding.galleryTextNotDownloaded.setTextColor(ContextCompat.getColor(ctx, R.color.grey))
+//        }
+//        binding.galleryTextNotDownloaded.setOnClickListener {
+//            bookGallery.applyFilter(false)
+//            binding.galleryTextAll.setTextColor(ContextCompat.getColor(ctx, R.color.grey))
+//            binding.galleryTextDownloaded.setTextColor(ContextCompat.getColor(ctx, R.color.grey))
+//            binding.galleryTextNotDownloaded.setTextColor(ContextCompat.getColor(ctx, R.color.white))
+//        }
 
         return binding.root
     }
-
-//    override fun onCreate(savedInstanceState: Bundle?) {
-//        super.onCreate(savedInstanceState)
-//        setContentView(R.layout.gallery_fragment)
-//
-//        History.init(this)
-//
-//        bookGallery = BookGallery(this, this.findViewById(R.id.recycler_view))
-//
-//        addImgView = findViewById(R.id.add_image_view)
-//        addImgView.setOnClickListener {
-//            if (Util.isInternetAvailable(this)) {
-//                showAddDialog()
-//            }
-//            else {
-//                Toast.makeText(this, "沒有連接網絡", Toast.LENGTH_SHORT).show()
-//            }
-//        }
-//
-//        randomOpenImgView = findViewById(R.id.random_open_imageView)
-//        randomOpenImgView.setOnClickListener {
-//            bookGallery.openRandomBook()
-//        }
-//
-//        tmpImgView = findViewById(R.id.tmp_image_vew)
-//        progressBar = findViewById(R.id.gallery_progress_bar)
-//
-//        textViewAll = findViewById(R.id.gallery_text_all)
-//        textViewAll.setOnClickListener {
-//            bookGallery.applyFilter()
-//            textViewAll.setTextColor(ContextCompat.getColor(this, R.color.white))
-//            textViewDownloaded.setTextColor(ContextCompat.getColor(this, R.color.grey))
-//            textViewNotDownloaded.setTextColor(ContextCompat.getColor(this, R.color.grey))
-//        }
-//
-//        textViewDownloaded = findViewById(R.id.gallery_text_downloaded)
-//        textViewDownloaded.setOnClickListener {
-//            bookGallery.applyFilter(true)
-//            textViewAll.setTextColor(ContextCompat.getColor(this, R.color.grey))
-//            textViewDownloaded.setTextColor(ContextCompat.getColor(this, R.color.white))
-//            textViewNotDownloaded.setTextColor(ContextCompat.getColor(this, R.color.grey))
-//        }
-//
-//        textViewNotDownloaded = findViewById(R.id.gallery_text_not_downloaded)
-//        textViewNotDownloaded.setOnClickListener {
-//            bookGallery.applyFilter(false)
-//            textViewAll.setTextColor(ContextCompat.getColor(this, R.color.grey))
-//            textViewDownloaded.setTextColor(ContextCompat.getColor(this, R.color.grey))
-//            textViewNotDownloaded.setTextColor(ContextCompat.getColor(this, R.color.white))
-//        }
-//    }
 
     override fun onResume() {
         super.onResume()

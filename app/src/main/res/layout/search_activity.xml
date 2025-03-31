@@ -15,16 +15,32 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-        <GridLayout
-            android:id="@+id/search_book_wrapper"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="8dp"
-            android:columnCount="2">
+            android:orientation="vertical">
 
-            <!--  some search_book.xml will be added here  -->
+            <GridLayout
+                android:id="@+id/search_book_wrapper"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:columnCount="2">
 
-        </GridLayout>
+                <!--  some search_book.xml will be added here  -->
+
+            </GridLayout>
+
+            <Button
+                android:id="@+id/load_more_button"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:backgroundTint="@color/darkgrey"
+                android:layout_marginHorizontal="8dp"
+                android:text="@string/load_more"
+                android:textColor="@color/grey" />
+
+        </LinearLayout>
 
     </ScrollView>
 
@@ -59,7 +75,7 @@
             android:maxLines="1"
             android:paddingHorizontal="8dp"
             android:textColor="@color/grey"
-            android:textSize="24sp" />
+            android:textSize="18sp" />
 
         <Button
             android:id="@+id/next_search_mark_button"
