@@ -93,6 +93,7 @@ class SearchActivity: AppCompatActivity() {
         searchMarkId = intent.getIntExtra("searchMarkId", -1)
         searchMark = searchDataSet.getSearchMark(searchMarkId)
 
+        // search mark position
         position = allSearchMarkIds.indexOf(searchMarkId)
 
         binding = SearchActivityBinding.inflate(layoutInflater)
@@ -236,7 +237,7 @@ class SearchActivity: AppCompatActivity() {
                 pageNum = book.select(".gl3e div").let { divs ->
                     for (div in divs.reversed()) {
                         val text = div.text()
-                        if (text.endsWith(" pages")) {
+                        if (text.endsWith(" pages") || text.endsWith(" page")) {
                             return@let text.trim().split(' ').first().toInt()
                         }
                     }
