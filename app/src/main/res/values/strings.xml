@@ -48,4 +48,6 @@
     <string name="non_h">非H</string>
     <string name="backup">備份</string>
     <string name="other">其他</string>
+    <string name="bookmark">書籤</string>
+    <string name="no_bookmark">沒有書籤</string>
 </resources>

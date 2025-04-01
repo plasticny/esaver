@@ -1,13 +1,11 @@
 package com.example.viewer.activity.viewer
 
-import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.view.KeyEvent
-import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import com.bumptech.glide.load.DataSource
@@ -16,11 +14,8 @@ import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
 import com.example.viewer.fetcher.BasePictureFetcher
 import com.example.viewer.database.BookDatabase
-import com.example.viewer.R
 import com.example.viewer.RandomBook
 import com.example.viewer.Util
-import com.example.viewer.databinding.BookmarkDialogBinding
-import com.example.viewer.databinding.BookmarkItemBinding
 import com.example.viewer.databinding.ViewerImageDialogBinding
 import com.example.viewer.dialog.BookmarkDialog
 import kotlinx.coroutines.CoroutineScope

@@ -12,7 +12,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="書籤"
+        android:text="@string/bookmark"
         android:textColor="@color/grey"
         android:textSize="16sp"/>
 
@@ -41,7 +41,7 @@
         android:layout_marginTop="8dp"
         android:gravity="center"
         android:visibility="gone"
-        android:text="沒有書籤"
+        android:text="@string/no_bookmark"
         android:textColor="@color/white"
         android:textSize="16sp"/>
 
