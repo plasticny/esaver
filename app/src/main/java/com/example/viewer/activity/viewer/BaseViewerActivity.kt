@@ -17,6 +17,7 @@ abstract class BaseViewerActivity: AppCompatActivity() {
     }
 
     protected abstract fun onImageLongClicked(): Boolean
+    protected abstract fun onPageTextClicked()
     protected abstract fun loadPage()
     protected abstract fun prevPage()
     protected abstract fun nextPage()
@@ -61,13 +62,17 @@ abstract class BaseViewerActivity: AppCompatActivity() {
         )
         val detector = GestureDetector(this, listener)
 
-        viewerActivityBinding.viewerPageTextView.setOnTouchListener { v, event ->
+        viewerActivityBinding.pageTextViewContainer.setOnTouchListener { v, event ->
             v.performClick()
             detector.onTouchEvent(event)
             if (event.action == MotionEvent.ACTION_UP) {
                 listener.reset()
             }
             true
+        }
+
+        viewerActivityBinding.viewerPageTextView.setOnClickListener {
+            onPageTextClicked()
         }
     }
 }

@@ -1,9 +1,7 @@
-package com.example.viewer.dataset
+package com.example.viewer.database
 
 import android.content.Context
-import android.nfc.Tag
 import android.os.Environment
-import androidx.compose.runtime.key
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.byteArrayPreferencesKey
@@ -12,21 +10,20 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.viewer.R
 import java.io.File
-import java.io.Serializable
 
 typealias Tags = Map<String, List<String>>
 
 private const val DB_NAME = "search"
 private val Context.searchDataStore: DataStore<Preferences> by preferencesDataStore(name = DB_NAME)
 
-class SearchDataset (context: Context): BaseDataset() {
+class SearchDatabase (context: Context): BaseDatabase() {
     companion object {
         const val TAG = "searchDB"
 
         @Volatile
-        private var instance: SearchDataset? = null
+        private var instance: SearchDatabase? = null
         fun getInstance (context: Context) = instance ?: synchronized(this) {
-            instance ?: SearchDataset(context).also { instance = it }
+            instance ?: SearchDatabase(context).also { instance = it }
         }
 
         data class SearchMark (

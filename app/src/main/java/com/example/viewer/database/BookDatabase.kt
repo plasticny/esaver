@@ -1,4 +1,4 @@
-package com.example.viewer.dataset
+package com.example.viewer.database
 
 import android.content.Context
 import android.os.Environment
@@ -19,14 +19,14 @@ enum class BookSource (val keyString: String) {
 private const val DB_NAME = "book"
 private val Context.bookDataStore: DataStore<Preferences> by preferencesDataStore(name = DB_NAME)
 
-class BookDataset (context: Context): BaseDataset() {
+class BookDatabase (context: Context): BaseDatabase() {
     companion object {
         const val NO_AUTHOR = "NoAuthor"
 
         @Volatile
-        private var instance: BookDataset? = null
+        private var instance: BookDatabase? = null
         fun getInstance (context: Context) = instance ?: synchronized(this) {
-            instance ?: BookDataset(context).also { instance = it }
+            instance ?: BookDatabase(context).also { instance = it }
         }
 
         data class Book (
@@ -91,6 +91,14 @@ class BookDataset (context: Context): BaseDataset() {
             assertBookIdExist(bookId)
             return longPreferencesKey("${bookId}_lastViewTime")
         }
+        /**
+         * type in db: int array
+         * store page of the book mark, start from 0
+         */
+        fun bookBookMarks (bookId: String): Preferences.Key<ByteArray> {
+            assertBookIdExist(bookId)
+            return byteArrayPreferencesKey("${bookId}_bookmarks")
+        }
         // -----------
         // author
         fun allAuthors () = byteArrayPreferencesKey("authors")
@@ -138,6 +146,7 @@ class BookDataset (context: Context): BaseDataset() {
             remove(storeKeys.bookCoverPage(id))
             remove(storeKeys.bookSkipPages(id))
             remove(storeKeys.bookLastViewTime(id))
+            remove(storeKeys.bookBookMarks(id))
 
             if (getBookSource(id) == BookSource.E) {
                 remove(storeKeys.bookPageUrls(id))
@@ -176,6 +185,22 @@ class BookDataset (context: Context): BaseDataset() {
             assertAuthorExist(oldAuthor)
             authors.remove(oldAuthor)
             storeAsByteArray(storeKeys.allAuthors(), authors)
+        }
+    }
+
+    fun getBookMarks (bookId: String) = readFromByteArray<List<Int>>(storeKeys.bookBookMarks(bookId)) ?: listOf()
+    fun addBookMark (bookId: String, page: Int) {
+        val bookmarks = getBookMarks(bookId).toMutableList()
+        bookmarks.add(page)
+        storeAsByteArray(storeKeys.bookBookMarks(bookId), bookmarks.sorted())
+    }
+    fun removeBookMark (bookId: String, page: Int) {
+        val bookmarks = getBookMarks(bookId).toMutableList()
+        bookmarks.remove(page).let { retFlag ->
+            if (!retFlag) {
+                throw Exception("the bookmark page $page is not exist")
+            }
+            storeAsByteArray(storeKeys.bookBookMarks(bookId), bookmarks)
         }
     }
 

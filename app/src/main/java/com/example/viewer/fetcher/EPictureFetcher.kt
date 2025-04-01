@@ -1,7 +1,7 @@
 package com.example.viewer.fetcher
 
 import android.content.Context
-import com.example.viewer.dataset.BookDataset
+import com.example.viewer.database.BookDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -14,7 +14,7 @@ class EPictureFetcher (context: Context, bookId: String): BasePictureFetcher(con
         private const val URL_START_TAG = "src=\""
     }
 
-    private val bookDataset = BookDataset.getInstance(context)
+    private val bookDataset = BookDatabase.getInstance(context)
     private val bookUrl: String = bookDataset.getBookUrl(bookId)
     private var pageUrls: MutableList<String> = bookDataset.getBookPageUrls(bookId).toMutableList()
 

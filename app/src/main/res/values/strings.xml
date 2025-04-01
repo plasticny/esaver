@@ -10,6 +10,8 @@
     <string name="fa_check">\uf00c</string>
     <string name="fa_filter_circle_xmark">\ue17b</string>
     <string name="fa_play">\uf04b</string>
+    <string name="fa_right_to_bracket">\uf2f6</string>
+    <string name="fa_bookmark">\uf02e</string>
 <!--  strings  -->
     <string name="app_name">eSaver</string>
     <string name="enter_url">輸入URL</string>
