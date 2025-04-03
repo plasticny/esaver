@@ -248,6 +248,11 @@ class LocalViewerActivity: BaseViewerActivity() {
             }
         }
 
+        dialogViewBinding.reloadButton.setOnClickListener {
+            loadPage()
+            dialog.dismiss()
+        }
+
         dialog.show()
     }
 
