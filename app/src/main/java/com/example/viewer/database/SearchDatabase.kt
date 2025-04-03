@@ -6,6 +6,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.byteArrayPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.viewer.R
@@ -81,6 +82,7 @@ class SearchDatabase (context: Context): BaseDatabase() {
         fun searchMarkKeyword (id: Int) = stringPreferencesKey("${TAG}_searchMarkKeyword_$id")
         fun searchMarkTags (id: Int) = byteArrayPreferencesKey("${TAG}_searchMarkTags_$id")
         fun excludeTags () = byteArrayPreferencesKey("${TAG}_excludeTags")
+        fun excludeTagLastUpdate () = longPreferencesKey("${TAG}_excludeTagLastUpdate")
     }
 
     private fun getNextId (): Int {
@@ -152,7 +154,11 @@ class SearchDatabase (context: Context): BaseDatabase() {
     // exclude tag
     //
     fun getExcludeTag () = readFromByteArray<Tags>(keys.excludeTags()) ?: mapOf()
-    fun storeExcludeTag (v: Tags) = storeAsByteArray(keys.excludeTags(), v)
+    fun storeExcludeTag (v: Tags) {
+        storeAsByteArray(keys.excludeTags(), v)
+        store(keys.excludeTagLastUpdate(), System.currentTimeMillis())
+    }
+    fun lastExcludeTagUpdateTime () = read(keys.excludeTagLastUpdate()) ?: 0
 
     //
     // backup

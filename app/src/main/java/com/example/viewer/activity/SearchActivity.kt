@@ -81,14 +81,15 @@ class SearchActivity: AppCompatActivity() {
     private var searchMarkId = -1
     private var position = -1
     private var next: String? = null
-    private var paused = false // for detecting user went to other page and came back
     private var bookRecords = mutableListOf<BookRecord>()
+    private var lastExcludeTagUpdateTime = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         searchDataSet = SearchDatabase.getInstance(baseContext)
         allSearchMarkIds = searchDataSet.getAllSearchMarkIds()
+        lastExcludeTagUpdateTime = searchDataSet.lastExcludeTagUpdateTime()
 
         searchMarkId = intent.getIntExtra("searchMarkId", -1)
         searchMark = searchDataSet.getSearchMark(searchMarkId)
@@ -133,20 +134,17 @@ class SearchActivity: AppCompatActivity() {
         lifecycleScope.launch { reset() }
     }
 
-    override fun onPause() {
-        super.onPause()
-        paused = true
-    }
-
     override fun onResume() {
         super.onResume()
         // after paused, the exclude tags may updated, do the filter again
-        if (paused) {
-            println("[SearchActivity.onResume] re-filter books")
-            binding.searchBookWrapper.removeAllViews()
-            bookRecords = excludeTagFilter(bookRecords).toMutableList()
-            addBookViews(bookRecords)
-            paused = false
+        searchDataSet.lastExcludeTagUpdateTime().let { newTime ->
+            if (newTime != lastExcludeTagUpdateTime) {
+                println("[${this::class.simpleName}.${this::onResume.name}] re-filter books")
+                binding.searchBookWrapper.removeAllViews()
+                bookRecords = excludeTagFilter(bookRecords).toMutableList()
+                addBookViews(bookRecords)
+                lastExcludeTagUpdateTime = newTime
+            }
         }
     }
 
