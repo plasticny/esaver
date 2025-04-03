@@ -92,7 +92,7 @@ class BookGallery (
 
         dialogViewBinding.profileDialogBookIdTextView.text = bookId
 
-        dialogViewBinding.profileDialogDeleteImageView.setOnClickListener {
+        dialogViewBinding.deleteButton.setOnClickListener {
             ConfirmDialog(context, layoutInflater).show(
                 context.getString(R.string.doDelete),
                 positiveCallback = {
@@ -105,7 +105,7 @@ class BookGallery (
             )
         }
 
-        dialogViewBinding.profileDialogSearchAuthorImageButton.setOnClickListener {
+        dialogViewBinding.searchAuthorButton.setOnClickListener {
             if (bookDataset.getUserAuthors().isEmpty()) {
                 Toast.makeText(context, "沒有作者可以選擇", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
