@@ -2,6 +2,7 @@ package com.example.viewer.activity.viewer
 
 import android.graphics.drawable.Drawable
 import android.os.Bundle
+import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DataSource
@@ -49,7 +50,10 @@ class OnlineViewerActivity: BaseViewerActivity() {
                 .listener(object: RequestListener<Drawable> {
                     override fun onLoadFailed(
                         e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean
-                    ): Boolean = loadEnded()
+                    ): Boolean {
+                        Toast.makeText(this@OnlineViewerActivity, "讀取圖片失敗", Toast.LENGTH_SHORT).show()
+                        return loadEnded()
+                    }
 
                     override fun onResourceReady(
                         resource: Drawable?, model: Any?, target: Target<Drawable>?, dataSource: DataSource?, isFirstResource: Boolean
@@ -64,6 +68,15 @@ class OnlineViewerActivity: BaseViewerActivity() {
                         into(viewerActivityBinding.photoView)
                     }
                 }
+        }
+
+        // pre-load next page
+        if (page + 1 <= lastPage) {
+            lifecycleScope.launch {
+                Glide.with(baseContext)
+                    .load(withContext(Dispatchers.IO) { getPictureUrl(page + 1) })
+                    .into(viewerActivityBinding.viewerTmpImageVew)
+            }
         }
     }
 
@@ -82,6 +95,8 @@ class OnlineViewerActivity: BaseViewerActivity() {
     }
 
     private suspend fun getPictureUrl (page: Int): String {
+        println("[${this::class.simpleName}.${this::getPageUrl.name}] $page")
+
         if (page < firstPage || page > lastPage) {
             throw Exception("page out of range")
         }
