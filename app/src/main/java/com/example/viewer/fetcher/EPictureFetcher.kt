@@ -6,6 +6,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
+import org.jsoup.Jsoup
 import java.net.URL
 
 class EPictureFetcher (context: Context, bookId: String): BasePictureFetcher(context, bookId) {
@@ -46,15 +47,11 @@ class EPictureFetcher (context: Context, bookId: String): BasePictureFetcher(con
         if (page > pageUrls.lastIndex) {
             println("[EPictureFetcher.getPageUrl]\nload next p")
 
-            val p = bookDataset.getBookP(bookId)
-            val html = coroutineScope {
-                withContext(Dispatchers.IO) {
-                    async { URL("${bookUrl}/?p=${p}").readText() }.await()
-                }
+            withContext(Dispatchers.IO) {
+                Jsoup.connect("${bookUrl}/?p=${bookDataset.getBookP(bookId)}").get()
+            }.select("#gdt a").map { it.attr("href") }.let {
+                pageUrlSegment -> pageUrls.addAll(pageUrlSegment)
             }
-
-            val pageUrlSegment = Regex("https://e-hentai.org/s/(.*?)/${bookId}-(\\d+)").findAll(html).map { it.value }.toList()
-            pageUrls.addAll(pageUrlSegment)
 
             bookDataset.increaseBookP(bookId)
             bookDataset.setBookPageUrls(bookId, pageUrls)
