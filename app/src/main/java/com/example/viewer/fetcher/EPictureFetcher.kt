@@ -1,28 +1,31 @@
 package com.example.viewer.fetcher
 
 import android.content.Context
-import androidx.navigation.serialization.generateRouteWithArgs
 import com.example.viewer.database.BookDatabase
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
-import java.net.URL
 
-class EPictureFetcher (context: Context, bookId: String): BasePictureFetcher(context, bookId) {
-    companion object {
-        private const val I3_TAG = "<div id=\"i3\">"
-        private const val URL_START_TAG = "src=\""
-    }
-
+class EPictureFetcher: BasePictureFetcher {
     private val bookDataset = BookDatabase.getInstance(context)
-    private val bookUrl: String = bookDataset.getBookUrl(bookId)
-    private var pageUrls: MutableList<String> = bookDataset.getBookPageUrls(bookId).toMutableList()
+    private val bookUrl: String
 
     @Volatile
     private var gettingPageUrl = false
+    private var pageUrls: MutableList<String>
+    private var p: Int
+
+    constructor (context: Context, bookId: String): super(context, bookId) {
+        p = bookDataset.getBookP(bookId)
+        bookUrl = bookDataset.getBookUrl(bookId)
+        pageUrls = bookDataset.getBookPageUrls(bookId).toMutableList()
+    }
+
+    constructor (context: Context, pageNum: Int, bookUrl: String): super(context, pageNum) {
+        p = 0
+        this.bookUrl = bookUrl
+        pageUrls = mutableListOf()
+    }
 
     override suspend fun savePicture(page: Int): Boolean {
         println("[EPictureFetcher.savePicture] $page")
@@ -32,18 +35,16 @@ class EPictureFetcher (context: Context, bookId: String): BasePictureFetcher(con
         return downloadPicture(page, url)
     }
 
-    private suspend fun fetchPictureUrl (page: Int): String {
-        println("[EPictureFetcher.fetchPictureUrl] $page")
-        val pageUrl = getPageUrl(page)
-        val pageText = withContext(Dispatchers.IO) {
-            async { URL(pageUrl).readText() }.await()
+    suspend fun fetchPictureUrl (page: Int): String {
+        println("[${this::class.simpleName}.${this::fetchPictureUrl.name}] $page")
+
+        if (page >= pageNum) {
+            throw Exception("page out of range")
         }
 
-        val i3Idx = pageText.indexOf(I3_TAG)
-        val startUrlIdx = pageText.indexOf(URL_START_TAG, i3Idx + I3_TAG.length)
-        val endUrlIdx = pageText.indexOf("\"", startUrlIdx + URL_START_TAG.length)
-
-        return pageText.substring(startUrlIdx + URL_START_TAG.length, endUrlIdx)
+        return withContext(Dispatchers.IO) {
+            Jsoup.connect(getPageUrl(page)).get()
+        }.selectFirst("#i3 #img")!!.attr("src")
     }
 
     private suspend fun getPageUrl (page: Int): String {
@@ -56,8 +57,6 @@ class EPictureFetcher (context: Context, bookId: String): BasePictureFetcher(con
         if (page > pageUrls.lastIndex) {
             gettingPageUrl = true
 
-            val p = bookDataset.getBookP(bookId)
-
             println("[${this::class.simpleName}.${this::getPageUrl.name}] load next p $p")
 
             withContext(Dispatchers.IO) {
@@ -66,8 +65,15 @@ class EPictureFetcher (context: Context, bookId: String): BasePictureFetcher(con
                 pageUrlSegment -> pageUrls.addAll(pageUrlSegment)
             }
 
-            bookDataset.increaseBookP(bookId)
-            bookDataset.setBookPageUrls(bookId, pageUrls)
+            if (isLocal) {
+                // save progress if local fetcher
+                bookId!!.let {
+                    p = bookDataset.increaseBookP(bookId)
+                    bookDataset.setBookPageUrls(bookId, pageUrls)
+                }
+            } else {
+                p++
+            }
 
             gettingPageUrl = false
         }

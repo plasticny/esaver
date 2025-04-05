@@ -45,7 +45,7 @@ class LocalViewerActivity: BaseViewerActivity() {
     private var volumeDownKeyHeld = false
 
     private val bookFolder: File
-        get() = fetcher.bookFolder
+        get() = fetcher.bookFolder!!
 
     override fun onCreate(savedInstanceState: Bundle?) {
         bookDataset = BookDatabase.getInstance(baseContext)

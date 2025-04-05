@@ -10,20 +10,15 @@ import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
 import com.example.viewer.activity.SearchActivity.Companion.BookRecord
+import com.example.viewer.fetcher.EPictureFetcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.jsoup.Jsoup
 
 class OnlineViewerActivity: BaseViewerActivity() {
     private lateinit var bookRecord: BookRecord
-    private lateinit var pageUrls: MutableList<String?>
+    private lateinit var fetcher: EPictureFetcher
     private lateinit var pictureUrls: MutableList<String?>
-
-    private var p = 0
-
-    @Volatile
-    private var gettingPageUrl = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         bookRecord = intent.getParcelableExtra("book_record", BookRecord::class.java)!!
@@ -31,7 +26,7 @@ class OnlineViewerActivity: BaseViewerActivity() {
         firstPage = 0
         lastPage = bookRecord.pageNum - 1
 
-        pageUrls = MutableList(bookRecord.pageNum) { null }
+        fetcher = EPictureFetcher(this, pageNum = bookRecord.pageNum, bookUrl = bookRecord.url)
         pictureUrls = MutableList(bookRecord.pageNum) { null }
 
         super.onCreate(savedInstanceState)
@@ -98,47 +93,16 @@ class OnlineViewerActivity: BaseViewerActivity() {
     }
 
     private suspend fun getPictureUrl (page: Int): String {
-        println("[${this::class.simpleName}.${this::getPageUrl.name}] $page")
+        println("[${this::class.simpleName}.${this::getPictureUrl.name}] $page")
 
         if (page < firstPage || page > lastPage) {
             throw Exception("page out of range")
         }
 
         if (pictureUrls[page] == null) {
-            pictureUrls[page] = withContext(Dispatchers.IO) {
-                Jsoup.connect(getPageUrl(page)).get()
-            }.selectFirst("#i3 #img")!!.attr("src")
+            pictureUrls[page] = fetcher.fetchPictureUrl(page)
         }
 
         return pictureUrls[page]!!
-    }
-
-    private suspend fun getPageUrl (page: Int): String {
-        if (page < firstPage || page > lastPage) {
-            throw Exception("page out of range")
-        }
-
-        while (gettingPageUrl) {
-            withContext(Dispatchers.IO) {
-                Thread.sleep(100)
-            }
-        }
-
-        if (pageUrls[page] == null) {
-            gettingPageUrl = true
-
-            withContext(Dispatchers.IO) {
-                Jsoup.connect("${bookRecord.url}/?p=${p++}").get()
-            }.select("#gdt a").forEach {
-                val idx = it.selectFirst("div")!!.attr("title").let { title ->
-                    title.split(':').first().let { token -> token.slice(5..token.lastIndex) }
-                }.toInt() - 1
-                pageUrls[idx] = it.attr("href")
-            }
-
-            gettingPageUrl = false
-        }
-
-        return pageUrls[page]!!
     }
 }

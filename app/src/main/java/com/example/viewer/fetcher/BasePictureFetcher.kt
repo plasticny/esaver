@@ -12,17 +12,13 @@ import com.example.viewer.database.BookSource
 import com.example.viewer.database.BookDatabase
 import com.example.viewer.Util
 import com.example.viewer.fetcher.HiPictureFetcher.Companion.okHttpClient
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.withContext
 import okhttp3.Request
 import okhttp3.Response
 import java.io.File
 
-abstract class BasePictureFetcher (
-    protected val context: Context, protected val bookId: String
-): CoroutineScope by MainScope() {
+abstract class BasePictureFetcher {
     companion object {
         fun getFetcher (context: Context, bookId: String): BasePictureFetcher {
             val source = BookDatabase.getInstance(context).getBookSource(bookId)
@@ -36,20 +32,50 @@ abstract class BasePictureFetcher (
 
     abstract suspend fun savePicture (page: Int): Boolean
 
-    private val fileGlide = Glide.with(context)
-        .setDefaultRequestOptions(RequestOptions()
-            .diskCacheStrategy(DiskCacheStrategy.NONE)
-            .skipMemoryCache(true)
-        ).asDrawable()
+    private val fileGlide: RequestBuilder<Drawable>
     private val downloadedPage = mutableSetOf<Int>()
     private var downloadFailureCallback: ((Response) -> Unit)? = null
 
-    protected val pageNum: Int = BookDatabase.getInstance(context).getBookPageNum(bookId)
+    protected val context: Context
+    protected val bookId: String?
+    protected val pageNum: Int
+    protected val isLocal: Boolean
 
-    val bookFolder = File(context.getExternalFilesDir(null), bookId)
+    val bookFolder: File?
+
+    /**
+     * for local book
+     */
+    protected constructor (context: Context, bookId: String) {
+        this.context = context
+        this.bookId = bookId
+
+        fileGlide = Glide.with(context).asDrawable()
+//            .setDefaultRequestOptions(RequestOptions()
+//                .diskCacheStrategy(DiskCacheStrategy.NONE)
+//                .skipMemoryCache(true)
+//            ).asDrawable()
+        pageNum = BookDatabase.getInstance(context).getBookPageNum(bookId)
+        bookFolder = File(context.getExternalFilesDir(null), bookId)
+        isLocal = true
+    }
+
+    /**
+     * for online book
+     */
+    protected constructor (context: Context, pageNum: Int) {
+        this.context = context
+        this.pageNum = pageNum
+        this.bookId = null
+        this.bookFolder = null
+
+        fileGlide = Glide.with(context).asDrawable()
+        isLocal = false
+    }
 
     suspend fun getPicture (page: Int, loadListener: RequestListener<Drawable>? = null): RequestBuilder<Drawable>? {
         assertPageInRange(page)
+        assertCallByLocalBookFetcher()
 
         val pictureFile = File(bookFolder, page.toString())
         println("[BasePictureFetcher.getPicture]\n${pictureFile.path}")
@@ -80,18 +106,14 @@ abstract class BasePictureFetcher (
         downloadFailureCallback = cb
     }
 
-    protected fun assertPageInRange (page: Int) {
-        if (page < 0 || page >= pageNum) {
-            throw Exception("page out of range")
-        }
-    }
-
     protected suspend fun downloadPicture (
         page: Int,
         url: String,
         headers: Map<String, String> = mapOf()
     ): Boolean {
         println("[BasePictureFetcher.downloadPicture] $url")
+
+        assertCallByLocalBookFetcher()
 
         if(!Util.isInternetAvailable(context)) {
             return false
@@ -114,5 +136,17 @@ abstract class BasePictureFetcher (
             }
         }
         return true
+    }
+
+    protected fun assertPageInRange (page: Int) {
+        if (page < 0 || page >= pageNum) {
+            throw Exception("page out of range")
+        }
+    }
+
+    private fun assertCallByLocalBookFetcher () {
+        if (bookFolder == null) {
+            throw Exception("only fetcher construct with local book config call this function")
+        }
     }
 }
