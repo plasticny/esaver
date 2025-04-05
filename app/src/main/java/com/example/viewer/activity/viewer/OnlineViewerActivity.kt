@@ -22,6 +22,9 @@ class OnlineViewerActivity: BaseViewerActivity() {
 
     private var p = 0
 
+    @Volatile
+    private var gettingPageUrl = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         bookRecord = intent.getParcelableExtra("book_record", BookRecord::class.java)!!
         page = 0
@@ -115,7 +118,15 @@ class OnlineViewerActivity: BaseViewerActivity() {
             throw Exception("page out of range")
         }
 
+        while (gettingPageUrl) {
+            withContext(Dispatchers.IO) {
+                Thread.sleep(100)
+            }
+        }
+
         if (pageUrls[page] == null) {
+            gettingPageUrl = true
+
             withContext(Dispatchers.IO) {
                 Jsoup.connect("${bookRecord.url}/?p=${p++}").get()
             }.select("#gdt a").forEach {
@@ -124,6 +135,8 @@ class OnlineViewerActivity: BaseViewerActivity() {
                 }.toInt() - 1
                 pageUrls[idx] = it.attr("href")
             }
+
+            gettingPageUrl = false
         }
 
         return pageUrls[page]!!

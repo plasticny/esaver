@@ -1,10 +1,12 @@
 package com.example.viewer.fetcher
 
 import android.content.Context
+import androidx.navigation.serialization.generateRouteWithArgs
 import com.example.viewer.database.BookDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
 import java.net.URL
@@ -19,6 +21,9 @@ class EPictureFetcher (context: Context, bookId: String): BasePictureFetcher(con
     private val bookUrl: String = bookDataset.getBookUrl(bookId)
     private var pageUrls: MutableList<String> = bookDataset.getBookPageUrls(bookId).toMutableList()
 
+    @Volatile
+    private var gettingPageUrl = false
+
     override suspend fun savePicture(page: Int): Boolean {
         println("[EPictureFetcher.savePicture] $page")
         assertPageInRange(page)
@@ -30,10 +35,8 @@ class EPictureFetcher (context: Context, bookId: String): BasePictureFetcher(con
     private suspend fun fetchPictureUrl (page: Int): String {
         println("[EPictureFetcher.fetchPictureUrl] $page")
         val pageUrl = getPageUrl(page)
-        val pageText = coroutineScope {
-            withContext(Dispatchers.IO) {
-                async { URL(pageUrl).readText() }.await()
-            }
+        val pageText = withContext(Dispatchers.IO) {
+            async { URL(pageUrl).readText() }.await()
         }
 
         val i3Idx = pageText.indexOf(I3_TAG)
@@ -44,17 +47,29 @@ class EPictureFetcher (context: Context, bookId: String): BasePictureFetcher(con
     }
 
     private suspend fun getPageUrl (page: Int): String {
+        while (gettingPageUrl) {
+            withContext(Dispatchers.IO) {
+                Thread.sleep(100)
+            }
+        }
+
         if (page > pageUrls.lastIndex) {
-            println("[EPictureFetcher.getPageUrl]\nload next p")
+            gettingPageUrl = true
+
+            val p = bookDataset.getBookP(bookId)
+
+            println("[${this::class.simpleName}.${this::getPageUrl.name}] load next p $p")
 
             withContext(Dispatchers.IO) {
-                Jsoup.connect("${bookUrl}/?p=${bookDataset.getBookP(bookId)}").get()
+                Jsoup.connect("${bookUrl}/?p=$p").get()
             }.select("#gdt a").map { it.attr("href") }.let {
                 pageUrlSegment -> pageUrls.addAll(pageUrlSegment)
             }
 
             bookDataset.increaseBookP(bookId)
             bookDataset.setBookPageUrls(bookId, pageUrls)
+
+            gettingPageUrl = false
         }
         return pageUrls[page]
     }
