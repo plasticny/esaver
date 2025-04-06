@@ -54,6 +54,10 @@ class LocalViewerActivity: BaseViewerActivity() {
         prepareBook(bookId)
 
         super.onCreate(savedInstanceState)
+
+        if (page + 1 <= lastPage) {
+            preloadPage(page + 1)
+        }
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
@@ -115,6 +119,10 @@ class LocalViewerActivity: BaseViewerActivity() {
                 page++
             }
             loadPage()
+
+            if (page + 1 <= lastPage) {
+                preloadPage(page + 1)
+            }
         }
     }
 
@@ -125,6 +133,10 @@ class LocalViewerActivity: BaseViewerActivity() {
                 page--
             }
             loadPage()
+
+            if (page - 1 >= firstPage) {
+                preloadPage(page - 1)
+            }
         }
     }
 
@@ -136,7 +148,6 @@ class LocalViewerActivity: BaseViewerActivity() {
         viewerActivityBinding.viewerPageTextView.text = (myPage + 1).toString()
         viewerActivityBinding.photoView.imageAlpha = 0
 
-        // load this page
         CoroutineScope(Dispatchers.Main).launch {
             val pictureBuilder = fetcher.getPicture(myPage, loadRequestListener)
             if (page == myPage) {
@@ -147,23 +158,22 @@ class LocalViewerActivity: BaseViewerActivity() {
                 toggleProgressBar(false)
             }
         }
+    }
 
-        // pre-load next next page
+    private fun preloadPage (page: Int) {
+        if (page < firstPage || page > lastPage) {
+            throw Exception("page out of range")
+        }
+
+        println("[${this::class.simpleName}.${this::preloadPage.name}] preload page $page")
+
         CoroutineScope(Dispatchers.IO).launch {
-            val nextPage = myPage + 1
-            if (nextPage > lastPage) {
+            if (!File(bookFolder, page.toString()).exists() && !Util.isInternetAvailable(baseContext)) {
                 return@launch
             }
-
-            if (File(bookFolder, nextPage.toString()).exists()) {
-                fetcher.getPicture(nextPage)?.run {
-                    withContext(Dispatchers.Main) {
-                        into(viewerActivityBinding.viewerTmpImageVew)
-                    }
-                }
-            } else {
-                if (Util.isInternetAvailable(baseContext)) {
-                    fetcher.savePicture(nextPage)
+            fetcher.getPicture(page)?.run {
+                withContext(Dispatchers.Main) {
+                    into(viewerActivityBinding.viewerTmpImageVew)
                 }
             }
         }

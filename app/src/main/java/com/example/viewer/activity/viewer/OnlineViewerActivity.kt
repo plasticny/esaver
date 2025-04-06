@@ -30,6 +30,10 @@ class OnlineViewerActivity: BaseViewerActivity() {
         pictureUrls = MutableList(bookRecord.pageNum) { null }
 
         super.onCreate(savedInstanceState)
+
+        if (page + 1 <= lastPage) {
+            preloadPage(page + 1)
+        }
     }
 
     override fun onImageLongClicked(): Boolean = true
@@ -60,21 +64,18 @@ class OnlineViewerActivity: BaseViewerActivity() {
                     }
             }
         }
-
-        // pre-load next page
-        if (page + 1 <= lastPage) {
-            lifecycleScope.launch {
-                Glide.with(baseContext)
-                    .load(getPictureUrl(page + 1))
-                    .into(viewerActivityBinding.viewerTmpImageVew)
-            }
-        }
     }
 
     override fun prevPage() {
         if (page > firstPage) {
             page--
             loadPage()
+
+            (page - 1).let {
+                if (it >= firstPage) {
+                    preloadPage(it)
+                }
+            }
         }
     }
 
@@ -82,6 +83,23 @@ class OnlineViewerActivity: BaseViewerActivity() {
         if (page < lastPage) {
             page++
             loadPage()
+
+            (page + 1).let {
+                if (it <= lastPage) {
+                    preloadPage(it)
+                }
+            }
+        }
+    }
+
+    private fun preloadPage (page: Int) {
+        if (page < firstPage || page > lastPage) {
+            throw Exception("page out of range")
+        }
+        lifecycleScope.launch {
+            Glide.with(baseContext)
+                .load(getPictureUrl(page))
+                .into(viewerActivityBinding.viewerTmpImageVew)
         }
     }
 
