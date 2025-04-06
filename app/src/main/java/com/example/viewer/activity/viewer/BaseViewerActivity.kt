@@ -1,13 +1,21 @@
 package com.example.viewer.activity.viewer
 
 import android.annotation.SuppressLint
+import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.widget.ProgressBar
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import com.bumptech.glide.load.DataSource
+import com.bumptech.glide.load.engine.GlideException
+import com.bumptech.glide.request.RequestListener
+import com.bumptech.glide.request.target.Target
 import com.example.viewer.databinding.ViewerActivityBinding
 import com.github.chrisbanes.photoview.PhotoView
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 
 abstract class BaseViewerActivity: AppCompatActivity() {
@@ -28,6 +36,19 @@ abstract class BaseViewerActivity: AppCompatActivity() {
     protected var page = -1 // current page num, firstPage to lastPage
     protected var firstPage = -1 // 0 to pageNum - 1
     protected var lastPage = -1 // 0 to pageNum - 1
+
+    // response listener for load page by glide
+    protected val loadRequestListener = object: RequestListener<Drawable> {
+        override fun onLoadFailed(
+            e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean
+        ): Boolean {
+            Toast.makeText(baseContext, "讀取圖片失敗", Toast.LENGTH_SHORT).show()
+            return false
+        }
+        override fun onResourceReady(
+            resource: Drawable?, model: Any?, target: Target<Drawable>?, dataSource: DataSource?, isFirstResource: Boolean
+        ): Boolean = false
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

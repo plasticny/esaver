@@ -21,6 +21,7 @@ import com.example.viewer.dialog.BookmarkDialog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.Response
 import java.io.File
 import java.io.FileOutputStream
@@ -130,48 +131,40 @@ class LocalViewerActivity: BaseViewerActivity() {
     override fun loadPage () {
         val myPage = page
 
-        viewerActivityBinding.viewerPageTextView.text = (myPage + 1).toString()
         toggleProgressBar(true)
+
+        viewerActivityBinding.viewerPageTextView.text = (myPage + 1).toString()
+        viewerActivityBinding.photoView.imageAlpha = 0
 
         // load this page
         CoroutineScope(Dispatchers.Main).launch {
-            val pictureBuilder = fetcher.getPicture(
-                myPage,
-                object: RequestListener<Drawable> {
-                    override fun onLoadFailed(
-                        e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean
-                    ): Boolean = loadEnded()
-
-                    override fun onResourceReady(
-                        resource: Drawable?, model: Any?, target: Target<Drawable>?, dataSource: DataSource?, isFirstResource: Boolean
-                    ): Boolean = loadEnded()
-
-                    private fun loadEnded (): Boolean {
-                        toggleProgressBar(false)
-                        return false
-                    }
-                }
-            )
+            val pictureBuilder = fetcher.getPicture(myPage, loadRequestListener)
             if (page == myPage) {
-                if (pictureBuilder != null) {
+                pictureBuilder?.run {
+                    into(viewerActivityBinding.photoView)
                     viewerActivityBinding.photoView.imageAlpha = 255
-                    pictureBuilder.into(viewerActivityBinding.photoView)
-                } else {
-                    println("[${this@LocalViewerActivity::class.simpleName}.loadPage] get picture failed")
-                    viewerActivityBinding.photoView.imageAlpha = 0
-                    toggleProgressBar(false)
                 }
+                toggleProgressBar(false)
             }
         }
 
         // pre-load next next page
         CoroutineScope(Dispatchers.IO).launch {
             val nextPage = myPage + 1
-            if (nextPage > lastPage || File(bookFolder, nextPage.toString()).exists()) {
+            if (nextPage > lastPage) {
                 return@launch
             }
-            if (Util.isInternetAvailable(baseContext)) {
-                fetcher.savePicture(nextPage)
+
+            if (File(bookFolder, nextPage.toString()).exists()) {
+                fetcher.getPicture(nextPage)?.run {
+                    withContext(Dispatchers.Main) {
+                        into(viewerActivityBinding.viewerTmpImageVew)
+                    }
+                }
+            } else {
+                if (Util.isInternetAvailable(baseContext)) {
+                    fetcher.savePicture(nextPage)
+                }
             }
         }
     }
@@ -189,9 +182,7 @@ class LocalViewerActivity: BaseViewerActivity() {
         }
 
         page = firstPage
-        fetcher = BasePictureFetcher.getFetcher(this, bookId).apply {
-            setDownloadFailureCallback { res -> onPictureDownloadFailure(res) }
-        }
+        fetcher = BasePictureFetcher.getFetcher(this, bookId)
     }
 
     private fun showImageDialog () {
@@ -249,6 +240,7 @@ class LocalViewerActivity: BaseViewerActivity() {
         }
 
         dialogViewBinding.reloadButton.setOnClickListener {
+            fetcher.resetPageCache(page)
             loadPage()
             dialog.dismiss()
         }
@@ -296,17 +288,7 @@ class LocalViewerActivity: BaseViewerActivity() {
         }
 
         // refresh page
+        fetcher.resetPageCache(page)
         loadPage()
-    }
-
-    private fun onPictureDownloadFailure (response: Response) {
-        toggleProgressBar(false)
-        runOnUiThread {
-            Toast.makeText(
-                baseContext,
-                "圖片下載失敗，響應代碼﹕${response.code}",
-                Toast.LENGTH_SHORT
-            ).show()
-        }
     }
 }

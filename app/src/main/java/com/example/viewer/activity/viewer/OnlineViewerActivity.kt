@@ -37,42 +37,35 @@ class OnlineViewerActivity: BaseViewerActivity() {
     override fun onPageTextClicked() = Unit
 
     override fun loadPage() {
+        val myPage = page
+
         toggleProgressBar(true)
 
-        val myPage = page
         viewerActivityBinding.viewerPageTextView.text = (page + 1).toString()
+        viewerActivityBinding.photoView.imageAlpha = 0
 
         lifecycleScope.launch {
-            Glide.with(baseContext)
-                .load(withContext(Dispatchers.IO) { getPictureUrl(page) })
-                .listener(object: RequestListener<Drawable> {
-                    override fun onLoadFailed(
-                        e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean
-                    ): Boolean {
-                        Toast.makeText(this@OnlineViewerActivity, "讀取圖片失敗", Toast.LENGTH_SHORT).show()
-                        return loadEnded()
-                    }
-
-                    override fun onResourceReady(
-                        resource: Drawable?, model: Any?, target: Target<Drawable>?, dataSource: DataSource?, isFirstResource: Boolean
-                    ): Boolean = loadEnded()
-
-                    private fun loadEnded (): Boolean {
-                        toggleProgressBar(false)
-                        return false
-                    }
-                }).run {
-                    if (myPage == page) {
-                        into(viewerActivityBinding.photoView)
-                    }
+            getPictureUrl(page).let {
+                if (myPage != page) {
+                    return@let
                 }
+
+                toggleProgressBar(false)
+                Glide.with(baseContext)
+                    .load(it)
+                    .listener(loadRequestListener)
+                    .run {
+                        into(viewerActivityBinding.photoView)
+                        viewerActivityBinding.photoView.imageAlpha = 255
+                    }
+            }
         }
 
         // pre-load next page
         if (page + 1 <= lastPage) {
             lifecycleScope.launch {
                 Glide.with(baseContext)
-                    .load(withContext(Dispatchers.IO) { getPictureUrl(page + 1) })
+                    .load(getPictureUrl(page + 1))
                     .into(viewerActivityBinding.viewerTmpImageVew)
             }
         }
@@ -100,7 +93,9 @@ class OnlineViewerActivity: BaseViewerActivity() {
         }
 
         if (pictureUrls[page] == null) {
-            pictureUrls[page] = fetcher.fetchPictureUrl(page)
+            pictureUrls[page] = withContext(Dispatchers.IO) {
+                 fetcher.fetchPictureUrl(page)
+            }
         }
 
         return pictureUrls[page]!!

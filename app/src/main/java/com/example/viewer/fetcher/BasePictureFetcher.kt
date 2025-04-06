@@ -5,9 +5,11 @@ import android.graphics.drawable.Drawable
 import android.widget.Toast
 import com.bumptech.glide.Glide
 import com.bumptech.glide.RequestBuilder
+import com.bumptech.glide.RequestManager
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.RequestOptions
+import com.bumptech.glide.signature.ObjectKey
 import com.example.viewer.database.BookSource
 import com.example.viewer.database.BookDatabase
 import com.example.viewer.Util
@@ -32,9 +34,8 @@ abstract class BasePictureFetcher {
 
     abstract suspend fun savePicture (page: Int): Boolean
 
-    private val fileGlide: RequestBuilder<Drawable>
-    private val downloadedPage = mutableSetOf<Int>()
-    private var downloadFailureCallback: ((Response) -> Unit)? = null
+    private val downloadingPages = mutableSetOf<Int>()
+    private val pageSignatures = mutableMapOf<Int, Long>()
 
     protected val context: Context
     protected val bookId: String?
@@ -50,11 +51,6 @@ abstract class BasePictureFetcher {
         this.context = context
         this.bookId = bookId
 
-        fileGlide = Glide.with(context).asDrawable()
-//            .setDefaultRequestOptions(RequestOptions()
-//                .diskCacheStrategy(DiskCacheStrategy.NONE)
-//                .skipMemoryCache(true)
-//            ).asDrawable()
         pageNum = BookDatabase.getInstance(context).getBookPageNum(bookId)
         bookFolder = File(context.getExternalFilesDir(null), bookId)
         isLocal = true
@@ -69,7 +65,6 @@ abstract class BasePictureFetcher {
         this.bookId = null
         this.bookFolder = null
 
-        fileGlide = Glide.with(context).asDrawable()
         isLocal = false
     }
 
@@ -78,32 +73,43 @@ abstract class BasePictureFetcher {
         assertCallByLocalBookFetcher()
 
         val pictureFile = File(bookFolder, page.toString())
-        println("[BasePictureFetcher.getPicture]\n${pictureFile.path}")
+        println("[BasePictureFetcher.getPicture]\n${pictureFile.path}\n")
+
+        val builder = createGlide(page).listener(loadListener)
 
         if (!pictureFile.exists()) {
-            // prevent multiple download
-            if (downloadedPage.contains(page)) {
-                return null
-            }
-            downloadedPage.add(page)
-
             if (!Util.isInternetAvailable(context)) {
                 Toast.makeText(context, "沒有網絡，無法下載", Toast.LENGTH_SHORT).show()
                 return null
             }
 
+            // when the picture is on downloading
+            if (downloadingPages.contains(page)) {
+                withContext(Dispatchers.IO) {
+                    while (downloadingPages.contains(page)) {
+                        Thread.sleep(100)
+                    }
+                }
+                if (pictureFile.exists()) {
+                    // if download success
+                    return builder.load(pictureFile.path)
+                }
+            }
+
+            downloadingPages.add(page)
             savePicture(page).let { retFlag ->
+                downloadingPages.remove(page)
                 if (!retFlag) {
                     return null
                 }
             }
         }
 
-        return fileGlide.listener(loadListener).load(pictureFile.path)
+        return builder.load(pictureFile.path)
     }
 
-    fun setDownloadFailureCallback (cb: (Response) -> Unit) {
-        downloadFailureCallback = cb
+    fun resetPageCache (page: Int) {
+        pageSignatures[page] = System.currentTimeMillis()
     }
 
     protected suspend fun downloadPicture (
@@ -126,22 +132,31 @@ abstract class BasePictureFetcher {
         }
 
         val request = requestBuilder.build()
-        withContext(Dispatchers.IO) {
+        return withContext(Dispatchers.IO) {
             okHttpClient.newCall(request).execute().use { response ->
                 if (response.isSuccessful) {
                     file.outputStream().use { response.body!!.byteStream().copyTo(it) }
+                    return@withContext true
                 } else {
-                    downloadFailureCallback?.invoke(response)
+                    return@withContext false
                 }
             }
         }
-        return true
     }
 
     protected fun assertPageInRange (page: Int) {
         if (page < 0 || page >= pageNum) {
             throw Exception("page out of range")
         }
+    }
+
+    private fun createGlide (page: Int): RequestBuilder<Drawable> {
+        if (!pageSignatures.containsKey(page)) {
+            resetPageCache(page)
+        }
+        return Glide.with(context)
+            .asDrawable()
+            .signature(ObjectKey(pageSignatures.getValue(page)))
     }
 
     private fun assertCallByLocalBookFetcher () {
