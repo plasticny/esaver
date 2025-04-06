@@ -8,14 +8,12 @@ import android.view.MotionEvent
 import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
 import com.example.viewer.databinding.ViewerActivityBinding
 import com.github.chrisbanes.photoview.PhotoView
-import kotlinx.coroutines.launch
 import kotlin.math.abs
 
 abstract class BaseViewerActivity: AppCompatActivity() {
@@ -53,10 +51,17 @@ abstract class BaseViewerActivity: AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        viewerActivityBinding = ViewerActivityBinding.inflate(layoutInflater).apply {
-            photoView.setOnLongClickListener { onImageLongClicked() }
+        viewerActivityBinding = ViewerActivityBinding.inflate(layoutInflater)
+
+        viewerActivityBinding.photoView.setOnLongClickListener {
+            onImageLongClicked()
         }
-        setupPageTextView()
+        setupChangePageOnImage()
+
+        viewerActivityBinding.pageTextViewContainer.setOnClickListener {
+            onPageTextClicked()
+        }
+//        setupChangePageOnPageText()
 
         setContentView(viewerActivityBinding.root)
 
@@ -76,8 +81,36 @@ abstract class BaseViewerActivity: AppCompatActivity() {
     }
 
     @SuppressLint("ClickableViewAccessibility")
-    private fun setupPageTextView () {
-        val listener = CustomGestureListener(
+    private fun setupChangePageOnImage () {
+        val photoView = viewerActivityBinding.photoView
+        val listener = ChangePageGestureListener(
+            FLIP_THRESHOLD, SCROLL_THRESHOLD,
+            prevPageCallback = {
+                if (photoView.scale == 1F) {
+                    prevPage()
+                }
+            },
+            nextPageCallback = {
+                if (photoView.scale == 1F) {
+                    nextPage()
+                }
+            }
+        )
+        val detector = GestureDetector(this, listener)
+
+        photoView.setOnTouchListener { v, event ->
+            v.performClick()
+            detector.onTouchEvent(event)
+            if (event.action == MotionEvent.ACTION_UP) {
+                listener.reset()
+            }
+            photoView.attacher.onTouch(v, event)
+        }
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private fun setupChangePageOnPageText () {
+        val listener = ChangePageGestureListener(
             FLIP_THRESHOLD, SCROLL_THRESHOLD,
             { prevPage() }, { nextPage() }
         )
@@ -91,14 +124,10 @@ abstract class BaseViewerActivity: AppCompatActivity() {
             }
             true
         }
-
-        viewerActivityBinding.viewerPageTextView.setOnClickListener {
-            onPageTextClicked()
-        }
     }
 }
 
-private class CustomGestureListener (
+private class ChangePageGestureListener (
     private val flipThreshold: Int,
     private val scrollThreshold: Int,
     private val prevPageCallback: () -> Unit,
