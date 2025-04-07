@@ -2,8 +2,8 @@ package com.example.viewer
 
 import android.content.Context
 import android.widget.Toast
-import com.example.viewer.dataset.BookDataset
-import com.example.viewer.dataset.BookSource
+import com.example.viewer.database.BookDatabase
+import com.example.viewer.database.BookSource
 import com.example.viewer.fetcher.BasePictureFetcher
 import com.example.viewer.fetcher.EPictureFetcher
 import com.example.viewer.fetcher.HiPictureFetcher
@@ -39,7 +39,7 @@ abstract class BookAdder (protected val context: Context) {
     protected lateinit var bookUrl: String
     protected var pageNum: Int = -1
 
-    protected val bookDataset = BookDataset.getInstance(context)
+    protected val bookDataset = BookDatabase.getInstance(context)
 
     suspend fun addBook (url: String, onEnded: (doAdded: Boolean) -> Unit) {
         if (!Util.isInternetAvailable(context)) {

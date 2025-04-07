@@ -1,44 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:background="@color/darkgrey">
+    android:background="@color/darkgrey"
+    android:orientation="vertical"
+    android:padding="16dp">
 
-    <TextView
-        android:id="@+id/profile_dialog_bookId_textView"
-        android:layout_width="wrap_content"
+<!--  top  -->
+
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="16dp"
-        android:text=""
-        android:textColor="@color/grey"
-        android:textSize="18sp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:layout_marginBottom="16dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
 
-    <ImageView
-        android:id="@+id/profile_dialog_delete_imageView"
-        android:layout_width="30dp"
-        android:layout_height="30dp"
-        android:layout_marginTop="16dp"
-        android:layout_marginEnd="16dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:srcCompat="@android:drawable/ic_menu_delete" />
+        <!--  text will be set programmatically  -->
+        <TextView
+            android:id="@+id/profile_dialog_bookId_textView"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="@color/grey"
+            android:textSize="18sp"/>
 
-    <!--  author  -->
+    </LinearLayout>
+
+<!--  author  -->
+
     <LinearLayout
         android:id="@+id/constraintLayout"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="16dp"
         android:orientation="horizontal"
-        android:gravity="center_vertical"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/profile_dialog_bookId_textView">
+        android:gravity="center_vertical">
 
         <TextView
             android:id="@+id/profile_dialog_author_TextView"
@@ -48,17 +45,21 @@
             android:textColor="@color/grey"
             android:textSize="20sp" />
 
-        <ImageButton
-            android:id="@+id/profile_dialog_search_author_imageButton"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
-            android:background="@color/transparent"
-            app:srcCompat="@android:drawable/ic_menu_search" />
+        <TextView
+            android:id="@+id/search_author_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/font_awesome"
+            android:text="@string/fa_magnifying_glass"
+            android:textSize="20sp"
+            android:textColor="@color/white"
+            android:layout_marginStart="8dp"/>
 
         <EditText
             android:id="@+id/profile_dialog_author_editText"
-            android:layout_width="240dp"
+            android:layout_width="0dp"
             android:layout_height="48dp"
+            android:layout_weight="1"
             android:layout_marginStart="8dp"
             android:textColor="@color/white"
             android:backgroundTint="@color/grey"
@@ -67,13 +68,13 @@
 
     </LinearLayout>
 
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/constraintLayout2"
-        android:layout_width="wrap_content"
+<!--  cover page  -->
+
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/constraintLayout">
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
 
         <TextView
             android:id="@+id/profile_dialog_coverPage_textView"
@@ -81,32 +82,27 @@
             android:layout_height="wrap_content"
             android:text="@string/cover_page"
             android:textColor="@color/grey"
-            android:textSize="20sp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            android:textSize="20sp" />
 
         <EditText
             android:id="@+id/profile_dialog_coverPage_editText"
-            android:layout_width="250dp"
+            android:layout_width="0dp"
             android:layout_height="48dp"
+            android:layout_weight="1"
             android:layout_marginStart="8dp"
             android:inputType="number"
             android:textColor="@color/white"
-            android:backgroundTint="@color/grey"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toEndOf="@+id/profile_dialog_coverPage_textView"
-            app:layout_constraintTop_toTopOf="parent" />
+            android:backgroundTint="@color/grey" />
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+    </LinearLayout>
 
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/constraintLayout3"
-        android:layout_width="wrap_content"
+<!--  skip page  -->
+
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/constraintLayout2">
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
 
         <TextView
             android:id="@+id/profile_dialog_skipPage_TextView"
@@ -114,38 +110,49 @@
             android:layout_height="wrap_content"
             android:text="@string/skip_pages"
             android:textColor="@color/grey"
-            android:textSize="20sp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            android:textSize="20sp"/>
 
         <EditText
             android:id="@+id/profile_dialog_skipPages_editText"
-            android:layout_width="230dp"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:layout_marginStart="8dp"
             android:inputType="text"
             android:textColor="@color/white"
-            android:backgroundTint="@color/grey"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toEndOf="@+id/profile_dialog_skipPage_TextView"
-            app:layout_constraintTop_toTopOf="parent" />
-    </androidx.constraintlayout.widget.ConstraintLayout>
+            android:backgroundTint="@color/grey"/>
+    </LinearLayout>
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/profile_dialog_apply_button"
-        android:layout_width="wrap_content"
+<!--  buttons  -->
+
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="8dp"
-        android:fontFamily="@font/font_awesome"
-        android:text="@string/fa_check"
-        android:textColor="@color/black"
-        android:theme="@style/Theme.MaterialComponents.Light"
-        android:backgroundTint="@color/grey"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/constraintLayout3"/>
+        android:layout_marginTop="16dp"
+        android:gravity="end"
+        android:orientation="horizontal">
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/delete_button"
+            android:layout_width="60dp"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/font_awesome"
+            android:text="@string/fa_trash"
+            android:textColor="@color/black"
+            android:theme="@style/Theme.MaterialComponents.Light"
+            android:backgroundTint="@color/grey"
+            android:layout_marginEnd="8dp"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/profile_dialog_apply_button"
+            android:layout_width="60dp"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/font_awesome"
+            android:text="@string/fa_check"
+            android:textColor="@color/black"
+            android:theme="@style/Theme.MaterialComponents.Light"
+            android:backgroundTint="@color/grey" />
+
+    </LinearLayout>
+
+</LinearLayout>

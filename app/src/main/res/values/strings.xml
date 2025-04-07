@@ -10,6 +10,9 @@
     <string name="fa_check">\uf00c</string>
     <string name="fa_filter_circle_xmark">\ue17b</string>
     <string name="fa_play">\uf04b</string>
+    <string name="fa_right_to_bracket">\uf2f6</string>
+    <string name="fa_bookmark">\uf02e</string>
+    <string name="fa_magnifying_glass">\uf002</string>
 <!--  strings  -->
     <string name="app_name">eSaver</string>
     <string name="enter_url">輸入URL</string>
@@ -44,4 +47,8 @@
     <string name="load_more">加載更多</string>
     <string name="keyword">關鍵字</string>
     <string name="non_h">非H</string>
+    <string name="backup">備份</string>
+    <string name="other">其他</string>
+    <string name="bookmark">書籤</string>
+    <string name="no_bookmark">沒有書籤</string>
 </resources>

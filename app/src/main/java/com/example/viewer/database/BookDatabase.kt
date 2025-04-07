@@ -1,6 +1,7 @@
-package com.example.viewer.dataset
+package com.example.viewer.database
 
 import android.content.Context
+import android.os.Environment
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.byteArrayPreferencesKey
@@ -8,22 +9,24 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import java.io.File
 
 enum class BookSource (val keyString: String) {
     E("E"),
     Hi("Hi")
 }
 
-private val Context.bookDataStore: DataStore<Preferences> by preferencesDataStore(name = "book")
+private const val DB_NAME = "book"
+private val Context.bookDataStore: DataStore<Preferences> by preferencesDataStore(name = DB_NAME)
 
-class BookDataset (context: Context): BaseDataset() {
+class BookDatabase (context: Context): BaseDatabase() {
     companion object {
         const val NO_AUTHOR = "NoAuthor"
 
         @Volatile
-        private var instance: BookDataset? = null
+        private var instance: BookDatabase? = null
         fun getInstance (context: Context) = instance ?: synchronized(this) {
-            instance ?: BookDataset(context).also { instance = it }
+            instance ?: BookDatabase(context).also { instance = it }
         }
 
         data class Book (
@@ -88,6 +91,14 @@ class BookDataset (context: Context): BaseDataset() {
             assertBookIdExist(bookId)
             return longPreferencesKey("${bookId}_lastViewTime")
         }
+        /**
+         * type in db: int array
+         * store page of the book mark, start from 0
+         */
+        fun bookBookMarks (bookId: String): Preferences.Key<ByteArray> {
+            assertBookIdExist(bookId)
+            return byteArrayPreferencesKey("${bookId}_bookmarks")
+        }
         // -----------
         // author
         fun allAuthors () = byteArrayPreferencesKey("authors")
@@ -115,13 +126,13 @@ class BookDataset (context: Context): BaseDataset() {
         }
 
         addBookId(id)
-        setBookUrl(id, url)
-        setBookSource(id, source)
+        store(storeKeys.bookUrl(id), url)
+        store(storeKeys.bookSource(id), source.keyString)
         addAuthorBookId(NO_AUTHOR, id)
         setBookCoverPage(id, 0)
-        setBookPageNum(id, pageNum)
+        store(storeKeys.bookPageNum(id), pageNum)
         if (source == BookSource.E) {
-            setBookP(id, 0)
+            store(storeKeys.bookP(id), 0)
             setBookPageUrls(id, listOf())
         }
     }
@@ -130,17 +141,18 @@ class BookDataset (context: Context): BaseDataset() {
         try {
             removeAuthorBookId(bookAuthor, id)
 
-            removeBookPageNum(id)
-            removeBookUrl(id)
-            removeBookCoverPage(id)
-            removeBookSkipPages(id)
-            removeBookLastViewTime(id)
+            remove(storeKeys.bookPageNum(id))
+            remove(storeKeys.bookUrl(id))
+            remove(storeKeys.bookCoverPage(id))
+            remove(storeKeys.bookSkipPages(id))
+            remove(storeKeys.bookLastViewTime(id))
+            remove(storeKeys.bookBookMarks(id))
 
             if (getBookSource(id) == BookSource.E) {
-                removeBookPageUrls(id)
-                removeBookP(id)
+                remove(storeKeys.bookPageUrls(id))
+                remove(storeKeys.bookP(id))
             }
-            removeBookSource(id)
+            remove(storeKeys.bookSource(id))
 
             removeBookId(id)
             return true
@@ -155,14 +167,40 @@ class BookDataset (context: Context): BaseDataset() {
         }
 
         if (!getAllAuthors().contains(newAuthor)) {
-            addAuthor(newAuthor)
+            println("[BookDataset] addAuthor $newAuthor")
+            val authors = (readFromByteArray<List<String>>(storeKeys.allAuthors()) ?: listOf()).toMutableList()
+            if (authors.contains(newAuthor)) {
+                throw Exception("author $newAuthor already exist")
+            }
+            authors.add(newAuthor)
+            storeAsByteArray(storeKeys.allAuthors(), authors.sorted())
         }
 
         addAuthorBookId(newAuthor, bookId)
         removeAuthorBookId(oldAuthor, bookId)
 
         if (oldAuthor != NO_AUTHOR && getAuthorBookIds(oldAuthor).isEmpty()) {
-            removeAuthor(oldAuthor)
+            println("[BookDataset] removeAuthor $oldAuthor")
+            val authors = (readFromByteArray<List<String>>(storeKeys.allAuthors()) ?: listOf()).toMutableList()
+            assertAuthorExist(oldAuthor)
+            authors.remove(oldAuthor)
+            storeAsByteArray(storeKeys.allAuthors(), authors)
+        }
+    }
+
+    fun getBookMarks (bookId: String) = readFromByteArray<List<Int>>(storeKeys.bookBookMarks(bookId)) ?: listOf()
+    fun addBookMark (bookId: String, page: Int) {
+        val bookmarks = getBookMarks(bookId).toMutableList()
+        bookmarks.add(page)
+        storeAsByteArray(storeKeys.bookBookMarks(bookId), bookmarks.sorted())
+    }
+    fun removeBookMark (bookId: String, page: Int) {
+        val bookmarks = getBookMarks(bookId).toMutableList()
+        bookmarks.remove(page).let { retFlag ->
+            if (!retFlag) {
+                throw Exception("the bookmark page $page is not exist")
+            }
+            storeAsByteArray(storeKeys.bookBookMarks(bookId), bookmarks)
         }
     }
 
@@ -189,21 +227,14 @@ class BookDataset (context: Context): BaseDataset() {
     }
 
     fun getBookUrl (bookId: String) = read(storeKeys.bookUrl(bookId))!!
-    fun setBookUrl (bookId: String, url: String) = store(storeKeys.bookUrl(bookId), url)
-    fun removeBookUrl (bookId: String) = remove(storeKeys.bookUrl(bookId))
 
     fun getBookPageUrls (bookId: String) = readFromByteArray<List<String>>(storeKeys.bookPageUrls(bookId))!!
     fun setBookPageUrls (bookId: String, urls: List<String>) = storeAsByteArray(storeKeys.bookPageUrls(bookId), urls)
-    fun removeBookPageUrls (bookId: String) = remove(storeKeys.bookPageUrls(bookId))
 
     fun getBookP (bookId: String) = read(storeKeys.bookP(bookId))!!
-    fun setBookP (bookId: String, v: Int) = store(storeKeys.bookP(bookId), v)
     fun increaseBookP (bookId: String) = store(storeKeys.bookP(bookId), getBookP(bookId) + 1)
-    fun removeBookP (bookId: String) = remove(storeKeys.bookP(bookId))
 
     fun getBookPageNum (bookId: String) = read(storeKeys.bookPageNum(bookId))!!
-    fun setBookPageNum (bookId: String, v: Int) = store(storeKeys.bookPageNum(bookId), v)
-    fun removeBookPageNum (bookId: String) = remove(storeKeys.bookPageNum(bookId))
 
     fun getBookSource (bookId: String): BookSource {
         return when (val sourceString = read(storeKeys.bookSource(bookId))!!) {
@@ -214,42 +245,21 @@ class BookDataset (context: Context): BaseDataset() {
             }
         }
     }
-    fun setBookSource (bookId: String, source: BookSource) = store(storeKeys.bookSource(bookId), source.keyString)
-    fun removeBookSource (bookId: String) = remove(storeKeys.bookSource(bookId))
 
     fun getBookCoverPage (bookId: String): Int = read(storeKeys.bookCoverPage(bookId))!!
     fun setBookCoverPage (bookId: String, v: Int) = store(storeKeys.bookCoverPage(bookId), v)
-    fun removeBookCoverPage (bookId: String) = remove(storeKeys.bookCoverPage(bookId))
 
     fun getBookSkipPages (bookId: String) = readFromByteArray<List<Int>>(storeKeys.bookSkipPages(bookId)) ?: listOf()
     fun setBookSkipPages (bookId: String, v: List<Int>) = storeAsByteArray(storeKeys.bookSkipPages(bookId), v.sorted())
-    fun removeBookSkipPages (bookId: String) = remove(storeKeys.bookSkipPages(bookId))
 
     fun getBookLastViewTime (bookId: String) = read(storeKeys.bookLastViewTime(bookId)) ?: 0L
     fun updateBookLastViewTime (bookId: String) = store(storeKeys.bookLastViewTime(bookId), System.currentTimeMillis())
-    fun removeBookLastViewTime (bookId: String) = remove(storeKeys.bookLastViewTime(bookId))
 
     // authors
     fun getAllAuthors (): List<String> = mutableListOf(NO_AUTHOR).also { it.addAll(
         getUserAuthors()
     ) }
     fun getUserAuthors () = readFromByteArray<List<String>>(storeKeys.allAuthors()) ?: listOf() // get authors that user added (without No Author)
-    fun addAuthor (name: String) {
-        println("[History.addAuthor] $name")
-        val authors = (readFromByteArray<List<String>>(storeKeys.allAuthors()) ?: listOf()).toMutableList()
-        if (authors.contains(name)) {
-            throw Exception("author $name already exist")
-        }
-        authors.add(name)
-        storeAsByteArray(storeKeys.allAuthors(), authors.sorted())
-    }
-    fun removeAuthor (name: String) {
-        println("[History.removeAuthor] $name")
-        val authors = (readFromByteArray<List<String>>(storeKeys.allAuthors()) ?: listOf()).toMutableList()
-        assertAuthorExist(name)
-        authors.remove(name)
-        storeAsByteArray(storeKeys.allAuthors(), authors)
-    }
     private fun assertAuthorExist (name: String) {
         if (!getAllAuthors().contains(name)) {
             throw Exception("author $name not exist")
@@ -257,7 +267,7 @@ class BookDataset (context: Context): BaseDataset() {
     }
 
     fun getAuthorBookIds (author: String) = readFromByteArray<List<String>>(storeKeys.authorBookIds(author)) ?: listOf()
-    fun addAuthorBookId (author: String, bookId: String) {
+    private fun addAuthorBookId (author: String, bookId: String) {
         val bookIds = getAuthorBookIds(author).toMutableList()
         if (bookIds.contains(bookId)) {
             throw Exception("bookId $bookId already exist in the list of author $author")
@@ -265,13 +275,30 @@ class BookDataset (context: Context): BaseDataset() {
         bookIds.add(bookId)
         storeAsByteArray(storeKeys.authorBookIds(author), bookIds.sorted())
     }
-    fun removeAuthorBookId (author: String, bookId: String) {
-        println("removeAuthorBookId")
+    private fun removeAuthorBookId (author: String, bookId: String) {
+        println("[BookDataset] removeAuthorBookId")
         val bookIds = getAuthorBookIds(author).toMutableList()
         if (!bookIds.contains(bookId)) {
             throw Exception("bookId $bookId is not in the list of author $author")
         }
         bookIds.remove(bookId)
         storeAsByteArray(storeKeys.authorBookIds(author), bookIds)
+    }
+
+    //
+    // backup
+    //
+    fun backup (context: Context) {
+        val dbFile = File("${context.filesDir}/datastore", "${DB_NAME}.preferences_pb")
+        val backupFolder = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "eSaver")
+        if (!backupFolder.exists()) {
+            backupFolder.mkdirs()
+        }
+
+        val backupFile = File(backupFolder, "book")
+        if (backupFile.exists()) {
+            backupFile.delete()
+        }
+        dbFile.copyTo(backupFile)
     }
 }

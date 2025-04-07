@@ -4,7 +4,7 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.util.TypedValue
-import com.example.viewer.dataset.BookDataset
+import com.example.viewer.database.BookDatabase
 import java.io.File
 import java.io.FileInputStream
 
@@ -39,7 +39,7 @@ class Util {
          */
         fun isBookDownloaded (context: Context, bookId: String): Boolean {
             val folder = File(context.getExternalFilesDir(null), bookId)
-            return BookDataset.getInstance(context).getBookPageNum(bookId) <= folder.listFiles()!!.size
+            return BookDatabase.getInstance(context).getBookPageNum(bookId) <= folder.listFiles()!!.size
         }
 
         fun isGifFile (file: File): Boolean = FileInputStream(file).use { fis ->

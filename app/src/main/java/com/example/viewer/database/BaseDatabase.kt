@@ -1,9 +1,8 @@
-package com.example.viewer.dataset
+package com.example.viewer.database
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
@@ -12,7 +11,7 @@ import java.io.ByteArrayOutputStream
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 
-abstract class BaseDataset protected constructor () {
+abstract class BaseDatabase protected constructor () {
     protected abstract val dataStore: DataStore<Preferences>
 
     protected fun<T> isKeyExist (key: Preferences.Key<T>) = runBlocking {

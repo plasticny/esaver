@@ -12,9 +12,9 @@ import com.bumptech.glide.Glide
 import com.example.viewer.R
 import com.example.viewer.databinding.SearchActivityBinding
 import com.example.viewer.databinding.SearchBookBinding
-import com.example.viewer.dataset.SearchDataset
-import com.example.viewer.dataset.SearchDataset.Companion.SearchMark
-import com.example.viewer.dataset.SearchDataset.Companion.Category
+import com.example.viewer.database.SearchDatabase
+import com.example.viewer.database.SearchDatabase.Companion.SearchMark
+import com.example.viewer.database.SearchDatabase.Companion.Category
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -73,7 +73,7 @@ class SearchActivity: AppCompatActivity() {
         }
     }
 
-    private lateinit var searchDataSet: SearchDataset
+    private lateinit var searchDataSet: SearchDatabase
     private lateinit var searchMark: SearchMark
     private lateinit var binding: SearchActivityBinding
     private lateinit var allSearchMarkIds: List<Int>
@@ -87,12 +87,13 @@ class SearchActivity: AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        searchDataSet = SearchDataset.getInstance(baseContext)
+        searchDataSet = SearchDatabase.getInstance(baseContext)
         allSearchMarkIds = searchDataSet.getAllSearchMarkIds()
 
         searchMarkId = intent.getIntExtra("searchMarkId", -1)
         searchMark = searchDataSet.getSearchMark(searchMarkId)
 
+        // search mark position
         position = allSearchMarkIds.indexOf(searchMarkId)
 
         binding = SearchActivityBinding.inflate(layoutInflater)
@@ -236,10 +237,11 @@ class SearchActivity: AppCompatActivity() {
                 pageNum = book.select(".gl3e div").let { divs ->
                     for (div in divs.reversed()) {
                         val text = div.text()
-                        if (text.endsWith(" pages")) {
+                        if (text.endsWith(" pages") || text.endsWith(" page")) {
                             return@let text.trim().split(' ').first().toInt()
                         }
                     }
+                    println(url)
                     throw Exception("page num is not found")
                 },
                 tags = mutableMapOf<String, List<String>>().apply {

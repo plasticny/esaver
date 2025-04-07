@@ -8,8 +8,8 @@ import com.bumptech.glide.RequestBuilder
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.RequestOptions
-import com.example.viewer.dataset.BookSource
-import com.example.viewer.dataset.BookDataset
+import com.example.viewer.database.BookSource
+import com.example.viewer.database.BookDatabase
 import com.example.viewer.Util
 import com.example.viewer.fetcher.HiPictureFetcher.Companion.okHttpClient
 import kotlinx.coroutines.CoroutineScope
@@ -25,7 +25,7 @@ abstract class BasePictureFetcher (
 ): CoroutineScope by MainScope() {
     companion object {
         fun getFetcher (context: Context, bookId: String): BasePictureFetcher {
-            val source = BookDataset.getInstance(context).getBookSource(bookId)
+            val source = BookDatabase.getInstance(context).getBookSource(bookId)
             println("[BasePictureFetcher.getFetcher] $source")
             return when (source) {
                 BookSource.E -> EPictureFetcher(context, bookId)
@@ -44,7 +44,7 @@ abstract class BasePictureFetcher (
     private val downloadedPage = mutableSetOf<Int>()
     private var downloadFailureCallback: ((Response) -> Unit)? = null
 
-    protected val pageNum: Int = BookDataset.getInstance(context).getBookPageNum(bookId)
+    protected val pageNum: Int = BookDatabase.getInstance(context).getBookPageNum(bookId)
 
     val bookFolder = File(context.getExternalFilesDir(null), bookId)
 

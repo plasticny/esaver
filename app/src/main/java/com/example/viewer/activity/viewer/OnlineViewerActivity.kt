@@ -35,6 +35,8 @@ class OnlineViewerActivity: BaseViewerActivity() {
 
     override fun onImageLongClicked(): Boolean = true
 
+    override fun onPageTextClicked() = Unit
+
     override fun loadPage() {
         toggleProgressBar(true)
 

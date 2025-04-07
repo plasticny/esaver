@@ -1,8 +1,7 @@
-package com.example.viewer.dataset
+package com.example.viewer.database
 
 import android.content.Context
-import android.nfc.Tag
-import androidx.compose.runtime.key
+import android.os.Environment
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.byteArrayPreferencesKey
@@ -10,20 +9,21 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.viewer.R
-import java.io.Serializable
+import java.io.File
 
 typealias Tags = Map<String, List<String>>
 
-private val Context.searchDataStore: DataStore<Preferences> by preferencesDataStore(name = "search")
+private const val DB_NAME = "search"
+private val Context.searchDataStore: DataStore<Preferences> by preferencesDataStore(name = DB_NAME)
 
-class SearchDataset (context: Context): BaseDataset() {
+class SearchDatabase (context: Context): BaseDatabase() {
     companion object {
         const val TAG = "searchDB"
 
         @Volatile
-        private var instance: SearchDataset? = null
+        private var instance: SearchDatabase? = null
         fun getInstance (context: Context) = instance ?: synchronized(this) {
-            instance ?: SearchDataset(context).also { instance = it }
+            instance ?: SearchDatabase(context).also { instance = it }
         }
 
         data class SearchMark (
@@ -153,4 +153,21 @@ class SearchDataset (context: Context): BaseDataset() {
     //
     fun getExcludeTag () = readFromByteArray<Tags>(keys.excludeTags()) ?: mapOf()
     fun storeExcludeTag (v: Tags) = storeAsByteArray(keys.excludeTags(), v)
+
+    //
+    // backup
+    //
+    fun backup (context: Context) {
+        val dbFile = File("${context.filesDir}/datastore", "${DB_NAME}.preferences_pb")
+        val backupFolder = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "eSaver")
+        if (!backupFolder.exists()) {
+            backupFolder.mkdirs()
+        }
+
+        val backupFile = File(backupFolder, "search")
+        if (backupFile.exists()) {
+            backupFile.delete()
+        }
+        dbFile.copyTo(backupFile)
+    }
 }

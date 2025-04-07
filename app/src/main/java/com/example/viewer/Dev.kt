@@ -1,7 +1,6 @@
 package com.example.viewer
 
 import android.content.Context
-import com.example.viewer.dataset.SearchDataset
 
 class Dev {
     companion object {

@@ -6,9 +6,6 @@ import android.graphics.Matrix
 import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.view.KeyEvent
-import android.view.LayoutInflater
-import android.view.View
-import android.widget.Button
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import com.bumptech.glide.load.DataSource
@@ -16,11 +13,11 @@ import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
 import com.example.viewer.fetcher.BasePictureFetcher
-import com.example.viewer.dataset.BookDataset
-import com.example.viewer.R
+import com.example.viewer.database.BookDatabase
 import com.example.viewer.RandomBook
 import com.example.viewer.Util
 import com.example.viewer.databinding.ViewerImageDialogBinding
+import com.example.viewer.dialog.BookmarkDialog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -37,7 +34,7 @@ class LocalViewerActivity: BaseViewerActivity() {
         private const val ROTATE_RIGHT = 90F
     }
 
-    private lateinit var bookDataset: BookDataset
+    private lateinit var bookDataset: BookDatabase
 
     private lateinit var fetcher: BasePictureFetcher
 
@@ -51,7 +48,7 @@ class LocalViewerActivity: BaseViewerActivity() {
         get() = fetcher.bookFolder
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        bookDataset = BookDataset.getInstance(baseContext)
+        bookDataset = BookDatabase.getInstance(baseContext)
         bookId = intent.getStringExtra("bookId")!!
         prepareBook(bookId)
 
@@ -103,6 +100,12 @@ class LocalViewerActivity: BaseViewerActivity() {
         showImageDialog()
         return true
     }
+
+    override fun onPageTextClicked() =
+        BookmarkDialog(this, layoutInflater, bookId, page) { bookMarkPage ->
+            page = bookMarkPage
+            loadPage()
+        }.show()
 
     override fun nextPage () {
         if (page < lastPage) {

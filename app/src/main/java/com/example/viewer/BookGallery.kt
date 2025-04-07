@@ -6,8 +6,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
-import android.widget.EditText
-import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
@@ -19,7 +17,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.viewer.activity.viewer.LocalViewerActivity
 import com.example.viewer.databinding.LocalBookProfileDialogBinding
-import com.example.viewer.dataset.BookDataset
+import com.example.viewer.database.BookDatabase
 import com.example.viewer.dialog.ConfirmDialog
 import com.google.android.flexbox.FlexboxLayout
 import kotlinx.coroutines.CoroutineScope
@@ -33,7 +31,7 @@ class BookGallery (
     private val layoutInflater: LayoutInflater,
     private val recyclerView: RecyclerView
 ) {
-    private val bookDataset = BookDataset.getInstance(context)
+    private val bookDataset = BookDatabase.getInstance(context)
 
     private val authorRecyclerViewAdapter: AuthorRecyclerViewAdapter = AuthorRecyclerViewAdapter(
         context, bookDataset, object: AdapterEventHandler {
@@ -51,8 +49,8 @@ class BookGallery (
     }
 
     fun notifyBookAdded () {
-        authorRecyclerViewAdapter.refreshAuthorBooks(BookDataset.NO_AUTHOR)
-        scrollToAuthor(BookDataset.NO_AUTHOR)
+        authorRecyclerViewAdapter.refreshAuthorBooks(BookDatabase.NO_AUTHOR)
+        scrollToAuthor(BookDatabase.NO_AUTHOR)
     }
 
     fun applyFilter (doDownloadComplete: Boolean? = null) {
@@ -94,7 +92,7 @@ class BookGallery (
 
         dialogViewBinding.profileDialogBookIdTextView.text = bookId
 
-        dialogViewBinding.profileDialogDeleteImageView.setOnClickListener {
+        dialogViewBinding.deleteButton.setOnClickListener {
             ConfirmDialog(context, layoutInflater).show(
                 context.getString(R.string.doDelete),
                 positiveCallback = {
@@ -107,7 +105,7 @@ class BookGallery (
             )
         }
 
-        dialogViewBinding.profileDialogSearchAuthorImageButton.setOnClickListener {
+        dialogViewBinding.searchAuthorButton.setOnClickListener {
             if (bookDataset.getUserAuthors().isEmpty()) {
                 Toast.makeText(context, "沒有作者可以選擇", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
@@ -204,7 +202,7 @@ private class AuthorRecyclerViewHolder (itemView: View): RecyclerView.ViewHolder
 
 private class AuthorRecyclerViewAdapter (
     val context: Context,
-    val bookDataset: BookDataset,
+    val bookDataset: BookDatabase,
     val adapterEventHandler: AdapterEventHandler
 ): RecyclerView.Adapter<AuthorRecyclerViewHolder>() {
     companion object {
@@ -228,7 +226,7 @@ private class AuthorRecyclerViewAdapter (
         println("[AuthorRecyclerViewAdapter.onBindViewHolder] $author")
 
         holder.authorTextView.apply {
-            text = if (author == BookDataset.NO_AUTHOR) ContextCompat.getString(context, R.string.noName) else author
+            text = if (author == BookDatabase.NO_AUTHOR) ContextCompat.getString(context, R.string.noName) else author
             setOnClickListener { adapterEventHandler.onAuthorClicked() }
         }
 
@@ -299,13 +297,13 @@ private class BookRecyclerViewHolder (itemView: View): RecyclerView.ViewHolder(i
 private class BookRecyclerViewAdapter (
     val context: Context,
     val author: String,
-    val bookDataset: BookDataset,
+    val bookDataset: BookDatabase,
     val handler: AdapterEventHandler
 ): RecyclerView.Adapter<BookRecyclerViewHolder> () {
     companion object {
         class Filter {
             var doDownloadComplete: Boolean? = null
-            fun isFiltered (context: Context, bookId: String, bookDataset: BookDataset): Boolean {
+            fun isFiltered (context: Context, bookId: String, bookDataset: BookDatabase): Boolean {
                 if (doDownloadComplete == null) {
                     return true
                 }
@@ -358,7 +356,7 @@ private class BookRecyclerViewAdapter (
     }
 }
 
-private class SelectAuthorDialog (context: Context, val bookDataset: BookDataset) {
+private class SelectAuthorDialog (context: Context, val bookDataset: BookDatabase) {
     private val dialogView = LayoutInflater.from(context).inflate(R.layout.select_author_dialog, null)
     private val dialog = AlertDialog.Builder(context).setView(dialogView).create()
 

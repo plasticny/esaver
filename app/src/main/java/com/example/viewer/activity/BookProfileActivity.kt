@@ -17,10 +17,10 @@ import com.example.viewer.activity.viewer.LocalViewerActivity
 import com.example.viewer.activity.viewer.OnlineViewerActivity
 import com.example.viewer.databinding.BookProfileActivityBinding
 import com.example.viewer.databinding.BookProfileTagBinding
-import com.example.viewer.dataset.BookDataset
-import com.example.viewer.dataset.BookSource
-import com.example.viewer.dataset.SearchDataset
-import com.example.viewer.dataset.SearchDataset.Companion.Category
+import com.example.viewer.database.BookDatabase
+import com.example.viewer.database.BookSource
+import com.example.viewer.database.SearchDatabase
+import com.example.viewer.database.SearchDatabase.Companion.Category
 import com.example.viewer.dialog.ConfirmDialog
 import kotlinx.coroutines.launch
 
@@ -48,7 +48,7 @@ class BookProfileActivity: AppCompatActivity() {
             }
 
             readButton.setOnClickListener {
-                val bookDataset = BookDataset.getInstance(baseContext)
+                val bookDataset = BookDatabase.getInstance(baseContext)
                 if (bookDataset.getAllBookIds().contains(bookRecord.id)) {
                     startActivity(Intent(baseContext, LocalViewerActivity::class.java).apply {
                         putExtra("bookId", bookRecord.id)
@@ -121,7 +121,7 @@ class BookProfileActivity: AppCompatActivity() {
     }
 
     private fun addFilterOutTag (cat: String, value: String) {
-        val searchDataset = SearchDataset.getInstance(baseContext)
+        val searchDataset = SearchDatabase.getInstance(baseContext)
         searchDataset.getExcludeTag().toMutableMap().apply {
             val values = get(cat)?.toMutableList() ?: mutableListOf()
             values.add(value)

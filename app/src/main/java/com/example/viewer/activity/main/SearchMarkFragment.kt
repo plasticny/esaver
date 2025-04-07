@@ -21,9 +21,9 @@ import com.example.viewer.databinding.MainSearchFragmentBinding
 import com.example.viewer.databinding.SearchMarkBinding
 import com.example.viewer.databinding.SearchMarkDialogBinding
 import com.example.viewer.databinding.SearchMarkDialogTagBinding
-import com.example.viewer.dataset.SearchDataset
-import com.example.viewer.dataset.SearchDataset.Companion.SearchMark
-import com.example.viewer.dataset.SearchDataset.Companion.Category
+import com.example.viewer.database.SearchDatabase
+import com.example.viewer.database.SearchDatabase.Companion.SearchMark
+import com.example.viewer.database.SearchDatabase.Companion.Category
 import com.example.viewer.dialog.ConfirmDialog
 
 data class SearchMarkEntry (
@@ -40,7 +40,7 @@ class SearchMarkFragment: Fragment() {
 
     private lateinit var parent: ViewGroup
     private lateinit var binding: MainSearchFragmentBinding
-    private lateinit var searchDataset: SearchDataset
+    private lateinit var searchDataset: SearchDatabase
 
     private var focusedSearchMark: SearchMarkEntry? = null
 
@@ -64,7 +64,7 @@ class SearchMarkFragment: Fragment() {
         savedInstanceState: Bundle?
     ): View {
         parent = container!!
-        searchDataset = SearchDataset.getInstance(parent.context)
+        searchDataset = SearchDatabase.getInstance(parent.context)
         binding = MainSearchFragmentBinding.inflate(layoutInflater, parent, false)
 
         binding.addButton.setOnClickListener {
