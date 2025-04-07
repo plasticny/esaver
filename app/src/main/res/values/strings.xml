@@ -13,6 +13,7 @@
     <string name="fa_right_to_bracket">\uf2f6</string>
     <string name="fa_bookmark">\uf02e</string>
     <string name="fa_magnifying_glass">\uf002</string>
+    <string name="fa_filter">\uf0b0</string>
 <!--  strings  -->
     <string name="app_name">eSaver</string>
     <string name="enter_url">輸入URL</string>

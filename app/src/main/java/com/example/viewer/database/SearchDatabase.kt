@@ -20,6 +20,7 @@ private val Context.searchDataStore: DataStore<Preferences> by preferencesDataSt
 class SearchDatabase (context: Context): BaseDatabase() {
     companion object {
         const val TAG = "searchDB"
+        const val TEMP_SEARCH_MARK_ID = -1
 
         @Volatile
         private var instance: SearchDatabase? = null
@@ -73,6 +74,9 @@ class SearchDatabase (context: Context): BaseDatabase() {
 
     private val keys = object {
         fun nextId () = intPreferencesKey("${TAG}_nextSearchMarkId")
+        /**
+         * search mark with id -1 is temporary search mark
+         */
         fun allSearchMarkIds () = byteArrayPreferencesKey("${TAG}_searchMarkIds")
         fun searchMarkName (id: Int) = stringPreferencesKey("${TAG}_searchMarkName_$id")
         /**
@@ -149,6 +153,7 @@ class SearchDatabase (context: Context): BaseDatabase() {
         }
         storeSearchMark(id, searchMark)
     }
+    fun setTmpSearchMark (searchMark: SearchMark) = storeSearchMark(TEMP_SEARCH_MARK_ID, searchMark)
 
     //
     // exclude tag

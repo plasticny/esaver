@@ -24,6 +24,9 @@ import com.example.viewer.database.SearchDatabase.Companion.Category
 import com.example.viewer.dialog.ConfirmDialog
 import kotlinx.coroutines.launch
 
+/**
+ * ParcelableExtra: book_record
+ */
 class BookProfileActivity: AppCompatActivity() {
     private lateinit var bookRecord: BookRecord
     private lateinit var rootBinding: BookProfileActivityBinding

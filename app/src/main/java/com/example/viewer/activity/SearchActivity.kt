@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Parcel
 import android.os.Parcelable
+import android.view.View
 import android.widget.Button
 import android.widget.ProgressBar
 import androidx.appcompat.app.AppCompatActivity
@@ -20,6 +21,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
 
+/**
+ * intExtra: searchMarkId; -1 for temporary search mark
+ */
 class SearchActivity: AppCompatActivity() {
     companion object {
         data class BookRecord (
@@ -80,9 +84,10 @@ class SearchActivity: AppCompatActivity() {
 
     private var searchMarkId = -1
     private var position = -1
-    private var next: String? = null
+    private var next: String? = null // for load more books
     private var bookRecords = mutableListOf<BookRecord>()
     private var lastExcludeTagUpdateTime = 0L
+    private var isTemporarySearch = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -93,30 +98,37 @@ class SearchActivity: AppCompatActivity() {
 
         searchMarkId = intent.getIntExtra("searchMarkId", -1)
         searchMark = searchDataSet.getSearchMark(searchMarkId)
+        isTemporarySearch = searchMarkId == -1
 
         // search mark position
         position = allSearchMarkIds.indexOf(searchMarkId)
 
         binding = SearchActivityBinding.inflate(layoutInflater)
 
-        setContentView(binding.root)
-
         binding.prevSearchMarkButton.apply {
-            setOnClickListener {
-                if (position == 0) {
-                    return@setOnClickListener
+            if (isTemporarySearch) {
+                visibility = View.INVISIBLE
+            } else {
+                setOnClickListener {
+                    if (position == 0) {
+                        return@setOnClickListener
+                    }
+                    searchMark = searchDataSet.getSearchMark(allSearchMarkIds[--position])
+                    lifecycleScope.launch { reset() }
                 }
-                searchMark = searchDataSet.getSearchMark(allSearchMarkIds[--position])
-                lifecycleScope.launch { reset() }
             }
         }
         binding.nextSearchMarkButton.apply {
-            setOnClickListener {
-                if (position == allSearchMarkIds.lastIndex) {
-                    return@setOnClickListener
+            if (isTemporarySearch) {
+                visibility = View.INVISIBLE
+            } else {
+                setOnClickListener {
+                    if (position == allSearchMarkIds.lastIndex) {
+                        return@setOnClickListener
+                    }
+                    searchMark = searchDataSet.getSearchMark(allSearchMarkIds[++position])
+                    lifecycleScope.launch { reset() }
                 }
-                searchMark = searchDataSet.getSearchMark(allSearchMarkIds[++position])
-                lifecycleScope.launch { reset() }
             }
         }
 
@@ -132,6 +144,8 @@ class SearchActivity: AppCompatActivity() {
         }
 
         lifecycleScope.launch { reset() }
+
+        setContentView(binding.root)
     }
 
     override fun onResume() {
@@ -154,8 +168,11 @@ class SearchActivity: AppCompatActivity() {
 
         binding.searchMarkName.text = searchMark.name
 
-        binding.prevSearchMarkButton.visibility = if (position == 0) Button.INVISIBLE else Button.VISIBLE
-        binding.nextSearchMarkButton.visibility = if (position == allSearchMarkIds.lastIndex) Button.INVISIBLE else Button.VISIBLE
+        if (!isTemporarySearch) {
+            // no need to update these button if temporary search mark
+            binding.prevSearchMarkButton.visibility = if (position == 0) Button.INVISIBLE else Button.VISIBLE
+            binding.nextSearchMarkButton.visibility = if (position == allSearchMarkIds.lastIndex) Button.INVISIBLE else Button.VISIBLE
+        }
 
         binding.searchBookWrapper.removeAllViews()
 
@@ -206,7 +223,7 @@ class SearchActivity: AppCompatActivity() {
             ).get()
         }
 
-        next = doc.selectFirst("#unext")!!.attribute("href")?.let { attr ->
+        next = doc.selectFirst("#unext")?.attribute("href")?.let { attr ->
             val tokens = attr.value.split("next=")
             if (tokens.size == 1) {
                 return@let null
