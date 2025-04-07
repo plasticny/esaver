@@ -1,9 +1,12 @@
 package com.example.viewer.fetcher
 
 import android.content.Context
+import android.widget.Toast
+import com.example.viewer.Util
 import com.example.viewer.database.BookDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.jsoup.HttpStatusException
 import org.jsoup.Jsoup
 
 class EPictureFetcher: BasePictureFetcher {
@@ -31,11 +34,17 @@ class EPictureFetcher: BasePictureFetcher {
         println("[EPictureFetcher.savePicture] $page")
         assertPageInRange(page)
 
-        val url = fetchPictureUrl(page)
-        return downloadPicture(page, url)
+        if (!Util.isInternetAvailable(context)) {
+            Toast.makeText(context, "沒有網絡，無法下載", Toast.LENGTH_SHORT).show()
+            return false
+        }
+
+        return fetchPictureUrl(page)?.let {
+            downloadPicture(page, it)
+        } ?: false
     }
 
-    suspend fun fetchPictureUrl (page: Int): String {
+    override suspend fun fetchPictureUrl (page: Int): String? {
         println("[${this::class.simpleName}.${this::fetchPictureUrl.name}] $page")
 
         if (page >= pageNum) {
@@ -43,8 +52,12 @@ class EPictureFetcher: BasePictureFetcher {
         }
 
         return withContext(Dispatchers.IO) {
-            Jsoup.connect(getPageUrl(page)).get()
-        }.selectFirst("#i3 #img")!!.attr("src")
+            try {
+                Jsoup.connect(getPageUrl(page)).get()
+            } catch (e: HttpStatusException) {
+                null
+            }
+        }?.selectFirst("#i3 #img")!!.attr("src") ?: null
     }
 
     private suspend fun getPageUrl (page: Int): String {

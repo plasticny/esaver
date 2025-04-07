@@ -1,6 +1,7 @@
 package com.example.viewer.activity.viewer
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.example.viewer.activity.SearchActivity.Companion.BookRecord
@@ -37,25 +38,24 @@ class OnlineViewerActivity: BaseViewerActivity() {
     override fun loadPage() {
         val myPage = page
 
-        toggleProgressBar(true)
-
         viewerActivityBinding.viewerPageTextView.text = (page + 1).toString()
-        viewerActivityBinding.photoView.imageAlpha = 0
+        toggleLoadingUi(true)
 
         lifecycleScope.launch {
-            getPictureUrl(page).let {
-                if (myPage != page) {
-                    return@let
-                }
+            val pictureUrl = getPictureUrl(page)
+            if (myPage != page) {
+                return@launch
+            }
 
-                toggleProgressBar(false)
-                Glide.with(baseContext)
-                    .load(it)
-                    .listener(loadRequestListener)
-                    .run {
-                        into(viewerActivityBinding.photoView)
-                        viewerActivityBinding.photoView.imageAlpha = 255
-                    }
+            if (pictureUrl != null) {
+                showPicture(
+                    pictureUrl, getPageSignature(page),
+                    onFailed = { alertLoadPictureFailed() },
+                    onFinished = { toggleLoadingUi(false) }
+                )
+            } else {
+                alertLoadPictureFailed()
+                toggleLoadingUi(false)
             }
         }
     }
@@ -91,13 +91,16 @@ class OnlineViewerActivity: BaseViewerActivity() {
             throw Exception("page out of range")
         }
         lifecycleScope.launch {
-            Glide.with(baseContext)
-                .load(getPictureUrl(page))
-                .into(viewerActivityBinding.viewerTmpImageVew)
+            getPictureUrl(page)?.let {
+                showPicture(
+                    it, getPageSignature(page),
+                    imageView = viewerActivityBinding.viewerTmpImageVew
+                )
+            }
         }
     }
 
-    private suspend fun getPictureUrl (page: Int): String {
+    private suspend fun getPictureUrl (page: Int): String? {
         println("[${this::class.simpleName}.${this::getPictureUrl.name}] $page")
 
         if (page < firstPage || page > lastPage) {
@@ -106,10 +109,10 @@ class OnlineViewerActivity: BaseViewerActivity() {
 
         if (pictureUrls[page] == null) {
             pictureUrls[page] = withContext(Dispatchers.IO) {
-                 fetcher.fetchPictureUrl(page)
+                 fetcher.getPictureUrl(page)
             }
         }
 
-        return pictureUrls[page]!!
+        return pictureUrls[page]
     }
 }

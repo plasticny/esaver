@@ -1,6 +1,7 @@
 package com.example.viewer.fetcher
 
 import android.content.Context
+import android.widget.Toast
 import com.example.viewer.Util
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
@@ -83,20 +84,35 @@ class HiPictureFetcher (context: Context, bookId: String): BasePictureFetcher(co
     override suspend fun savePicture(page: Int): Boolean {
         assertPageInRange(page)
 
-        val url = getPictureUrl(page)
-        val headers = mapOf(
-            "accept" to "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
-            "accept-language" to "zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7",
-            "sec-ch-ua" to "\"Chromium\";v=\"128\", \"Not;A=Brand\";v=\"24\", \"Opera GX\";v=\"114\"",
-            "sec-ch-ua-mobile" to "?0",
-            "sec-ch-ua-platform" to "\"Windows\"",
-            "sec-fetch-dest" to "image",
-            "sec-fetch-mode" to "no-cors",
-            "sec-fetch-site" to "same-site",
-            "user-agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 OPR/114.0.0.0 (Edition GX-CN)",
-            "referer" to "https://hitomi.la/reader/${bookId!!}.html"
-        )
-        return downloadPicture(page, url, headers)
+        if (!Util.isInternetAvailable(context)) {
+            Toast.makeText(context, "沒有網絡，無法下載", Toast.LENGTH_SHORT).show()
+            return false
+        }
+
+        return fetchPictureUrl(page)?.let { url ->
+            val headers = mapOf(
+                "accept" to "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+                "accept-language" to "zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7",
+                "sec-ch-ua" to "\"Chromium\";v=\"128\", \"Not;A=Brand\";v=\"24\", \"Opera GX\";v=\"114\"",
+                "sec-ch-ua-mobile" to "?0",
+                "sec-ch-ua-platform" to "\"Windows\"",
+                "sec-fetch-dest" to "image",
+                "sec-fetch-mode" to "no-cors",
+                "sec-fetch-site" to "same-site",
+                "user-agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 OPR/114.0.0.0 (Edition GX-CN)",
+                "referer" to "https://hitomi.la/reader/${bookId!!}.html"
+            )
+            downloadPicture(page, url, headers)
+        } ?: false
+    }
+
+    override suspend fun fetchPictureUrl (page: Int): String? {
+        val pictureInfo = pictureInfos!![page]
+        if (pictureInfo.haswebp == 0) {
+            throw Exception("no webp")
+        }
+        val thirdDomain = findThirdDomain(pictureInfo.hash)
+        return "https://${thirdDomain}.hitomi.la/webp/${gg!!.b}${gg!!.h(pictureInfo.hash)}/${pictureInfo.hash}.webp"
     }
 
     private fun getPictureInfos (): List<PictureInfo> {
@@ -126,15 +142,6 @@ class HiPictureFetcher (context: Context, bookId: String): BasePictureFetcher(co
         val baseV = Regex("'(.*)'").find(params.split(",").last())!!.value
 
         return baseV.substring(1, baseV.lastIndex)
-    }
-
-    private fun getPictureUrl (page: Int): String {
-        val pictureInfo = pictureInfos!![page]
-        if (pictureInfo.haswebp == 0) {
-            throw Exception("no webp")
-        }
-        val thirdDomain = findThirdDomain(pictureInfo.hash)
-        return "https://${thirdDomain}.hitomi.la/webp/${gg!!.b}${gg!!.h(pictureInfo.hash)}/${pictureInfo.hash}.webp"
     }
 
     private fun findThirdDomain (fileHash: String): String {

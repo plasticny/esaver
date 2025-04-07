@@ -33,9 +33,9 @@ abstract class BasePictureFetcher {
     }
 
     abstract suspend fun savePicture (page: Int): Boolean
+    protected abstract suspend fun fetchPictureUrl (page: Int): String?
 
     private val downloadingPages = mutableSetOf<Int>()
-    private val pageSignatures = mutableMapOf<Int, Long>()
 
     protected val context: Context
     protected val bookId: String?
@@ -68,48 +68,39 @@ abstract class BasePictureFetcher {
         isLocal = false
     }
 
-    suspend fun getPicture (page: Int, loadListener: RequestListener<Drawable>? = null): RequestBuilder<Drawable>? {
+    suspend fun getPictureUrl (page: Int): String? {
         assertPageInRange(page)
-        assertCallByLocalBookFetcher()
 
+        if (!isLocal) {
+            // local fetcher, no need to check storage
+            return fetchPictureUrl(page)
+        }
+
+        //
+        // check whether picture is stored
+        //
         val pictureFile = File(bookFolder, page.toString())
-        println("[BasePictureFetcher.getPicture]\n${pictureFile.path}\n")
+        println("[${this::class.simpleName}.${this::getPictureUrl.name}]\n${pictureFile.path}")
 
-        val builder = createGlide(page).listener(loadListener)
+        // when the picture is on downloading
+        if (downloadingPages.contains(page)) {
+            withContext(Dispatchers.IO) {
+                while (downloadingPages.contains(page)) {
+                    Thread.sleep(100)
+                }
+            }
+        }
 
         if (!pictureFile.exists()) {
-            if (!Util.isInternetAvailable(context)) {
-                Toast.makeText(context, "沒有網絡，無法下載", Toast.LENGTH_SHORT).show()
-                return null
-            }
-
-            // when the picture is on downloading
-            if (downloadingPages.contains(page)) {
-                withContext(Dispatchers.IO) {
-                    while (downloadingPages.contains(page)) {
-                        Thread.sleep(100)
-                    }
-                }
-                if (pictureFile.exists()) {
-                    // if download success
-                    return builder.load(pictureFile.path)
-                }
-            }
-
-            downloadingPages.add(page)
+            downloadingPages.add(page) // fetching picture url may take time
             savePicture(page).let { retFlag ->
-                downloadingPages.remove(page)
                 if (!retFlag) {
                     return null
                 }
             }
         }
 
-        return builder.load(pictureFile.path)
-    }
-
-    fun resetPageCache (page: Int) {
-        pageSignatures[page] = System.currentTimeMillis()
+        return pictureFile.path
     }
 
     protected suspend fun downloadPicture (
@@ -125,6 +116,8 @@ abstract class BasePictureFetcher {
             return false
         }
 
+        downloadingPages.add(page)
+
         val file = File(bookFolder, page.toString())
         val requestBuilder = Request.Builder().url(url)
         for (header in headers) {
@@ -136,10 +129,11 @@ abstract class BasePictureFetcher {
             okHttpClient.newCall(request).execute().use { response ->
                 if (response.isSuccessful) {
                     file.outputStream().use { response.body!!.byteStream().copyTo(it) }
-                    return@withContext true
-                } else {
-                    return@withContext false
+                    // this line should be after the write-to-file statement
+                    // else the corrupted image might be read
+                    downloadingPages.remove(page)
                 }
+                return@withContext response.isSuccessful
             }
         }
     }
@@ -148,15 +142,6 @@ abstract class BasePictureFetcher {
         if (page < 0 || page >= pageNum) {
             throw Exception("page out of range")
         }
-    }
-
-    private fun createGlide (page: Int): RequestBuilder<Drawable> {
-        if (!pageSignatures.containsKey(page)) {
-            resetPageCache(page)
-        }
-        return Glide.with(context)
-            .asDrawable()
-            .signature(ObjectKey(pageSignatures.getValue(page)))
     }
 
     private fun assertCallByLocalBookFetcher () {

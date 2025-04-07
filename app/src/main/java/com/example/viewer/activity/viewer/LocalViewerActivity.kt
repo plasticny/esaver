@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.view.KeyEvent
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.lifecycle.lifecycleScope
 import com.example.viewer.fetcher.BasePictureFetcher
 import com.example.viewer.database.BookDatabase
 import com.example.viewer.RandomBook
@@ -104,6 +105,12 @@ class LocalViewerActivity: BaseViewerActivity() {
         BookmarkDialog(this, layoutInflater, bookId, page) { bookMarkPage ->
             page = bookMarkPage
             loadPage()
+            if (page + 1 <= lastPage) {
+                preloadPage(page + 1)
+            }
+            if (page - 1 >= firstPage) {
+                preloadPage(page - 1)
+            }
         }.show()
 
     override fun nextPage () {
@@ -137,19 +144,24 @@ class LocalViewerActivity: BaseViewerActivity() {
     override fun loadPage () {
         val myPage = page
 
-        toggleProgressBar(true)
+        viewerActivityBinding.viewerPageTextView.text = (page + 1).toString()
+        toggleLoadingUi(true)
 
-        viewerActivityBinding.viewerPageTextView.text = (myPage + 1).toString()
-        viewerActivityBinding.photoView.imageAlpha = 0
+        lifecycleScope.launch {
+            val pictureUrl = fetcher.getPictureUrl(page)
+            if (myPage != page) {
+                return@launch
+            }
 
-        CoroutineScope(Dispatchers.Main).launch {
-            val pictureBuilder = fetcher.getPicture(myPage, loadRequestListener)
-            if (page == myPage) {
-                pictureBuilder?.run {
-                    into(viewerActivityBinding.photoView)
-                    viewerActivityBinding.photoView.imageAlpha = 255
-                }
-                toggleProgressBar(false)
+            if (pictureUrl != null) {
+                showPicture(
+                    pictureUrl, getPageSignature(page),
+                    onFailed = { alertLoadPictureFailed() },
+                    onFinished = { toggleLoadingUi(false) }
+                )
+            } else {
+                alertLoadPictureFailed()
+                toggleLoadingUi(false)
             }
         }
     }
@@ -159,16 +171,15 @@ class LocalViewerActivity: BaseViewerActivity() {
             throw Exception("page out of range")
         }
 
-        println("[${this::class.simpleName}.${this::preloadPage.name}] preload page $page")
-
-        CoroutineScope(Dispatchers.IO).launch {
+        lifecycleScope.launch {
             if (!File(bookFolder, page.toString()).exists() && !Util.isInternetAvailable(baseContext)) {
                 return@launch
             }
-            fetcher.getPicture(page)?.run {
-                withContext(Dispatchers.Main) {
-                    into(viewerActivityBinding.viewerTmpImageVew)
-                }
+            fetcher.getPictureUrl(page)?.let {
+                showPicture(
+                    it, getPageSignature(page),
+                    imageView = viewerActivityBinding.viewerTmpImageVew
+                )
             }
         }
     }
@@ -244,7 +255,7 @@ class LocalViewerActivity: BaseViewerActivity() {
         }
 
         dialogViewBinding.reloadButton.setOnClickListener {
-            fetcher.resetPageCache(page)
+            resetPageSignature(page)
             loadPage()
             dialog.dismiss()
         }
@@ -275,7 +286,9 @@ class LocalViewerActivity: BaseViewerActivity() {
             Toast.makeText(baseContext, "不支持旋轉GIF", Toast.LENGTH_SHORT).show()
             return
         }
-        else {
+
+        toggleLoadingUi(true)
+        CoroutineScope(Dispatchers.IO).launch {
             // handle static file rotation
             val originImage = BitmapFactory.decodeFile(imageFile.path)
             val rotatedImage = Bitmap.createBitmap(
@@ -289,10 +302,13 @@ class LocalViewerActivity: BaseViewerActivity() {
             }
             originImage.recycle()
             rotatedImage.recycle()
-        }
 
-        // refresh page
-        fetcher.resetPageCache(page)
-        loadPage()
+            // refresh page
+            withContext(Dispatchers.Main) {
+                resetPageSignature(page)
+                loadPage()
+                toggleLoadingUi(false)
+            }
+        }
     }
 }

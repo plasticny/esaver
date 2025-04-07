@@ -5,15 +5,17 @@ import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.view.GestureDetector
 import android.view.MotionEvent
+import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
+import com.bumptech.glide.signature.ObjectKey
 import com.example.viewer.databinding.ViewerActivityBinding
-import com.github.chrisbanes.photoview.PhotoView
 import kotlin.math.abs
 
 abstract class BaseViewerActivity: AppCompatActivity() {
@@ -35,18 +37,7 @@ abstract class BaseViewerActivity: AppCompatActivity() {
     protected var firstPage = -1 // 0 to pageNum - 1
     protected var lastPage = -1 // 0 to pageNum - 1
 
-    // response listener for load page by glide
-    protected val loadRequestListener = object: RequestListener<Drawable> {
-        override fun onLoadFailed(
-            e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean
-        ): Boolean {
-            Toast.makeText(baseContext, "讀取圖片失敗", Toast.LENGTH_SHORT).show()
-            return false
-        }
-        override fun onResourceReady(
-            resource: Drawable?, model: Any?, target: Target<Drawable>?, dataSource: DataSource?, isFirstResource: Boolean
-        ): Boolean = false
-    }
+    private val pageSignatures = mutableMapOf<Int, ObjectKey>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,16 +59,60 @@ abstract class BaseViewerActivity: AppCompatActivity() {
         loadPage()
     }
 
-    protected fun toggleProgressBar (toggle: Boolean) {
+    protected fun toggleLoadingUi (toggle: Boolean) {
         viewerActivityBinding.let {
             if (toggle) {
                 it.viewerProgressBar.visibility = ProgressBar.VISIBLE
-                it.photoView.visibility = PhotoView.INVISIBLE
+                it.photoView.imageAlpha = 0
             } else {
                 it.viewerProgressBar.visibility = ProgressBar.GONE
-                it.photoView.visibility = PhotoView.VISIBLE
+                it.photoView.imageAlpha = 255
             }
         }
+    }
+
+    protected fun showPicture (
+        url: String,
+        signature: ObjectKey,
+        imageView: ImageView = viewerActivityBinding.photoView,
+        onPictureReady: (() -> Unit)? = null,
+        onFailed: (() -> Unit)? = null,
+        onFinished: (() -> Unit)? = null
+    ) {
+        Glide.with(baseContext)
+            .asDrawable()
+            .signature(signature)
+            .load(url)
+            .listener(object: RequestListener<Drawable> {
+                override fun onResourceReady(
+                    resource: Drawable?, model: Any?, target: Target<Drawable>?, dataSource: DataSource?, isFirstResource: Boolean
+                ): Boolean {
+                    onPictureReady?.invoke()
+                    onFinished?.invoke()
+                    return false
+                }
+                override fun onLoadFailed(
+                    e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean
+                ): Boolean {
+                    onFailed?.invoke()
+                    onFinished?.invoke()
+                    return false
+                }
+            })
+            .into(imageView)
+    }
+
+    protected fun alertLoadPictureFailed () = Toast.makeText(baseContext, "讀取圖片失敗", Toast.LENGTH_SHORT).show()
+
+    protected fun getPageSignature (page: Int): ObjectKey {
+        if (!pageSignatures.containsKey(page)) {
+            resetPageSignature(page)
+        }
+        return pageSignatures.getValue(page)
+    }
+
+    protected fun resetPageSignature (page: Int) {
+        pageSignatures[page] = ObjectKey(System.currentTimeMillis())
     }
 
     @SuppressLint("ClickableViewAccessibility")
