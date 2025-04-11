@@ -5,6 +5,11 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.util.TypedValue
 import com.example.viewer.database.BookDatabase
+import com.example.viewer.database.SearchDatabase
+import com.example.viewer.database.SearchDatabase.Companion.Category.ArtistCG
+import com.example.viewer.database.SearchDatabase.Companion.Category.Doujinshi
+import com.example.viewer.database.SearchDatabase.Companion.Category.Manga
+import com.example.viewer.database.SearchDatabase.Companion.Category.NonH
 import java.io.File
 import java.io.FileInputStream
 
@@ -21,6 +26,7 @@ class Util {
             "other" to "其他",
             "parody" to "原作"
         )
+        private val CATEGORY_ENTRIES = SearchDatabase.Companion.Category.entries
 
         fun dp2px (context: Context, dp: Float): Int {
             val displayMetrics = context.resources.displayMetrics
@@ -51,6 +57,18 @@ class Util {
             header[1] == 'I'.code.toByte() &&
             header[2] == 'F'.code.toByte() &&
             (header[3] == '8'.code.toByte() || header[3] == '7'.code.toByte()))
+        }
+
+        fun categoryFromOrdinal (ordinal: Int) = CATEGORY_ENTRIES[ordinal]
+
+        fun categoryFromName (name: String) = when (name) {
+            Doujinshi.name -> Doujinshi
+            Manga.name -> Manga
+            ArtistCG.name -> ArtistCG
+            "Artist CG" -> ArtistCG
+            NonH.name -> NonH
+            "Non-H" -> NonH
+            else -> throw Exception("unexpected string $name")
         }
     }
 }

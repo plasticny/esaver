@@ -18,6 +18,9 @@ enum class PositiveButtonStyle {
     },
     SEARCH {
         override val iconTextId = R.string.fa_magnifying_glass
+    },
+    CONFIRM {
+        override val iconTextId = R.string.fa_check
     };
     abstract val iconTextId: Int
 }

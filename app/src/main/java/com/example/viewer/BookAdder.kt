@@ -4,15 +4,16 @@ import android.content.Context
 import android.widget.Toast
 import com.example.viewer.database.BookDatabase
 import com.example.viewer.database.BookSource
+import com.example.viewer.database.SearchDatabase
 import com.example.viewer.fetcher.BasePictureFetcher
 import com.example.viewer.fetcher.EPictureFetcher
 import com.example.viewer.fetcher.HiPictureFetcher
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
 import java.io.File
 import java.net.URL
 
@@ -30,14 +31,12 @@ abstract class BookAdder (protected val context: Context) {
 
     protected abstract fun getUrl (url: String): String
     protected abstract fun getId (): String
-    protected abstract suspend fun fetchPageNum(): Int
     protected abstract fun getFetcher (): BasePictureFetcher
-    protected abstract fun storeToDataSet ()
+    protected abstract suspend fun storeToDataSet ()
 
     // init in addBook
     protected lateinit var bookId: String
     protected lateinit var bookUrl: String
-    protected var pageNum: Int = -1
 
     protected val bookDataset = BookDatabase.getInstance(context)
 
@@ -48,11 +47,10 @@ abstract class BookAdder (protected val context: Context) {
 
         bookUrl = getUrl(url)
         bookId = getId()
-        pageNum = fetchPageNum()
 
         // check if the book is already saved
-        if (bookDataset.getAllBookIds().contains(bookId)) {
-            Toast.makeText(context, "已經存有這本書", Toast.LENGTH_SHORT).show()
+        if (bookDataset.isBookStored(bookId)) {
+            Toast.makeText(context, "已經儲存這本書", Toast.LENGTH_SHORT).show()
             onEnded(false)
             return
         }
@@ -84,17 +82,53 @@ private class EBookAdder (context: Context): BookAdder(context) {
 
     override fun getFetcher(): BasePictureFetcher = EPictureFetcher(context, bookId)
 
-    override suspend fun fetchPageNum(): Int {
-        val html = withContext(Dispatchers.IO) {
-            coroutineScope { async { URL(bookUrl).readText() }.await() }
+    override suspend fun storeToDataSet() {
+        val doc = withContext(Dispatchers.IO) {
+            Jsoup.connect(bookUrl).get()
         }
-        val pageText = Regex(">(\\d+) pages<").find(html)!!.value
-        return pageText.substring(1, pageText.length - 7).toInt()
+        bookDataset.addBook(
+            id = bookId,
+            url = bookUrl,
+            category = Util.categoryFromName(
+                doc.selectFirst("#gdc")!!.text().trim()
+            ),
+            title = findTitle(doc),
+            pageNum = findPageNum(doc),
+            tags = findTags(doc),
+            source = BookSource.E
+        )
     }
 
-    override fun storeToDataSet() = bookDataset.addBook(
-        bookId, bookUrl, BookSource.E, pageNum
-    )
+    fun findTitle (doc: Document): String {
+        doc.selectFirst("#gj")!!.text().trim().let {
+            if (it.isNotEmpty()) {
+                return it
+            }
+        }
+        return doc.selectFirst("#gn")!!.text().trim()
+    }
+
+    fun findPageNum (doc: Document): Int {
+        val gdt2s = doc.select("#gdd .gdt2")
+        for (gdt2 in gdt2s) {
+            val text = gdt2.text()
+            if (text.contains("page")) {
+                return text.split(' ').first().toInt()
+            }
+        }
+        throw Exception("[${this::class.simpleName}.${this::findPageNum.name}] cannot find page number")
+    }
+
+    fun findTags (doc: Document): Map<String, List<String>> {
+        val tags = mutableMapOf<String, List<String>>()
+
+        doc.select("#taglist tr").forEach { tr ->
+            val category = tr.selectFirst(".tc")!!.text().trim().dropLast(1)
+            tags[category] = tr.select(".gt,.gtl").map { it.text().trim() }
+        }
+
+        return tags
+    }
 }
 
 private class HiBookAdder (context: Context): BookAdder(context) {
@@ -118,7 +152,17 @@ private class HiBookAdder (context: Context): BookAdder(context) {
 
     override fun getFetcher(): BasePictureFetcher = HiPictureFetcher(context, bookId)
 
-    override suspend fun fetchPageNum(): Int {
+    override suspend fun storeToDataSet() = bookDataset.addBook(
+        id = bookId,
+        url = bookUrl,
+        category = SearchDatabase.Companion.Category.Doujinshi,
+        title = "",
+        pageNum = fetchPageNum(),
+        tags = mapOf(),
+        source = BookSource.Hi
+    )
+
+    fun fetchPageNum(): Int {
         var bookIdJs: String
         runBlocking {
             withContext(Dispatchers.IO) {
@@ -128,8 +172,4 @@ private class HiBookAdder (context: Context): BookAdder(context) {
         val galleryInfo = Gson().fromJson(bookIdJs, GalleryInfo::class.java)!!
         return galleryInfo.files.size
     }
-
-    override fun storeToDataSet() = bookDataset.addBook(
-        bookId, bookUrl, BookSource.Hi, pageNum
-    )
 }

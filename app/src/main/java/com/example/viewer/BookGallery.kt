@@ -15,22 +15,17 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import com.example.viewer.activity.BookProfileActivity
 import com.example.viewer.activity.viewer.LocalViewerActivity
-import com.example.viewer.databinding.LocalBookProfileDialogBinding
 import com.example.viewer.database.BookDatabase
-import com.example.viewer.dialog.ConfirmDialog
+import com.example.viewer.dialog.SelectAuthorDialog
 import com.google.android.flexbox.FlexboxLayout
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import okhttp3.internal.wait
 import java.io.File
 import kotlin.math.ceil
 
 class BookGallery (
     private val context: Context,
-    private val layoutInflater: LayoutInflater,
+    layoutInflater: LayoutInflater,
     private val recyclerView: RecyclerView
 ) {
     private val bookDataset = BookDatabase.getInstance(context)
@@ -38,8 +33,15 @@ class BookGallery (
     private val authorRecyclerViewAdapter: AuthorRecyclerViewAdapter = AuthorRecyclerViewAdapter(
         context, bookDataset, object: AdapterEventHandler {
             override fun onBookClicked(bookId: String) = openBook(bookId)
-            override fun onBookLongClicked(author: String, bookId: String) = showProfileDialog(author, bookId)
-            override fun onAuthorClicked() = SelectAuthorDialog(context, bookDataset).show {
+            override fun onBookLongClicked(author: String, bookId: String) {
+                context.startActivity(Intent(context, BookProfileActivity::class.java).apply {
+                    putExtra(
+                        "book_record",
+                        bookDataset.getBook(context, bookId, author)
+                    )
+                })
+            }
+            override fun onAuthorClicked() = SelectAuthorDialog(context, layoutInflater).show {
                 author -> scrollToAuthor(author)
             }
         }
@@ -76,113 +78,6 @@ class BookGallery (
         val intent = Intent(context, LocalViewerActivity::class.java)
         intent.putExtra("bookId", bookId)
         context.startActivity(intent)
-    }
-
-    private fun showProfileDialog (author: String, bookId: String) {
-        val dialogViewBinding = LocalBookProfileDialogBinding.inflate(layoutInflater)
-        val dialog = AlertDialog.Builder(context).setView(dialogViewBinding.root).create()
-
-        val authorEditText = dialogViewBinding.profileDialogAuthorEditText.apply {
-            setText(author)
-        }
-        val coverPageEditText = dialogViewBinding.profileDialogCoverPageEditText.apply {
-            setText((bookDataset.getBookCoverPage(bookId) + 1).toString())
-        }
-        val skipPageEditText = dialogViewBinding.profileDialogSkipPagesEditText.apply {
-            setText(bookDataset.getBookSkipPages(bookId).joinToString(",") { (it + 1).toString() })
-        }
-
-        dialogViewBinding.profileDialogBookIdTextView.text = bookId
-
-        dialogViewBinding.deleteButton.setOnClickListener {
-            ConfirmDialog(context, layoutInflater).show(
-                context.getString(R.string.doDelete),
-                positiveCallback = {
-                    dialogViewBinding.progressBar.visibility = View.VISIBLE
-                    CoroutineScope(Dispatchers.IO).launch {
-                        deleteBook(author, bookId)
-                        withContext(Dispatchers.Main) {
-                            authorRecyclerViewAdapter.refreshAuthorBooks(author)
-                            dialogViewBinding.progressBar.visibility = View.GONE
-                            dialog.dismiss()
-                        }
-                    }
-                }
-            )
-        }
-
-        dialogViewBinding.searchAuthorButton.setOnClickListener {
-            if (bookDataset.getUserAuthors().isEmpty()) {
-                Toast.makeText(context, "沒有作者可以選擇", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            SelectAuthorDialog(context, bookDataset).show { author -> authorEditText.setText(author) }
-        }
-
-        dialogViewBinding.profileDialogApplyButton.setOnClickListener {
-            val authorText = authorEditText.text.toString().trim()
-            val coverPageText = coverPageEditText.text.toString().trim()
-            val skipPageText = skipPageEditText.text.toString().trim()
-
-            if (authorText.isEmpty()) {
-                Toast.makeText(context, "作者不能為空", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            if (authorText.isEmpty()) {
-                Toast.makeText(context, "封面頁不能為空", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            // update author and cover page
-            var doRefreshAuthor = false
-            val refreshAuthorSet = mutableSetOf<String>()
-            if (authorText != author) {
-                bookDataset.changeAuthor(bookId, author, authorText)
-                doRefreshAuthor = true
-                refreshAuthorSet.add(author)
-                refreshAuthorSet.add(authorText)
-            }
-            coverPageText.toInt().let {
-                if (it != bookDataset.getBookCoverPage(bookId) + 1) {
-                    bookDataset.setBookCoverPage(bookId, it - 1)
-                    refreshAuthorSet.add(authorText)
-                }
-            }
-
-            if (doRefreshAuthor) {
-                authorRecyclerViewAdapter.refreshAuthor()
-            }
-            for (refreshAuthor in refreshAuthorSet) {
-                authorRecyclerViewAdapter.refreshAuthorBooks(refreshAuthor)
-            }
-
-            // update skip pages
-            val newSkipPages = mutableListOf<Int>()
-            for (token in skipPageText.split(',')) {
-                try {
-                    newSkipPages.add(token.trim().toInt() - 1)
-                }
-                catch (e: Exception) {
-                    println("[reading skip page] token '$token' cannot convert into int")
-                }
-            }
-            bookDataset.setBookSkipPages(bookId, newSkipPages)
-
-            dialog.dismiss()
-        }
-
-        dialog.show()
-    }
-
-    private fun deleteBook (author: String, bookId: String) {
-        val ret = bookDataset.removeBook(bookId, author)
-        if (ret) {
-            val bookFolder = File(context.getExternalFilesDir(null), bookId)
-            for (file in bookFolder.listFiles()!!) {
-                file.delete()
-            }
-            bookFolder.delete()
-        }
     }
 
     private fun scrollToAuthor (author: String) = recyclerView.scrollToPosition(authorRecyclerViewAdapter.getAuthorPosition(author)!!)
@@ -359,30 +254,5 @@ private class BookRecyclerViewAdapter (
 
     private fun getBookIds (): List<String> = bookDataset.getAuthorBookIds(author).filter {
         filter.isFiltered(context, it, bookDataset)
-    }
-}
-
-private class SelectAuthorDialog (context: Context, val bookDataset: BookDatabase) {
-    private val dialogView = LayoutInflater.from(context).inflate(R.layout.select_author_dialog, null)
-    private val dialog = AlertDialog.Builder(context).setView(dialogView).create()
-
-    fun show (cb: (String) -> Unit) {
-        dialogView.findViewById<FlexboxLayout>(R.id.select_author_dialog_flexboxLayout).apply {
-            for (author in bookDataset.getUserAuthors()) {
-                addView(Button(context).apply {
-                    text = author
-                    layoutParams = ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                    )
-                    isAllCaps = false
-                    setOnClickListener {
-                        cb(author)
-                        dialog.dismiss()
-                    }
-                })
-            }
-        }
-        dialog.show()
     }
 }

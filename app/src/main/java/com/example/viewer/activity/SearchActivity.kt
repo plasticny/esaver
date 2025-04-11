@@ -2,15 +2,15 @@ package com.example.viewer.activity
 
 import android.content.Intent
 import android.os.Bundle
-import android.os.Parcel
-import android.os.Parcelable
 import android.view.View
 import android.widget.Button
 import android.widget.ProgressBar
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
+import com.example.viewer.BookRecord
 import com.example.viewer.R
+import com.example.viewer.Util
 import com.example.viewer.databinding.SearchActivityBinding
 import com.example.viewer.databinding.SearchBookBinding
 import com.example.viewer.database.SearchDatabase
@@ -25,58 +25,6 @@ import org.jsoup.Jsoup
  * intExtra: searchMarkId; -1 for temporary search mark
  */
 class SearchActivity: AppCompatActivity() {
-    companion object {
-        data class BookRecord (
-            val id: String,
-            val url: String,
-            val coverUrl: String,
-            val cat: String,
-            val title: String,
-            val pageNum: Int,
-            val tags: Map<String, List<String>>
-        ): Parcelable {
-            companion object CREATOR : Parcelable.Creator<BookRecord> {
-                override fun createFromParcel(parcel: Parcel): BookRecord {
-                    return BookRecord(parcel)
-                }
-
-                override fun newArray(size: Int): Array<BookRecord?> {
-                    return arrayOfNulls(size)
-                }
-            }
-
-            constructor(parcel: Parcel) : this(
-                parcel.readString()!!,
-                parcel.readString()!!,
-                parcel.readString()!!,
-                parcel.readString()!!,
-                parcel.readString()!!,
-                parcel.readInt(),
-                parcel.readBundle(ClassLoader.getSystemClassLoader())!!.let { bundle ->
-                    bundle.keySet().associateWith { bundle.getStringArray(it)!!.toList() }
-                }
-            )
-
-            override fun writeToParcel(parcel: Parcel, flags: Int) {
-                parcel.writeString(id)
-                parcel.writeString(url)
-                parcel.writeString(coverUrl)
-                parcel.writeString(cat)
-                parcel.writeString(title)
-                parcel.writeInt(pageNum)
-                parcel.writeBundle(Bundle().apply {
-                    for ((key, value) in tags) {
-                        putStringArray(key, value.toTypedArray())
-                    }
-                })
-            }
-
-            override fun describeContents(): Int {
-                return 0
-            }
-        }
-    }
-
     private lateinit var searchDataSet: SearchDatabase
     private lateinit var searchMark: SearchMark
     private lateinit var binding: SearchActivityBinding
@@ -201,7 +149,7 @@ class SearchActivity: AppCompatActivity() {
                     pageNumTextView.text = baseContext.getString(R.string.n_page, bookRecord.pageNum)
                     searchBookCatTextView.apply {
                         text = bookRecord.cat
-                        setTextColor(context.getColor(Category.fromString(bookRecord.cat).color))
+                        setTextColor(context.getColor(Util.categoryFromName(bookRecord.cat).color))
                     }
                     root.setOnClickListener {
                         val intent = Intent(baseContext, BookProfileActivity::class.java)

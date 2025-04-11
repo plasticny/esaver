@@ -1,10 +1,8 @@
 package com.example.viewer.activity.viewer
 
 import android.os.Bundle
-import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
-import com.bumptech.glide.Glide
-import com.example.viewer.activity.SearchActivity.Companion.BookRecord
+import com.example.viewer.BookRecord
 import com.example.viewer.fetcher.EPictureFetcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

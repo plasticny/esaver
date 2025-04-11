@@ -1,14 +1,19 @@
 package com.example.viewer
 
 import android.content.Context
+import com.example.viewer.database.BookDatabase
 
+/**
+ * for development usage and backup code
+ */
 class Dev {
     companion object {
         fun run (context: Context) {
+//            BookDatabase.getInstance(context).dev()
         }
     }
 
-    private fun rotateGif () {
+//    private fun rotateGif () {
         // This method is too bad performance, and the rotated gif is not playable
 
         // handle gif file rotation
@@ -38,5 +43,5 @@ class Dev {
 //            encoder.finishEncoding()
 //        }
 //        originGif.recycle()
-    }
+//    }
 }
