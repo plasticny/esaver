@@ -33,29 +33,6 @@ class BookDatabase (context: Context): BaseDatabase() {
         fun getInstance (context: Context) = instance ?: synchronized(this) {
             instance ?: BookDatabase(context).also { instance = it }
         }
-
-        /**
-         * a book record stored in db
-         */
-        data class BookDBRecord (
-            val id: String,
-            val url: String,
-            val title: String,
-            val pageNum: Int,
-            val catOrdinal: Int,
-            val tags: Map<String, List<String>>,
-            val source: String,
-            val coverPage: Int,
-            val skipPages: List<Int>,
-            val lastViewTime: Long,
-            val p: Int? = null,
-            val pageUrls: List<String>? = null
-        )
-
-        data class Author (
-            val name: String,
-            val bookIds: List<String>
-        )
     }
 
     override val dataStore = context.bookDataStore
@@ -135,10 +112,6 @@ class BookDatabase (context: Context): BaseDatabase() {
             }
             return byteArrayPreferencesKey("${author}_bookIds")
         }
-    }
-
-    fun dev () {
-//        removeBook("3310366", NO_AUTHOR)
     }
 
     //

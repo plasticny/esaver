@@ -12,19 +12,6 @@ import com.example.viewer.database.SearchDatabase.Companion.SearchMark
 import com.example.viewer.databinding.SearchMarkDialogBinding
 import com.example.viewer.databinding.SearchMarkDialogTagBinding
 
-enum class PositiveButtonStyle {
-    SAVE {
-        override val iconTextId = R.string.fa_floppy_disk
-    },
-    SEARCH {
-        override val iconTextId = R.string.fa_magnifying_glass
-    },
-    CONFIRM {
-        override val iconTextId = R.string.fa_check
-    };
-    abstract val iconTextId: Int
-}
-
 class SearchMarkDialog (
     context: Context,
     private val layoutInflater: LayoutInflater,
@@ -158,4 +145,17 @@ class SearchMarkDialog (
             this.add(value)
         }
     }
+}
+
+enum class PositiveButtonStyle {
+    SAVE {
+        override val iconTextId = R.string.fa_floppy_disk
+    },
+    SEARCH {
+        override val iconTextId = R.string.fa_magnifying_glass
+    },
+    CONFIRM {
+        override val iconTextId = R.string.fa_check
+    };
+    abstract val iconTextId: Int
 }
