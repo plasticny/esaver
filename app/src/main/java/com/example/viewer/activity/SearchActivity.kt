@@ -1,5 +1,6 @@
 package com.example.viewer.activity
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
@@ -25,6 +26,30 @@ import org.jsoup.Jsoup
  * intExtra: searchMarkId; -1 for temporary search mark
  */
 class SearchActivity: AppCompatActivity() {
+    companion object {
+        /**
+         * @param context context of an activity
+         */
+        fun startTmpSearch (
+            context: Context,
+            categories: List<Category> = Category.entries.toList(),
+            keyword: String = "",
+            tags: Map<String, List<String>> = mapOf()
+        ) {
+            SearchDatabase.getInstance(context).setTmpSearchMark(
+                SearchMark(
+                    name = context.getString(R.string.search),
+                    categories, keyword, tags
+                )
+            )
+            context.startActivity(
+                Intent(context, SearchActivity::class.java).apply {
+                    putExtra("searchMarkId", SearchDatabase.TEMP_SEARCH_MARK_ID)
+                }
+            )
+        }
+    }
+
     private lateinit var searchDataSet: SearchDatabase
     private lateinit var searchMark: SearchMark
     private lateinit var binding: SearchActivityBinding

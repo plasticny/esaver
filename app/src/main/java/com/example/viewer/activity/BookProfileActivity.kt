@@ -24,6 +24,8 @@ import com.example.viewer.databinding.BookProfileTagBinding
 import com.example.viewer.database.BookDatabase
 import com.example.viewer.database.BookSource
 import com.example.viewer.database.SearchDatabase
+import com.example.viewer.database.SearchDatabase.Companion.SearchMark
+import com.example.viewer.databinding.DialogTagBinding
 import com.example.viewer.databinding.LocalReadSettingDialogBinding
 import com.example.viewer.databinding.SelectAuthorDialogBinding
 import com.example.viewer.dialog.ConfirmDialog
@@ -169,15 +171,7 @@ class BookProfileActivity: AppCompatActivity() {
                     text = value
                     backgroundTintList = ColorStateList.valueOf(baseContext.getColor(R.color.darkgrey))
                     setTextColor(baseContext.getColor(R.color.grey))
-                    setOnClickListener {
-                        ConfirmDialog(this@BookProfileActivity, layoutInflater).show(
-                            "濾除 $tagCat:$value ?",
-                            positiveCallback = {
-                                addFilterOutTag(tagCat, value)
-                                this@BookProfileActivity.finish()
-                            }
-                        )
-                    }
+                    setOnClickListener { showTagDialog(tagCat, value) }
                 }.also { tagValueWrapper.addView(it) }
             }
         }
@@ -187,13 +181,21 @@ class BookProfileActivity: AppCompatActivity() {
     }
 
     private fun addFilterOutTag (cat: String, value: String) {
-        val searchDataset = SearchDatabase.getInstance(baseContext)
-        searchDataset.getExcludeTag().toMutableMap().apply {
-            val values = get(cat)?.toMutableList() ?: mutableListOf()
-            values.add(value)
-            set(cat, values)
-        }.also {
-            searchDataset.storeExcludeTag(it)
+        toggleProgressBar(true)
+        CoroutineScope(Dispatchers.IO).launch {
+            val searchDataset = SearchDatabase.getInstance(baseContext)
+            val excludeTags = searchDataset.getExcludeTag().toMutableMap()
+            val values = excludeTags[cat]?.toMutableList() ?: mutableListOf()
+
+            if (!values.contains(value)) {
+                excludeTags[cat] = values.apply { add(value) }
+                searchDataset.storeExcludeTag(excludeTags)
+            }
+
+            withContext(Dispatchers.Main) {
+                Toast.makeText(baseContext, "已加至濾除列表", Toast.LENGTH_SHORT).show()
+                toggleProgressBar(false)
+            }
         }
     }
 
@@ -261,6 +263,32 @@ class BookProfileActivity: AppCompatActivity() {
             bookDatabase.setBookSkipPages(bookId, newSkipPages)
 
             dialog.dismiss()
+        }
+
+        dialog.show()
+    }
+
+    private fun showTagDialog (category: String, value: String) {
+        val dialogViewBinding = DialogTagBinding.inflate(layoutInflater)
+        val dialog = AlertDialog.Builder(this).setView(dialogViewBinding.root).create()
+        val translatedCategory = Util.TAG_TRANSLATION_MAP[category]
+
+        dialogViewBinding.categoryTextView.text = translatedCategory
+
+        dialogViewBinding.valueTextView.text = value
+
+        dialogViewBinding.excludeButton.setOnClickListener {
+            ConfirmDialog(this@BookProfileActivity, layoutInflater).show(
+                "濾除 $translatedCategory: $value ?",
+                positiveCallback = { addFilterOutTag(category, value) }
+            )
+        }
+
+        dialogViewBinding.searchButton.setOnClickListener {
+            SearchActivity.startTmpSearch(
+                this@BookProfileActivity,
+                tags = mapOf(Pair(category, listOf(value)))
+            )
         }
 
         dialog.show()

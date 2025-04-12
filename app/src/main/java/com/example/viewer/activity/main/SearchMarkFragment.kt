@@ -61,7 +61,9 @@ class SearchMarkFragment: Fragment() {
             setOnEditorActionListener { _, actionId, event ->
                 if (actionId == EditorInfo.IME_ACTION_SEARCH) {
                     if (event?.action == null || event.action == KeyEvent.ACTION_UP) {
-                        startTmpSearch(keyword = text.toString().trim())
+                        SearchActivity.startTmpSearch(
+                            context, keyword = text.toString().trim()
+                        )
                     }
                 }
                 true
@@ -76,7 +78,8 @@ class SearchMarkFragment: Fragment() {
                     showNameField = false,
                     positiveButtonStyle = PositiveButtonStyle.SEARCH
                 ) { retSearchMark ->
-                    startTmpSearch(
+                    SearchActivity.startTmpSearch(
+                        context,
                         retSearchMark.categories,
                         retSearchMark.keyword,
                         retSearchMark.tags
@@ -288,19 +291,4 @@ class SearchMarkFragment: Fragment() {
        searchDataset.getAllSearchMarkIds().map { id ->
            Pair(id, searchDataset.getSearchMark(id))
        }
-
-    private fun startTmpSearch (
-        categories: List<Category> = Category.entries.toList(),
-        keyword: String = "",
-        tags: Tags = mapOf()
-    ) {
-        searchDataset.setTmpSearchMark(
-            SearchMark(name = getString(R.string.search), categories, keyword, tags)
-        )
-        parent.context.startActivity(
-            Intent(parent.context, SearchActivity::class.java).apply {
-                putExtra("searchMarkId", SearchDatabase.TEMP_SEARCH_MARK_ID)
-            }
-        )
-    }
 }

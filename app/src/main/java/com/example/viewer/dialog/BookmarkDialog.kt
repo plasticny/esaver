@@ -13,7 +13,10 @@ import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.core.view.marginBottom
+import androidx.core.view.marginTop
 import com.example.viewer.R
+import com.example.viewer.Util
 import com.example.viewer.database.BookDatabase
 import com.example.viewer.databinding.BookmarkDialogBinding
 import com.example.viewer.databinding.BookmarkItemBinding
@@ -105,10 +108,15 @@ class BookmarkDialog (
                 // add a dummy view to make the only bookmark item has 50% width
                 addView(
                     View(context).apply {
+                        val margin = Util.dp2px(context, 4f)
                         layoutParams = GridLayout.LayoutParams().apply {
                             width = 0
                             height = GridLayout.LayoutParams.MATCH_PARENT
                             columnSpec = GridLayout.spec(UNDEFINED, 1f)
+                            leftMargin = margin
+                            rightMargin = margin
+                            topMargin = margin
+                            bottomMargin = margin
                         }
                     }
                 )
