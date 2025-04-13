@@ -51,8 +51,7 @@
 
 <!--  page text  -->
 
-    <LinearLayout
-        android:id="@+id/page_textView_container"
+    <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="60dp"
         android:gravity="center"
@@ -60,16 +59,27 @@
         app:layout_constraintEnd_toEndOf="@+id/viewer_tmp_image_vew"
         app:layout_constraintStart_toStartOf="parent">
 
-        <TextView
-            android:id="@+id/viewer_page_TextView"
+        <androidx.cardview.widget.CardView
+            android:id="@+id/page_text_wrapper"
             android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:textColor="@color/grey"
-            android:textSize="18sp"
-            android:paddingHorizontal="8dp"
-            android:gravity="center_vertical"/>
+            android:layout_height="wrap_content"
+            android:backgroundTint="#72FFFFFF"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="0dp">
 
-    </LinearLayout>
+            <TextView
+                android:id="@+id/viewer_page_TextView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/grey"
+                android:textSize="18sp"
+                android:paddingVertical="4dp"
+                android:paddingHorizontal="24dp"
+                android:gravity="center_vertical"/>
+
+        </androidx.cardview.widget.CardView>
+
+    </RelativeLayout>
 
     <ImageView
         android:id="@+id/viewer_tmp_image_vew"

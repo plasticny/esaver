@@ -50,7 +50,7 @@ abstract class BaseViewerActivity: AppCompatActivity() {
         }
         setupChangePageOnImage()
 
-        viewerActivityBinding.pageTextViewContainer.setOnClickListener {
+        viewerActivityBinding.pageTextWrapper.setOnClickListener {
             onPageTextClicked()
         }
 
@@ -187,24 +187,6 @@ abstract class BaseViewerActivity: AppCompatActivity() {
         val detector = GestureDetector(this, listener)
 
         viewerActivityBinding.loadFailedContainer.setOnTouchListener { v, event ->
-            v.performClick()
-            detector.onTouchEvent(event)
-            if (event.action == MotionEvent.ACTION_UP) {
-                listener.reset()
-            }
-            true
-        }
-    }
-
-    @SuppressLint("ClickableViewAccessibility")
-    private fun setupChangePageOnPageText () {
-        val listener = ChangePageGestureListener(
-            FLIP_THRESHOLD, SCROLL_THRESHOLD,
-            { prevPage() }, { nextPage() }
-        )
-        val detector = GestureDetector(this, listener)
-
-        viewerActivityBinding.pageTextViewContainer.setOnTouchListener { v, event ->
             v.performClick()
             detector.onTouchEvent(event)
             if (event.action == MotionEvent.ACTION_UP) {

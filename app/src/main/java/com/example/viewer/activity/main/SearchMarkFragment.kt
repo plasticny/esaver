@@ -73,7 +73,7 @@ class SearchMarkFragment: Fragment() {
         binding.advanceSearchButton.apply {
             setOnClickListener {
                 SearchMarkDialog(context, layoutInflater).show(
-                    title = "進階搜索",
+                    title = "進階搜尋",
                     keyword = binding.searchEditText.text.toString().trim(),
                     showNameField = false,
                     positiveButtonStyle = PositiveButtonStyle.SEARCH
@@ -90,7 +90,7 @@ class SearchMarkFragment: Fragment() {
 
         binding.addButton.setOnClickListener {
             SearchMarkDialog(parent.context, layoutInflater).show(
-                title = "新增搜索標記"
+                title = "新增搜尋標記"
             ) { retSearchMark ->
                 searchDataset.addSearchMark(retSearchMark)
                 refreshSearchMarkWrapper()
@@ -106,7 +106,7 @@ class SearchMarkFragment: Fragment() {
         binding.toolBarEditButton.setOnClickListener {
             focusedSearchMark!!.let { entry ->
                 SearchMarkDialog(parent.context, layoutInflater).show(
-                    title = "編輯搜索標記"
+                    title = "編輯搜尋標記"
                 ) { retSearchMark ->
                     searchDataset.modifySearchMark(entry.id, retSearchMark)
                     deFocusSearchMark(doModifyBindingStyle = false)
