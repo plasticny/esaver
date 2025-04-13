@@ -25,9 +25,8 @@ class SearchMarkDialog (
     private val dialog = AlertDialog.Builder(context).setView(dialogBinding.root).create()
 
     fun show (
-        searchMark: SearchMark? = null,
         title: String? = null,
-        keyword: String? = null,
+        searchMark: SearchMark? = null,
         showNameField: Boolean = true,
         positiveButtonStyle: PositiveButtonStyle = PositiveButtonStyle.SAVE,
         positiveCb: ((SearchMark) -> Unit)? = null
@@ -69,7 +68,7 @@ class SearchMarkDialog (
         }
 
         // keyword
-        dialogBinding.keywordEditText.setText(keyword ?: searchMark?.keyword ?: "")
+        dialogBinding.keywordEditText.setText(searchMark?.keyword ?: "")
 
         // tags
         searchMark?.tags?.forEach { entry ->
@@ -86,6 +85,10 @@ class SearchMarkDialog (
                 tagBindings.add(tagBinding)
                 dialogBinding.tagWrapper.addView(tagBinding.root, 0)
             }
+        }
+
+        dialogBinding.cancelButton.setOnClickListener {
+            dialog.dismiss()
         }
 
         // positive button
@@ -153,9 +156,6 @@ enum class PositiveButtonStyle {
     },
     SEARCH {
         override val iconTextId = R.string.fa_magnifying_glass
-    },
-    CONFIRM {
-        override val iconTextId = R.string.fa_check
     };
     abstract val iconTextId: Int
 }

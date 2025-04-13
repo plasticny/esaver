@@ -61,4 +61,5 @@
     <string name="exclude_tag">濾除標籤</string>
     <string name="search_tag">搜尋標籤</string>
     <string name="load_image_failed_retry">圖片讀取失敗\n點擊重試</string>
+    <string name="there_is_no_more">沒有更多了</string>
 </resources>

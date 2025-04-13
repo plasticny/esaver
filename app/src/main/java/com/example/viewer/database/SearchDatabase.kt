@@ -125,6 +125,9 @@ class SearchDatabase (context: Context): BaseDatabase() {
             getAllSearchMarkIds().toMutableList().also { it.remove(id) }
         )
     }
+    /**
+     * @return id of added search mark
+     */
     fun addSearchMark (searchMark: SearchMark): Int {
         val id = getNextId()
         storeSearchMark(id, searchMark)

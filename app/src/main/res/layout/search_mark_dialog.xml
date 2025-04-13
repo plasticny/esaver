@@ -148,15 +148,33 @@
 
 <!--  buttons  -->
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/positive_button"
-        android:layout_width="60dp"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:fontFamily="@font/font_awesome"
-        android:text="@string/fa_floppy_disk"
-        android:textColor="@color/black"
-        android:theme="@style/Theme.MaterialComponents.Light"
-        android:backgroundTint="@color/grey"
-        android:layout_gravity="end"/>
+        android:orientation="horizontal"
+        android:gravity="end">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/cancel_button"
+            android:layout_width="60dp"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/font_awesome"
+            android:text="@string/fa_xmark"
+            android:textColor="@color/black"
+            android:theme="@style/Theme.MaterialComponents.Light"
+            android:backgroundTint="@color/grey"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/positive_button"
+            android:layout_width="60dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:fontFamily="@font/font_awesome"
+            android:text="@string/fa_floppy_disk"
+            android:textColor="@color/black"
+            android:theme="@style/Theme.MaterialComponents.Light"
+            android:backgroundTint="@color/grey"/>
+
+    </LinearLayout>
 
 </LinearLayout>

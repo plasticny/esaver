@@ -63,7 +63,7 @@
             android:id="@+id/page_text_wrapper"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:backgroundTint="#72FFFFFF"
+            android:backgroundTint="#3EFFFFFF"
             app:cardCornerRadius="8dp"
             app:cardElevation="0dp">
 

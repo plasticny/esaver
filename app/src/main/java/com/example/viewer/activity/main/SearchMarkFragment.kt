@@ -72,9 +72,15 @@ class SearchMarkFragment: Fragment() {
 
         binding.advanceSearchButton.apply {
             setOnClickListener {
+                val searchMark = SearchMark (
+                    name = "",
+                    categories = listOf(),
+                    keyword = binding.searchEditText.text.toString().trim(),
+                    tags = mapOf()
+                )
                 SearchMarkDialog(context, layoutInflater).show(
                     title = "進階搜尋",
-                    keyword = binding.searchEditText.text.toString().trim(),
+                    searchMark = searchMark,
                     showNameField = false,
                     positiveButtonStyle = PositiveButtonStyle.SEARCH
                 ) { retSearchMark ->

@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.view.View
 import android.widget.Button
 import android.widget.ProgressBar
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
@@ -17,6 +18,8 @@ import com.example.viewer.databinding.SearchBookBinding
 import com.example.viewer.database.SearchDatabase
 import com.example.viewer.database.SearchDatabase.Companion.SearchMark
 import com.example.viewer.database.SearchDatabase.Companion.Category
+import com.example.viewer.dialog.PositiveButtonStyle
+import com.example.viewer.dialog.SearchMarkDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -55,6 +58,7 @@ class SearchActivity: AppCompatActivity() {
     private lateinit var binding: SearchActivityBinding
     private lateinit var allSearchMarkIds: List<Int>
 
+    @Volatile
     private var searchMarkId = -1
     private var position = -1
     private var next: String? = null // for load more books
@@ -78,41 +82,64 @@ class SearchActivity: AppCompatActivity() {
 
         binding = SearchActivityBinding.inflate(layoutInflater)
 
+        binding.searchMarkNameContainer.setOnClickListener {
+            SearchMarkDialog(this, layoutInflater).show(
+                title = "編輯搜尋",
+                searchMark = if (isTemporarySearch) SearchMark(
+                    name = "",
+                    categories = searchMark.categories,
+                    keyword = searchMark.keyword,
+                    tags = searchMark.tags
+                ) else searchMark,
+                positiveButtonStyle = PositiveButtonStyle.SAVE
+            ) { retSearchMark ->
+                if (isTemporarySearch) {
+                    searchMarkId = searchDataSet.addSearchMark(retSearchMark)
+                    allSearchMarkIds = searchDataSet.getAllSearchMarkIds()
+                    position = allSearchMarkIds.indexOf(searchMarkId)
+                    isTemporarySearch = false
+                    Toast.makeText(baseContext, "已儲存", Toast.LENGTH_SHORT).show()
+                } else {
+                    searchDataSet.modifySearchMark(searchMarkId, retSearchMark)
+                }
+
+                searchMark = retSearchMark
+                lifecycleScope.launch { reset() }
+            }
+        }
+
         binding.prevSearchMarkButton.apply {
             if (isTemporarySearch) {
                 visibility = View.INVISIBLE
-            } else {
-                setOnClickListener {
-                    if (position == 0) {
-                        return@setOnClickListener
-                    }
-                    searchMark = searchDataSet.getSearchMark(allSearchMarkIds[--position])
-                    lifecycleScope.launch { reset() }
+            }
+            setOnClickListener {
+                if (position == 0) {
+                    return@setOnClickListener
                 }
+                val id = allSearchMarkIds[--position]
+                searchMark = searchDataSet.getSearchMark(id)
+                searchMarkId = id
+                lifecycleScope.launch { reset() }
             }
         }
         binding.nextSearchMarkButton.apply {
             if (isTemporarySearch) {
                 visibility = View.INVISIBLE
-            } else {
-                setOnClickListener {
-                    if (position == allSearchMarkIds.lastIndex) {
-                        return@setOnClickListener
-                    }
-                    searchMark = searchDataSet.getSearchMark(allSearchMarkIds[++position])
-                    lifecycleScope.launch { reset() }
+            }
+            setOnClickListener {
+                if (position == allSearchMarkIds.lastIndex) {
+                    return@setOnClickListener
                 }
+                val id = allSearchMarkIds[++position]
+                searchMark = searchDataSet.getSearchMark(id)
+                searchMarkId = id
+                lifecycleScope.launch { reset() }
             }
         }
 
         binding.loadMoreButton.apply {
             setOnClickListener {
-                lifecycleScope.launch {
-                    loadMoreBooks()
-                    if (next == null){
-                        visibility = Button.INVISIBLE
-                    }
-                }
+                lifecycleScope.launch { loadMoreBooks() }
             }
         }
 
@@ -149,20 +176,36 @@ class SearchActivity: AppCompatActivity() {
 
         binding.searchBookWrapper.removeAllViews()
 
-        binding.loadMoreButton.visibility = Button.INVISIBLE
+        // hide these views while loading
+        binding.loadMoreButton.visibility = View.INVISIBLE
+        binding.noMoreTextView.visibility = View.INVISIBLE
+
         loadMoreBooks()
-        if (next != null) {
-            binding.loadMoreButton.visibility = Button.VISIBLE
-        }
     }
 
     private suspend fun loadMoreBooks () {
+        val mySearchId = searchMarkId
+
         binding.searchProgressBar.visibility = ProgressBar.VISIBLE
         val books = excludeTagFilter(fetchBooks())
         binding.searchProgressBar.visibility = ProgressBar.GONE
 
+        // if the search mark changed, terminate this function
+        if (mySearchId != searchMarkId) {
+            return
+        }
+
         addBookViews(books)
         bookRecords.addAll(books)
+
+        // change visibility of load more button and no more text
+        if (next != null) {
+            binding.loadMoreButton.visibility = View.VISIBLE
+            binding.noMoreTextView.visibility = View.GONE
+        } else {
+            binding.loadMoreButton.visibility = View.GONE
+            binding.noMoreTextView.visibility = View.VISIBLE
+        }
     }
 
     private fun addBookViews (books: List<BookRecord>) {
