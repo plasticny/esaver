@@ -14,6 +14,7 @@ import com.example.viewer.RandomBook
 import com.example.viewer.Util
 import com.example.viewer.databinding.ViewerImageDialogBinding
 import com.example.viewer.dialog.BookmarkDialog
+import com.example.viewer.dialog.ConfirmDialog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -37,11 +38,11 @@ class LocalViewerActivity: BaseViewerActivity() {
     private lateinit var bookId: String
     private lateinit var skipPageSet: Set<Int>
 
-    private var nextBookFlag = false
-    private var volumeDownKeyHeld = false
-
     private val bookFolder: File
         get() = fetcher.bookFolder!!
+
+    @Volatile
+    private var askingNextBook = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         bookDataset = BookDatabase.getInstance(baseContext)
@@ -53,47 +54,6 @@ class LocalViewerActivity: BaseViewerActivity() {
         if (page + 1 <= lastPage) {
             preloadPage(page + 1)
         }
-    }
-
-    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        if (event != null) {
-            when (keyCode) {
-                KeyEvent.KEYCODE_VOLUME_UP -> {
-                    nextBookFlag = false
-                    prevPage()
-                    return true
-                }
-                KeyEvent.KEYCODE_VOLUME_DOWN -> {
-                    if (page < lastPage) {
-                        nextPage()
-                    } else if (!nextBookFlag) {
-                        nextBookFlag = true
-                        Toast.makeText(this, "尾頁，再按一次到下一本", Toast.LENGTH_SHORT).show()
-                    } else if (!volumeDownKeyHeld) {
-                        nextBook()
-                    }
-                    volumeDownKeyHeld = true
-                    return true
-                }
-            }
-        }
-        return super.onKeyDown(keyCode, event)
-    }
-
-    override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
-        if (event != null) {
-            when (keyCode) {
-                KeyEvent.KEYCODE_VOLUME_DOWN -> {
-                    volumeDownKeyHeld = false
-                    return true
-                }
-                KeyEvent.KEYCODE_BACK -> {
-                    finish()
-                    return true
-                }
-            }
-        }
-        return super.onKeyDown(keyCode, event)
     }
 
     override fun onImageLongClicked(): Boolean {
@@ -114,7 +74,20 @@ class LocalViewerActivity: BaseViewerActivity() {
         }.show()
 
     override fun nextPage () {
-        if (page < lastPage) {
+        if (page == lastPage && !askingNextBook) {
+            askingNextBook = true
+            ConfirmDialog(this, layoutInflater).show(
+                "已到尾頁，到下一本書嗎？",
+                positiveCallback = {
+                    nextBook()
+                    askingNextBook = false
+                },
+                negativeCallback = {
+                    askingNextBook = false
+                }
+            )
+        }
+        else if (page < lastPage) {
             page++
             while (skipPageSet.contains(page)) {
                 page++
@@ -146,6 +119,7 @@ class LocalViewerActivity: BaseViewerActivity() {
 
         viewerActivityBinding.viewerPageTextView.text = (page + 1).toString()
         toggleLoadingUi(true)
+        toggleLoadFailedScreen(false)
 
         lifecycleScope.launch {
             val pictureUrl = fetcher.getPictureUrl(page)
@@ -156,12 +130,13 @@ class LocalViewerActivity: BaseViewerActivity() {
             if (pictureUrl != null) {
                 showPicture(
                     pictureUrl, getPageSignature(page),
-                    onFailed = { alertLoadPictureFailed() },
+                    onPictureReady = { toggleLoadFailedScreen(false) },
+                    onFailed = { toggleLoadFailedScreen(true) },
                     onFinished = { toggleLoadingUi(false) }
                 )
             } else {
-                alertLoadPictureFailed()
                 toggleLoadingUi(false)
+                toggleLoadFailedScreen(true)
             }
         }
     }
@@ -266,9 +241,6 @@ class LocalViewerActivity: BaseViewerActivity() {
     private fun nextBook () {
         bookId = RandomBook.next(this, !Util.isInternetAvailable(this))
         prepareBook(bookId)
-
-        nextBookFlag = false
-
         bookDataset.updateBookLastViewTime(bookId)
         loadPage()
     }

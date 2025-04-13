@@ -38,6 +38,7 @@ class OnlineViewerActivity: BaseViewerActivity() {
 
         viewerActivityBinding.viewerPageTextView.text = (page + 1).toString()
         toggleLoadingUi(true)
+        toggleLoadFailedScreen(false)
 
         lifecycleScope.launch {
             val pictureUrl = getPictureUrl(page)
@@ -48,12 +49,13 @@ class OnlineViewerActivity: BaseViewerActivity() {
             if (pictureUrl != null) {
                 showPicture(
                     pictureUrl, getPageSignature(page),
-                    onFailed = { alertLoadPictureFailed() },
+                    onPictureReady = { toggleLoadFailedScreen(false) },
+                    onFailed = { toggleLoadFailedScreen(true) },
                     onFinished = { toggleLoadingUi(false) }
                 )
             } else {
-                alertLoadPictureFailed()
                 toggleLoadingUi(false)
+                toggleLoadFailedScreen(true)
             }
         }
     }

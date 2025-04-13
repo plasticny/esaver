@@ -4,10 +4,11 @@ import android.annotation.SuppressLint
 import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.view.GestureDetector
+import android.view.KeyEvent
 import android.view.MotionEvent
+import android.view.View
 import android.widget.ImageView
 import android.widget.ProgressBar
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DataSource
@@ -52,21 +53,56 @@ abstract class BaseViewerActivity: AppCompatActivity() {
         viewerActivityBinding.pageTextViewContainer.setOnClickListener {
             onPageTextClicked()
         }
-//        setupChangePageOnPageText()
+
+        viewerActivityBinding.reloadIcon.setOnClickListener {
+            loadPage()
+        }
+        viewerActivityBinding.reloadTextView.setOnClickListener {
+            loadPage()
+        }
+        setupChangePageOnFailScreen()
 
         setContentView(viewerActivityBinding.root)
 
         loadPage()
     }
 
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (event != null) {
+            when (keyCode) {
+                KeyEvent.KEYCODE_VOLUME_UP -> {
+                    prevPage()
+                    return true
+                }
+                KeyEvent.KEYCODE_VOLUME_DOWN -> {
+                    nextPage()
+                    return true
+                }
+            }
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
     protected fun toggleLoadingUi (toggle: Boolean) {
         viewerActivityBinding.let {
             if (toggle) {
                 it.viewerProgressBar.visibility = ProgressBar.VISIBLE
-                it.photoView.imageAlpha = 0
+                it.photoView.visibility = View.INVISIBLE
             } else {
                 it.viewerProgressBar.visibility = ProgressBar.GONE
-                it.photoView.imageAlpha = 255
+                it.photoView.visibility = View.VISIBLE
+            }
+        }
+    }
+
+    protected fun toggleLoadFailedScreen (toggle: Boolean) {
+        viewerActivityBinding.let {
+            if (toggle) {
+                it.loadFailedContainer.visibility = ProgressBar.VISIBLE
+                it.photoView.visibility = View.INVISIBLE
+            } else {
+                it.loadFailedContainer.visibility = ProgressBar.GONE
+                it.photoView.visibility = View.VISIBLE
             }
         }
     }
@@ -101,8 +137,6 @@ abstract class BaseViewerActivity: AppCompatActivity() {
             })
             .into(imageView)
     }
-
-    protected fun alertLoadPictureFailed () = Toast.makeText(baseContext, "讀取圖片失敗", Toast.LENGTH_SHORT).show()
 
     protected fun getPageSignature (page: Int): ObjectKey {
         if (!pageSignatures.containsKey(page)) {
@@ -144,6 +178,25 @@ abstract class BaseViewerActivity: AppCompatActivity() {
     }
 
     @SuppressLint("ClickableViewAccessibility")
+    private fun setupChangePageOnFailScreen () {
+        val listener = ChangePageGestureListener(
+            FLIP_THRESHOLD, SCROLL_THRESHOLD,
+            prevPageCallback = { prevPage() },
+            nextPageCallback = { nextPage() }
+        )
+        val detector = GestureDetector(this, listener)
+
+        viewerActivityBinding.loadFailedContainer.setOnTouchListener { v, event ->
+            v.performClick()
+            detector.onTouchEvent(event)
+            if (event.action == MotionEvent.ACTION_UP) {
+                listener.reset()
+            }
+            true
+        }
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
     private fun setupChangePageOnPageText () {
         val listener = ChangePageGestureListener(
             FLIP_THRESHOLD, SCROLL_THRESHOLD,
@@ -177,13 +230,11 @@ private class ChangePageGestureListener (
     ): Boolean {
         // change page on fling
         if (e1 != null && isMotionHorizontal(e1, e2)) {
-            if (abs(e2.x - e1.x) > flipThreshold) {
-                return false
+            if (abs(e2.x - e1.x) <= flipThreshold) {
+                changePage(e1, e2)
             }
-            changePage(e1, e2)
-            return true
         }
-        return false
+        return true
     }
 
     override fun onScroll(
