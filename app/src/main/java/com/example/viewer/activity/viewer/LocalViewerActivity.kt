@@ -3,15 +3,11 @@ package com.example.viewer.activity.viewer
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
-import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.view.KeyEvent
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
-import com.bumptech.glide.load.DataSource
-import com.bumptech.glide.load.engine.GlideException
-import com.bumptech.glide.request.RequestListener
-import com.bumptech.glide.request.target.Target
+import androidx.lifecycle.lifecycleScope
 import com.example.viewer.fetcher.BasePictureFetcher
 import com.example.viewer.database.BookDatabase
 import com.example.viewer.RandomBook
@@ -21,7 +17,7 @@ import com.example.viewer.dialog.BookmarkDialog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import okhttp3.Response
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 
@@ -45,7 +41,7 @@ class LocalViewerActivity: BaseViewerActivity() {
     private var volumeDownKeyHeld = false
 
     private val bookFolder: File
-        get() = fetcher.bookFolder
+        get() = fetcher.bookFolder!!
 
     override fun onCreate(savedInstanceState: Bundle?) {
         bookDataset = BookDatabase.getInstance(baseContext)
@@ -53,6 +49,10 @@ class LocalViewerActivity: BaseViewerActivity() {
         prepareBook(bookId)
 
         super.onCreate(savedInstanceState)
+
+        if (page + 1 <= lastPage) {
+            preloadPage(page + 1)
+        }
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
@@ -105,6 +105,12 @@ class LocalViewerActivity: BaseViewerActivity() {
         BookmarkDialog(this, layoutInflater, bookId, page) { bookMarkPage ->
             page = bookMarkPage
             loadPage()
+            if (page + 1 <= lastPage) {
+                preloadPage(page + 1)
+            }
+            if (page - 1 >= firstPage) {
+                preloadPage(page - 1)
+            }
         }.show()
 
     override fun nextPage () {
@@ -114,6 +120,10 @@ class LocalViewerActivity: BaseViewerActivity() {
                 page++
             }
             loadPage()
+
+            if (page + 1 <= lastPage) {
+                preloadPage(page + 1)
+            }
         }
     }
 
@@ -124,54 +134,52 @@ class LocalViewerActivity: BaseViewerActivity() {
                 page--
             }
             loadPage()
+
+            if (page - 1 >= firstPage) {
+                preloadPage(page - 1)
+            }
         }
     }
 
     override fun loadPage () {
         val myPage = page
 
-        viewerActivityBinding.viewerPageTextView.text = (myPage + 1).toString()
-        toggleProgressBar(true)
+        viewerActivityBinding.viewerPageTextView.text = (page + 1).toString()
+        toggleLoadingUi(true)
 
-        // load this page
-        CoroutineScope(Dispatchers.Main).launch {
-            val pictureBuilder = fetcher.getPicture(
-                myPage,
-                object: RequestListener<Drawable> {
-                    override fun onLoadFailed(
-                        e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean
-                    ): Boolean = loadEnded()
-
-                    override fun onResourceReady(
-                        resource: Drawable?, model: Any?, target: Target<Drawable>?, dataSource: DataSource?, isFirstResource: Boolean
-                    ): Boolean = loadEnded()
-
-                    private fun loadEnded (): Boolean {
-                        toggleProgressBar(false)
-                        return false
-                    }
-                }
-            )
-            if (page == myPage) {
-                if (pictureBuilder != null) {
-                    viewerActivityBinding.photoView.imageAlpha = 255
-                    pictureBuilder.into(viewerActivityBinding.photoView)
-                } else {
-                    println("[${this@LocalViewerActivity::class.simpleName}.loadPage] get picture failed")
-                    viewerActivityBinding.photoView.imageAlpha = 0
-                    toggleProgressBar(false)
-                }
-            }
-        }
-
-        // pre-load next next page
-        CoroutineScope(Dispatchers.IO).launch {
-            val nextPage = myPage + 1
-            if (nextPage > lastPage || File(bookFolder, nextPage.toString()).exists()) {
+        lifecycleScope.launch {
+            val pictureUrl = fetcher.getPictureUrl(page)
+            if (myPage != page) {
                 return@launch
             }
-            if (Util.isInternetAvailable(baseContext)) {
-                fetcher.savePicture(nextPage)
+
+            if (pictureUrl != null) {
+                showPicture(
+                    pictureUrl, getPageSignature(page),
+                    onFailed = { alertLoadPictureFailed() },
+                    onFinished = { toggleLoadingUi(false) }
+                )
+            } else {
+                alertLoadPictureFailed()
+                toggleLoadingUi(false)
+            }
+        }
+    }
+
+    private fun preloadPage (page: Int) {
+        if (page < firstPage || page > lastPage) {
+            throw Exception("page out of range")
+        }
+
+        lifecycleScope.launch {
+            if (!File(bookFolder, page.toString()).exists() && !Util.isInternetAvailable(baseContext)) {
+                return@launch
+            }
+            fetcher.getPictureUrl(page)?.let {
+                showPicture(
+                    it, getPageSignature(page),
+                    imageView = viewerActivityBinding.viewerTmpImageVew
+                )
             }
         }
     }
@@ -189,9 +197,7 @@ class LocalViewerActivity: BaseViewerActivity() {
         }
 
         page = firstPage
-        fetcher = BasePictureFetcher.getFetcher(this, bookId).apply {
-            setDownloadFailureCallback { res -> onPictureDownloadFailure(res) }
-        }
+        fetcher = BasePictureFetcher.getFetcher(this, bookId)
     }
 
     private fun showImageDialog () {
@@ -248,6 +254,12 @@ class LocalViewerActivity: BaseViewerActivity() {
             }
         }
 
+        dialogViewBinding.reloadButton.setOnClickListener {
+            resetPageSignature(page)
+            loadPage()
+            dialog.dismiss()
+        }
+
         dialog.show()
     }
 
@@ -274,7 +286,9 @@ class LocalViewerActivity: BaseViewerActivity() {
             Toast.makeText(baseContext, "不支持旋轉GIF", Toast.LENGTH_SHORT).show()
             return
         }
-        else {
+
+        toggleLoadingUi(true)
+        CoroutineScope(Dispatchers.IO).launch {
             // handle static file rotation
             val originImage = BitmapFactory.decodeFile(imageFile.path)
             val rotatedImage = Bitmap.createBitmap(
@@ -288,20 +302,13 @@ class LocalViewerActivity: BaseViewerActivity() {
             }
             originImage.recycle()
             rotatedImage.recycle()
-        }
 
-        // refresh page
-        loadPage()
-    }
-
-    private fun onPictureDownloadFailure (response: Response) {
-        toggleProgressBar(false)
-        runOnUiThread {
-            Toast.makeText(
-                baseContext,
-                "圖片下載失敗，響應代碼﹕${response.code}",
-                Toast.LENGTH_SHORT
-            ).show()
+            // refresh page
+            withContext(Dispatchers.Main) {
+                resetPageSignature(page)
+                loadPage()
+                toggleLoadingUi(false)
+            }
         }
     }
 }

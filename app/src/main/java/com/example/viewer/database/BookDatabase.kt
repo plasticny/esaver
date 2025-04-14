@@ -232,7 +232,11 @@ class BookDatabase (context: Context): BaseDatabase() {
     fun setBookPageUrls (bookId: String, urls: List<String>) = storeAsByteArray(storeKeys.bookPageUrls(bookId), urls)
 
     fun getBookP (bookId: String) = read(storeKeys.bookP(bookId))!!
-    fun increaseBookP (bookId: String) = store(storeKeys.bookP(bookId), getBookP(bookId) + 1)
+    fun increaseBookP (bookId: String): Int {
+        val p = getBookP(bookId) + 1
+        store(storeKeys.bookP(bookId), p)
+        return p
+    }
 
     fun getBookPageNum (bookId: String) = read(storeKeys.bookPageNum(bookId))!!
 

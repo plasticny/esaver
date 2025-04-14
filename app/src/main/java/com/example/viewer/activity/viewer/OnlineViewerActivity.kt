@@ -1,25 +1,19 @@
 package com.example.viewer.activity.viewer
 
-import android.graphics.drawable.Drawable
 import android.os.Bundle
+import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
-import com.bumptech.glide.load.DataSource
-import com.bumptech.glide.load.engine.GlideException
-import com.bumptech.glide.request.RequestListener
-import com.bumptech.glide.request.target.Target
 import com.example.viewer.activity.SearchActivity.Companion.BookRecord
+import com.example.viewer.fetcher.EPictureFetcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.jsoup.Jsoup
 
 class OnlineViewerActivity: BaseViewerActivity() {
     private lateinit var bookRecord: BookRecord
-    private lateinit var pageUrls: MutableList<String?>
+    private lateinit var fetcher: EPictureFetcher
     private lateinit var pictureUrls: MutableList<String?>
-
-    private var p = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         bookRecord = intent.getParcelableExtra("book_record", BookRecord::class.java)!!
@@ -27,10 +21,14 @@ class OnlineViewerActivity: BaseViewerActivity() {
         firstPage = 0
         lastPage = bookRecord.pageNum - 1
 
-        pageUrls = MutableList(bookRecord.pageNum) { null }
+        fetcher = EPictureFetcher(this, pageNum = bookRecord.pageNum, bookUrl = bookRecord.url)
         pictureUrls = MutableList(bookRecord.pageNum) { null }
 
         super.onCreate(savedInstanceState)
+
+        if (page + 1 <= lastPage) {
+            preloadPage(page + 1)
+        }
     }
 
     override fun onImageLongClicked(): Boolean = true
@@ -38,32 +36,27 @@ class OnlineViewerActivity: BaseViewerActivity() {
     override fun onPageTextClicked() = Unit
 
     override fun loadPage() {
-        toggleProgressBar(true)
-
         val myPage = page
+
         viewerActivityBinding.viewerPageTextView.text = (page + 1).toString()
+        toggleLoadingUi(true)
 
         lifecycleScope.launch {
-            Glide.with(baseContext)
-                .load(withContext(Dispatchers.IO) { getPictureUrl(page) })
-                .listener(object: RequestListener<Drawable> {
-                    override fun onLoadFailed(
-                        e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean
-                    ): Boolean = loadEnded()
+            val pictureUrl = getPictureUrl(page)
+            if (myPage != page) {
+                return@launch
+            }
 
-                    override fun onResourceReady(
-                        resource: Drawable?, model: Any?, target: Target<Drawable>?, dataSource: DataSource?, isFirstResource: Boolean
-                    ): Boolean = loadEnded()
-
-                    private fun loadEnded (): Boolean {
-                        toggleProgressBar(false)
-                        return false
-                    }
-                }).run {
-                    if (myPage == page) {
-                        into(viewerActivityBinding.photoView)
-                    }
-                }
+            if (pictureUrl != null) {
+                showPicture(
+                    pictureUrl, getPageSignature(page),
+                    onFailed = { alertLoadPictureFailed() },
+                    onFinished = { toggleLoadingUi(false) }
+                )
+            } else {
+                alertLoadPictureFailed()
+                toggleLoadingUi(false)
+            }
         }
     }
 
@@ -71,6 +64,12 @@ class OnlineViewerActivity: BaseViewerActivity() {
         if (page > firstPage) {
             page--
             loadPage()
+
+            (page - 1).let {
+                if (it >= firstPage) {
+                    preloadPage(it)
+                }
+            }
         }
     }
 
@@ -78,39 +77,42 @@ class OnlineViewerActivity: BaseViewerActivity() {
         if (page < lastPage) {
             page++
             loadPage()
+
+            (page + 1).let {
+                if (it <= lastPage) {
+                    preloadPage(it)
+                }
+            }
         }
     }
 
-    private suspend fun getPictureUrl (page: Int): String {
+    private fun preloadPage (page: Int) {
+        if (page < firstPage || page > lastPage) {
+            throw Exception("page out of range")
+        }
+        lifecycleScope.launch {
+            getPictureUrl(page)?.let {
+                showPicture(
+                    it, getPageSignature(page),
+                    imageView = viewerActivityBinding.viewerTmpImageVew
+                )
+            }
+        }
+    }
+
+    private suspend fun getPictureUrl (page: Int): String? {
+        println("[${this::class.simpleName}.${this::getPictureUrl.name}] $page")
+
         if (page < firstPage || page > lastPage) {
             throw Exception("page out of range")
         }
 
         if (pictureUrls[page] == null) {
             pictureUrls[page] = withContext(Dispatchers.IO) {
-                Jsoup.connect(getPageUrl(page)).get()
-            }.selectFirst("#i3 #img")!!.attr("src")
-        }
-
-        return pictureUrls[page]!!
-    }
-
-    private suspend fun getPageUrl (page: Int): String {
-        if (page < firstPage || page > lastPage) {
-            throw Exception("page out of range")
-        }
-
-        if (pageUrls[page] == null) {
-            withContext(Dispatchers.IO) {
-                Jsoup.connect("${bookRecord.url}/?p=${p++}").get()
-            }.select("#gdt a").forEach {
-                val idx = it.selectFirst("div")!!.attr("title").let { title ->
-                    title.split(':').first().let { token -> token.slice(5..token.lastIndex) }
-                }.toInt() - 1
-                pageUrls[idx] = it.attr("href")
+                 fetcher.getPictureUrl(page)
             }
         }
 
-        return pageUrls[page]!!
+        return pictureUrls[page]
     }
 }

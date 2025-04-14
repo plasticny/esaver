@@ -1,63 +1,94 @@
 package com.example.viewer.fetcher
 
 import android.content.Context
+import android.widget.Toast
+import com.example.viewer.Util
 import com.example.viewer.database.BookDatabase
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
-import java.net.URL
+import org.jsoup.HttpStatusException
+import org.jsoup.Jsoup
 
-class EPictureFetcher (context: Context, bookId: String): BasePictureFetcher(context, bookId) {
-    companion object {
-        private const val I3_TAG = "<div id=\"i3\">"
-        private const val URL_START_TAG = "src=\""
+class EPictureFetcher: BasePictureFetcher {
+    private val bookDataset = BookDatabase.getInstance(context)
+    private val bookUrl: String
+
+    @Volatile
+    private var gettingPageUrl = false
+    private var pageUrls: MutableList<String>
+    private var p: Int
+
+    constructor (context: Context, bookId: String): super(context, bookId) {
+        p = bookDataset.getBookP(bookId)
+        bookUrl = bookDataset.getBookUrl(bookId)
+        pageUrls = bookDataset.getBookPageUrls(bookId).toMutableList()
     }
 
-    private val bookDataset = BookDatabase.getInstance(context)
-    private val bookUrl: String = bookDataset.getBookUrl(bookId)
-    private var pageUrls: MutableList<String> = bookDataset.getBookPageUrls(bookId).toMutableList()
+    constructor (context: Context, pageNum: Int, bookUrl: String): super(context, pageNum) {
+        p = 0
+        this.bookUrl = bookUrl
+        pageUrls = mutableListOf()
+    }
 
     override suspend fun savePicture(page: Int): Boolean {
         println("[EPictureFetcher.savePicture] $page")
         assertPageInRange(page)
 
-        val url = fetchPictureUrl(page)
-        return downloadPicture(page, url)
-    }
-
-    private suspend fun fetchPictureUrl (page: Int): String {
-        println("[EPictureFetcher.fetchPictureUrl] $page")
-        val pageUrl = getPageUrl(page)
-        val pageText = coroutineScope {
-            withContext(Dispatchers.IO) {
-                async { URL(pageUrl).readText() }.await()
-            }
+        if (!Util.isInternetAvailable(context)) {
+            Toast.makeText(context, "沒有網絡，無法下載", Toast.LENGTH_SHORT).show()
+            return false
         }
 
-        val i3Idx = pageText.indexOf(I3_TAG)
-        val startUrlIdx = pageText.indexOf(URL_START_TAG, i3Idx + I3_TAG.length)
-        val endUrlIdx = pageText.indexOf("\"", startUrlIdx + URL_START_TAG.length)
+        return fetchPictureUrl(page)?.let {
+            downloadPicture(page, it)
+        } ?: false
+    }
 
-        return pageText.substring(startUrlIdx + URL_START_TAG.length, endUrlIdx)
+    override suspend fun fetchPictureUrl (page: Int): String? {
+        println("[${this::class.simpleName}.${this::fetchPictureUrl.name}] $page")
+
+        if (page >= pageNum) {
+            throw Exception("page out of range")
+        }
+
+        return withContext(Dispatchers.IO) {
+            try {
+                Jsoup.connect(getPageUrl(page)).get()
+            } catch (e: HttpStatusException) {
+                null
+            }
+        }?.selectFirst("#i3 #img")!!.attr("src") ?: null
     }
 
     private suspend fun getPageUrl (page: Int): String {
-        if (page > pageUrls.lastIndex) {
-            println("[EPictureFetcher.getPageUrl]\nload next p")
+        while (gettingPageUrl) {
+            withContext(Dispatchers.IO) {
+                Thread.sleep(100)
+            }
+        }
 
-            val p = bookDataset.getBookP(bookId)
-            val html = coroutineScope {
-                withContext(Dispatchers.IO) {
-                    async { URL("${bookUrl}/?p=${p}").readText() }.await()
-                }
+        if (page > pageUrls.lastIndex) {
+            gettingPageUrl = true
+
+            println("[${this::class.simpleName}.${this::getPageUrl.name}] load next p $p")
+
+            withContext(Dispatchers.IO) {
+                Jsoup.connect("${bookUrl}/?p=$p").get()
+            }.select("#gdt a").map { it.attr("href") }.let {
+                pageUrlSegment -> pageUrls.addAll(pageUrlSegment)
             }
 
-            val pageUrlSegment = Regex("https://e-hentai.org/s/(.*?)/${bookId}-(\\d+)").findAll(html).map { it.value }.toList()
-            pageUrls.addAll(pageUrlSegment)
+            if (isLocal) {
+                // save progress if local fetcher
+                bookId!!.let {
+                    p = bookDataset.increaseBookP(bookId)
+                    bookDataset.setBookPageUrls(bookId, pageUrls)
+                }
+            } else {
+                p++
+            }
 
-            bookDataset.increaseBookP(bookId)
-            bookDataset.setBookPageUrls(bookId, pageUrls)
+            gettingPageUrl = false
         }
         return pageUrls[page]
     }

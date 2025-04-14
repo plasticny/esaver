@@ -5,24 +5,22 @@ import android.graphics.drawable.Drawable
 import android.widget.Toast
 import com.bumptech.glide.Glide
 import com.bumptech.glide.RequestBuilder
+import com.bumptech.glide.RequestManager
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.RequestOptions
+import com.bumptech.glide.signature.ObjectKey
 import com.example.viewer.database.BookSource
 import com.example.viewer.database.BookDatabase
 import com.example.viewer.Util
 import com.example.viewer.fetcher.HiPictureFetcher.Companion.okHttpClient
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.withContext
 import okhttp3.Request
 import okhttp3.Response
 import java.io.File
 
-abstract class BasePictureFetcher (
-    protected val context: Context, protected val bookId: String
-): CoroutineScope by MainScope() {
+abstract class BasePictureFetcher {
     companion object {
         fun getFetcher (context: Context, bookId: String): BasePictureFetcher {
             val source = BookDatabase.getInstance(context).getBookSource(bookId)
@@ -35,37 +33,66 @@ abstract class BasePictureFetcher (
     }
 
     abstract suspend fun savePicture (page: Int): Boolean
+    protected abstract suspend fun fetchPictureUrl (page: Int): String?
 
-    private val fileGlide = Glide.with(context)
-        .setDefaultRequestOptions(RequestOptions()
-            .diskCacheStrategy(DiskCacheStrategy.NONE)
-            .skipMemoryCache(true)
-        ).asDrawable()
-    private val downloadedPage = mutableSetOf<Int>()
-    private var downloadFailureCallback: ((Response) -> Unit)? = null
+    private val downloadingPages = mutableSetOf<Int>()
 
-    protected val pageNum: Int = BookDatabase.getInstance(context).getBookPageNum(bookId)
+    protected val context: Context
+    protected val bookId: String?
+    protected val pageNum: Int
+    protected val isLocal: Boolean
 
-    val bookFolder = File(context.getExternalFilesDir(null), bookId)
+    val bookFolder: File?
 
-    suspend fun getPicture (page: Int, loadListener: RequestListener<Drawable>? = null): RequestBuilder<Drawable>? {
+    /**
+     * for local book
+     */
+    protected constructor (context: Context, bookId: String) {
+        this.context = context
+        this.bookId = bookId
+
+        pageNum = BookDatabase.getInstance(context).getBookPageNum(bookId)
+        bookFolder = File(context.getExternalFilesDir(null), bookId)
+        isLocal = true
+    }
+
+    /**
+     * for online book
+     */
+    protected constructor (context: Context, pageNum: Int) {
+        this.context = context
+        this.pageNum = pageNum
+        this.bookId = null
+        this.bookFolder = null
+
+        isLocal = false
+    }
+
+    suspend fun getPictureUrl (page: Int): String? {
         assertPageInRange(page)
 
+        if (!isLocal) {
+            // local fetcher, no need to check storage
+            return fetchPictureUrl(page)
+        }
+
+        //
+        // check whether picture is stored
+        //
         val pictureFile = File(bookFolder, page.toString())
-        println("[BasePictureFetcher.getPicture]\n${pictureFile.path}")
+        println("[${this::class.simpleName}.${this::getPictureUrl.name}]\n${pictureFile.path}")
+
+        // when the picture is on downloading
+        if (downloadingPages.contains(page)) {
+            withContext(Dispatchers.IO) {
+                while (downloadingPages.contains(page)) {
+                    Thread.sleep(100)
+                }
+            }
+        }
 
         if (!pictureFile.exists()) {
-            // prevent multiple download
-            if (downloadedPage.contains(page)) {
-                return null
-            }
-            downloadedPage.add(page)
-
-            if (!Util.isInternetAvailable(context)) {
-                Toast.makeText(context, "沒有網絡，無法下載", Toast.LENGTH_SHORT).show()
-                return null
-            }
-
+            downloadingPages.add(page) // fetching picture url may take time
             savePicture(page).let { retFlag ->
                 if (!retFlag) {
                     return null
@@ -73,17 +100,7 @@ abstract class BasePictureFetcher (
             }
         }
 
-        return fileGlide.listener(loadListener).load(pictureFile.path)
-    }
-
-    fun setDownloadFailureCallback (cb: (Response) -> Unit) {
-        downloadFailureCallback = cb
-    }
-
-    protected fun assertPageInRange (page: Int) {
-        if (page < 0 || page >= pageNum) {
-            throw Exception("page out of range")
-        }
+        return pictureFile.path
     }
 
     protected suspend fun downloadPicture (
@@ -93,9 +110,13 @@ abstract class BasePictureFetcher (
     ): Boolean {
         println("[BasePictureFetcher.downloadPicture] $url")
 
+        assertCallByLocalBookFetcher()
+
         if(!Util.isInternetAvailable(context)) {
             return false
         }
+
+        downloadingPages.add(page)
 
         val file = File(bookFolder, page.toString())
         val requestBuilder = Request.Builder().url(url)
@@ -104,15 +125,28 @@ abstract class BasePictureFetcher (
         }
 
         val request = requestBuilder.build()
-        withContext(Dispatchers.IO) {
+        return withContext(Dispatchers.IO) {
             okHttpClient.newCall(request).execute().use { response ->
                 if (response.isSuccessful) {
                     file.outputStream().use { response.body!!.byteStream().copyTo(it) }
-                } else {
-                    downloadFailureCallback?.invoke(response)
+                    // this line should be after the write-to-file statement
+                    // else the corrupted image might be read
+                    downloadingPages.remove(page)
                 }
+                return@withContext response.isSuccessful
             }
         }
-        return true
+    }
+
+    protected fun assertPageInRange (page: Int) {
+        if (page < 0 || page >= pageNum) {
+            throw Exception("page out of range")
+        }
+    }
+
+    private fun assertCallByLocalBookFetcher () {
+        if (bookFolder == null) {
+            throw Exception("only fetcher construct with local book config call this function")
+        }
     }
 }

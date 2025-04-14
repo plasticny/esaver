@@ -23,6 +23,8 @@ import com.google.android.flexbox.FlexboxLayout
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.internal.wait
 import java.io.File
 import kotlin.math.ceil
 
@@ -96,10 +98,14 @@ class BookGallery (
             ConfirmDialog(context, layoutInflater).show(
                 context.getString(R.string.doDelete),
                 positiveCallback = {
-                    CoroutineScope(Dispatchers.Main).launch {
+                    dialogViewBinding.progressBar.visibility = View.VISIBLE
+                    CoroutineScope(Dispatchers.IO).launch {
                         deleteBook(author, bookId)
-                        authorRecyclerViewAdapter.refreshAuthorBooks(author)
-                        dialog.dismiss()
+                        withContext(Dispatchers.Main) {
+                            authorRecyclerViewAdapter.refreshAuthorBooks(author)
+                            dialogViewBinding.progressBar.visibility = View.GONE
+                            dialog.dismiss()
+                        }
                     }
                 }
             )

@@ -1,158 +1,179 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
+<androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:background="@color/darkgrey"
-    android:orientation="vertical"
-    android:padding="16dp">
-
-<!--  top  -->
+    android:background="@color/darkgrey">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
+        android:orientation="vertical"
+        android:padding="16dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
 
-        <!--  text will be set programmatically  -->
-        <TextView
-            android:id="@+id/profile_dialog_bookId_textView"
-            android:layout_width="0dp"
+        <!--  top  -->
+
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:textColor="@color/grey"
-            android:textSize="18sp"/>
+            android:layout_marginBottom="16dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <!--  text will be set programmatically  -->
+            <TextView
+                android:id="@+id/profile_dialog_bookId_textView"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textColor="@color/grey"
+                android:textSize="18sp"/>
+
+        </LinearLayout>
+
+        <!--  author  -->
+
+        <LinearLayout
+            android:id="@+id/constraintLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/profile_dialog_author_TextView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/author"
+                android:textColor="@color/grey"
+                android:textSize="20sp" />
+
+            <TextView
+                android:id="@+id/search_author_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/font_awesome"
+                android:text="@string/fa_magnifying_glass"
+                android:textSize="20sp"
+                android:textColor="@color/white"
+                android:layout_marginStart="8dp"/>
+
+            <EditText
+                android:id="@+id/profile_dialog_author_editText"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:textColor="@color/white"
+                android:backgroundTint="@color/grey"
+                android:autofillHints="Author name"
+                android:inputType="text" />
+
+        </LinearLayout>
+
+        <!--  cover page  -->
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/profile_dialog_coverPage_textView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/cover_page"
+                android:textColor="@color/grey"
+                android:textSize="20sp" />
+
+            <EditText
+                android:id="@+id/profile_dialog_coverPage_editText"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:inputType="number"
+                android:textColor="@color/white"
+                android:backgroundTint="@color/grey" />
+
+        </LinearLayout>
+
+        <!--  skip page  -->
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/profile_dialog_skipPage_TextView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/skip_pages"
+                android:textColor="@color/grey"
+                android:textSize="20sp"/>
+
+            <EditText
+                android:id="@+id/profile_dialog_skipPages_editText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:inputType="text"
+                android:textColor="@color/white"
+                android:backgroundTint="@color/grey"/>
+        </LinearLayout>
+
+        <!--  buttons  -->
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:gravity="end"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/delete_button"
+                android:layout_width="60dp"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/font_awesome"
+                android:text="@string/fa_trash"
+                android:textColor="@color/black"
+                android:theme="@style/Theme.MaterialComponents.Light"
+                android:backgroundTint="@color/grey"
+                android:layout_marginEnd="8dp"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/profile_dialog_apply_button"
+                android:layout_width="60dp"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/font_awesome"
+                android:text="@string/fa_check"
+                android:textColor="@color/black"
+                android:theme="@style/Theme.MaterialComponents.Light"
+                android:backgroundTint="@color/grey" />
+
+        </LinearLayout>
 
     </LinearLayout>
 
-<!--  author  -->
-
-    <LinearLayout
-        android:id="@+id/constraintLayout"
-        android:layout_width="match_parent"
+    <ProgressBar
+        android:id="@+id/progress_bar"
+        style="?android:attr/progressBarStyleLarge"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical">
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
-        <TextView
-            android:id="@+id/profile_dialog_author_TextView"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/author"
-            android:textColor="@color/grey"
-            android:textSize="20sp" />
-
-        <TextView
-            android:id="@+id/search_author_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:fontFamily="@font/font_awesome"
-            android:text="@string/fa_magnifying_glass"
-            android:textSize="20sp"
-            android:textColor="@color/white"
-            android:layout_marginStart="8dp"/>
-
-        <EditText
-            android:id="@+id/profile_dialog_author_editText"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_weight="1"
-            android:layout_marginStart="8dp"
-            android:textColor="@color/white"
-            android:backgroundTint="@color/grey"
-            android:autofillHints="Author name"
-            android:inputType="text" />
-
-    </LinearLayout>
-
-<!--  cover page  -->
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical">
-
-        <TextView
-            android:id="@+id/profile_dialog_coverPage_textView"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/cover_page"
-            android:textColor="@color/grey"
-            android:textSize="20sp" />
-
-        <EditText
-            android:id="@+id/profile_dialog_coverPage_editText"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_weight="1"
-            android:layout_marginStart="8dp"
-            android:inputType="number"
-            android:textColor="@color/white"
-            android:backgroundTint="@color/grey" />
-
-    </LinearLayout>
-
-<!--  skip page  -->
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical">
-
-        <TextView
-            android:id="@+id/profile_dialog_skipPage_TextView"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/skip_pages"
-            android:textColor="@color/grey"
-            android:textSize="20sp"/>
-
-        <EditText
-            android:id="@+id/profile_dialog_skipPages_editText"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="8dp"
-            android:inputType="text"
-            android:textColor="@color/white"
-            android:backgroundTint="@color/grey"/>
-    </LinearLayout>
-
-<!--  buttons  -->
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:gravity="end"
-        android:orientation="horizontal">
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/delete_button"
-            android:layout_width="60dp"
-            android:layout_height="wrap_content"
-            android:fontFamily="@font/font_awesome"
-            android:text="@string/fa_trash"
-            android:textColor="@color/black"
-            android:theme="@style/Theme.MaterialComponents.Light"
-            android:backgroundTint="@color/grey"
-            android:layout_marginEnd="8dp"/>
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/profile_dialog_apply_button"
-            android:layout_width="60dp"
-            android:layout_height="wrap_content"
-            android:fontFamily="@font/font_awesome"
-            android:text="@string/fa_check"
-            android:textColor="@color/black"
-            android:theme="@style/Theme.MaterialComponents.Light"
-            android:backgroundTint="@color/grey" />
-
-    </LinearLayout>
-
-</LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>
