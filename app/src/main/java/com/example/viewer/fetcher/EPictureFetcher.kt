@@ -1,6 +1,7 @@
 package com.example.viewer.fetcher
 
 import android.content.Context
+import android.view.View
 import android.widget.Toast
 import com.example.viewer.Util
 import com.example.viewer.database.BookDatabase
@@ -10,6 +11,13 @@ import org.jsoup.HttpStatusException
 import org.jsoup.Jsoup
 
 class EPictureFetcher: BasePictureFetcher {
+    companion object {
+        suspend fun isBookWarning (url: String) =
+            withContext(Dispatchers.IO) {
+                Jsoup.connect(url).get()
+            }.html().contains("<h1>Content Warning</h1>")
+    }
+
     private val bookDataset = BookDatabase.getInstance(context)
     private val bookUrl: String
 
@@ -72,12 +80,17 @@ class EPictureFetcher: BasePictureFetcher {
 
             println("[${this::class.simpleName}.${this::getPageUrl.name}] load next p $p")
 
-            withContext(Dispatchers.IO) {
-                val url = "${bookUrl}/?p=$p"
+            val doc = withContext(Dispatchers.IO) {
+                val url = "${bookUrl}/?p=$p&nw=always"
                 println("[${this@EPictureFetcher::class.simpleName}.${this@EPictureFetcher::getPageUrl.name}]\nfetching page url from $url")
                 Jsoup.connect(url).get()
-            }.select("#gdt a").map { it.attr("href") }.let {
-                pageUrlSegment -> pageUrls.addAll(pageUrlSegment)
+            }
+            doc.select("#gdt a").map { it.attr("href") }.let { pageUrlSegment ->
+                if (pageUrlSegment.isEmpty()) {
+                    println(doc.html())
+                    throw Exception("[${this@EPictureFetcher::class.simpleName}.${this@EPictureFetcher::getPageUrl.name}] no page url fetched")
+                }
+                pageUrls.addAll(pageUrlSegment)
             }
 
             if (isLocal) {

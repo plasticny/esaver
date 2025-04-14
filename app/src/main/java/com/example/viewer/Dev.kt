@@ -2,6 +2,10 @@ package com.example.viewer
 
 import android.content.Context
 import com.example.viewer.database.BookDatabase
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import org.jsoup.Jsoup
 
 /**
  * for development usage and backup code
@@ -9,7 +13,6 @@ import com.example.viewer.database.BookDatabase
 class Dev {
     companion object {
         fun run (context: Context) {
-//            BookDatabase.getInstance(context).dev()
         }
     }
 

@@ -4,7 +4,6 @@ import android.content.Intent
 import android.content.res.ColorStateList
 import android.os.Bundle
 import android.view.View
-import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.Toast
@@ -24,16 +23,17 @@ import com.example.viewer.databinding.BookProfileTagBinding
 import com.example.viewer.database.BookDatabase
 import com.example.viewer.database.BookSource
 import com.example.viewer.database.SearchDatabase
-import com.example.viewer.database.SearchDatabase.Companion.SearchMark
 import com.example.viewer.databinding.DialogTagBinding
 import com.example.viewer.databinding.LocalReadSettingDialogBinding
-import com.example.viewer.databinding.SelectAuthorDialogBinding
 import com.example.viewer.dialog.ConfirmDialog
 import com.example.viewer.dialog.SelectAuthorDialog
+import com.example.viewer.fetcher.EPictureFetcher
+import com.google.gson.JsonIOException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jsoup.Jsoup
 import java.io.File
 
 /**
@@ -54,100 +54,111 @@ class BookProfileActivity: AppCompatActivity() {
 
         isBookStored = bookDatabase.isBookStored(bookRecord.id)
 
-        rootBinding = BookProfileActivityBinding.inflate(layoutInflater).apply {
-            Glide.with(baseContext).load(bookRecord.coverUrl).into(coverImageView)
+        rootBinding = BookProfileActivityBinding.inflate(layoutInflater)
 
-            idTextView.text = bookRecord.id
+        rootBinding.coverImageView.let {
+            Glide.with(baseContext).load(bookRecord.coverUrl).into(it)
+        }
 
-            titleTextView.text = bookRecord.title
+        rootBinding.idTextView.text = bookRecord.id
 
-            pageNumTextView.text = baseContext.getString(R.string.n_page, bookRecord.pageNum)
+        rootBinding.titleTextView.text = bookRecord.title
 
-            categoryTextView.apply {
-                text = bookRecord.cat
-                setTextColor(context.getColor(Util.categoryFromName(bookRecord.cat).color))
+        rootBinding.warningContainer.apply {
+            // only check warning if book is not stored
+            lifecycleScope.launch {
+                if (!isBookStored && EPictureFetcher.isBookWarning(bookRecord.url)) {
+                    visibility = View.VISIBLE
+                }
             }
+        }
 
-            readButtonWrapper.setOnClickListener {
+        rootBinding.pageNumTextView.text = baseContext.getString(R.string.n_page, bookRecord.pageNum)
+
+        rootBinding.categoryTextView.apply {
+            text = bookRecord.cat
+            setTextColor(context.getColor(Util.categoryFromName(bookRecord.cat).color))
+        }
+
+        rootBinding.readButtonWrapper.setOnClickListener {
+            if (isBookStored) {
+                startActivity(Intent(baseContext, LocalViewerActivity::class.java).apply {
+                    putExtra("bookId", bookRecord.id)
+                })
+            } else {
+                startActivity(Intent(baseContext, OnlineViewerActivity::class.java).apply {
+                    putExtra("book_record", bookRecord)
+                })
+            }
+        }
+
+        rootBinding.saveButtonWrapper.apply {
+            visibility = if (isBookStored) View.GONE else View.VISIBLE
+
+            setOnClickListener {
                 if (isBookStored) {
-                    startActivity(Intent(baseContext, LocalViewerActivity::class.java).apply {
-                        putExtra("bookId", bookRecord.id)
-                    })
-                } else {
-                    startActivity(Intent(baseContext, OnlineViewerActivity::class.java).apply {
-                        putExtra("book_record", bookRecord)
-                    })
+                    return@setOnClickListener
                 }
-            }
-
-            saveButtonWrapper.apply {
-                visibility = if (isBookStored) View.GONE else View.VISIBLE
-
-                setOnClickListener {
-                    if (isBookStored) {
-                        return@setOnClickListener
-                    }
-                    lifecycleScope.launch {
-                        toggleProgressBar(true)
-                        BookAdder.getBookAdder(baseContext, BookSource.E).addBook(bookRecord.url) { doAdded ->
-                            toggleProgressBar(false)
-                            if (!doAdded) {
-                                return@addBook
-                            }
-                            ConfirmDialog(this@BookProfileActivity, layoutInflater).show(
-                                "已加入到書庫，返回書庫？",
-                                positiveCallback = {
-                                    startActivity(
-                                        Intent(baseContext, MainActivity::class.java).apply {
-                                            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                                        }
-                                    )
-                                }
-                            )
+                lifecycleScope.launch {
+                    toggleProgressBar(true)
+                    BookAdder.getBookAdder(baseContext, BookSource.E).addBook(bookRecord.url) { doAdded ->
+                        toggleProgressBar(false)
+                        if (!doAdded) {
+                            return@addBook
                         }
+                        ConfirmDialog(this@BookProfileActivity, layoutInflater).show(
+                            "已加入到書庫，返回書庫？",
+                            positiveCallback = {
+                                startActivity(
+                                    Intent(baseContext, MainActivity::class.java).apply {
+                                        addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                                    }
+                                )
+                            }
+                        )
                     }
                 }
             }
+        }
 
-            localSettingButtonWrapper.apply {
-                visibility = if (isBookStored) View.VISIBLE else View.GONE
-                setOnClickListener {
-                    if (isBookStored) {
-                        showReadSettingDialog(bookRecord.author!!, bookRecord.id)
-                    }
+        rootBinding.localSettingButtonWrapper.apply {
+            visibility = if (isBookStored) View.VISIBLE else View.GONE
+            setOnClickListener {
+                if (isBookStored) {
+                    showReadSettingDialog(bookRecord.author!!, bookRecord.id)
                 }
             }
+        }
 
-            deleteButtonWrapper.apply {
-                visibility = if (isBookStored) View.VISIBLE else View.GONE
-                setOnClickListener {
-                    if (!isBookStored) {
-                        return@setOnClickListener
-                    }
-                    ConfirmDialog(this@BookProfileActivity, layoutInflater).show(
-                        getString(R.string.doDelete),
-                        positiveCallback = {
-                            toggleProgressBar(true)
-                            CoroutineScope(Dispatchers.IO).launch {
-                                deleteBook(bookRecord.author!!, bookRecord.id).let { retFlag ->
-                                    withContext(Dispatchers.Main) {
-                                        toggleProgressBar(false)
-                                        if (retFlag) {
-                                            finish()
-                                        }
+        rootBinding.deleteButtonWrapper.apply {
+            visibility = if (isBookStored) View.VISIBLE else View.GONE
+            setOnClickListener {
+                if (!isBookStored) {
+                    return@setOnClickListener
+                }
+                ConfirmDialog(this@BookProfileActivity, layoutInflater).show(
+                    getString(R.string.doDelete),
+                    positiveCallback = {
+                        toggleProgressBar(true)
+                        CoroutineScope(Dispatchers.IO).launch {
+                            deleteBook(bookRecord.author!!, bookRecord.id).let { retFlag ->
+                                withContext(Dispatchers.Main) {
+                                    toggleProgressBar(false)
+                                    if (retFlag) {
+                                        finish()
                                     }
                                 }
                             }
                         }
-                    )
-                }
-            }
-
-            tagWrapper.apply {
-                lifecycleScope.launch {
-                    for (entry in bookRecord.tags.entries) {
-                        addView(createTagRow(entry.key, entry.value).root)
                     }
+                )
+            }
+        }
+
+        rootBinding.tagWrapper.apply {
+            lifecycleScope.launch {
+                for (entry in bookRecord.tags.entries) {
+                    addView(createTagRow(entry.key, entry.value).root)
                 }
             }
         }
