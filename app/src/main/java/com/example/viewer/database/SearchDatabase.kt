@@ -75,6 +75,7 @@ class SearchDatabase (context: Context): BaseDatabase() {
         fun searchMarkCats (id: Int) = byteArrayPreferencesKey("${TAG}_searchMarkCats_$id")
         fun searchMarkKeyword (id: Int) = stringPreferencesKey("${TAG}_searchMarkKeyword_$id")
         fun searchMarkTags (id: Int) = byteArrayPreferencesKey("${TAG}_searchMarkTags_$id")
+        fun searchMarkListLastUpdate () = longPreferencesKey("${TAG}_searchMarkListLastUpdate")
         fun excludeTags () = byteArrayPreferencesKey("${TAG}_excludeTags")
         fun excludeTagLastUpdate () = longPreferencesKey("${TAG}_excludeTagLastUpdate")
     }
@@ -124,6 +125,8 @@ class SearchDatabase (context: Context): BaseDatabase() {
             keys.allSearchMarkIds(),
             getAllSearchMarkIds().toMutableList().also { it.remove(id) }
         )
+
+        store(keys.searchMarkListLastUpdate(), System.currentTimeMillis())
     }
     /**
      * @return id of added search mark
@@ -132,6 +135,7 @@ class SearchDatabase (context: Context): BaseDatabase() {
         val id = getNextId()
         storeSearchMark(id, searchMark)
         storeAsByteArray(keys.allSearchMarkIds(), getAllSearchMarkIds().toMutableList().apply { add(id) })
+        store(keys.searchMarkListLastUpdate(), System.currentTimeMillis())
         return id
     }
     fun getSearchMark (id: Int): SearchMark = SearchMark(
@@ -147,6 +151,10 @@ class SearchDatabase (context: Context): BaseDatabase() {
         storeSearchMark(id, searchMark)
     }
     fun setTmpSearchMark (searchMark: SearchMark) = storeSearchMark(TEMP_SEARCH_MARK_ID, searchMark)
+    /**
+     * update: insert or remove
+     */
+    fun getSearchMarkListUpdateTime () = read(keys.searchMarkListLastUpdate()) ?: 0
 
     //
     // exclude tag

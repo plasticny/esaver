@@ -10,6 +10,7 @@ import android.view.View
 import android.widget.ImageView
 import android.widget.ProgressBar
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.GlideException
@@ -17,6 +18,7 @@ import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
 import com.bumptech.glide.signature.ObjectKey
 import com.example.viewer.databinding.ViewerActivityBinding
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 
 abstract class BaseViewerActivity: AppCompatActivity() {
@@ -27,9 +29,10 @@ abstract class BaseViewerActivity: AppCompatActivity() {
 
     protected abstract fun onImageLongClicked(): Boolean
     protected abstract fun onPageTextClicked()
-    protected abstract fun loadPage()
     protected abstract fun prevPage()
     protected abstract fun nextPage()
+    protected abstract fun reloadPage()
+    protected abstract suspend fun getPictureUrl (page: Int): String?
 
     protected lateinit var viewerActivityBinding: ViewerActivityBinding
 
@@ -55,10 +58,10 @@ abstract class BaseViewerActivity: AppCompatActivity() {
         }
 
         viewerActivityBinding.reloadIcon.setOnClickListener {
-            loadPage()
+            reloadPage()
         }
         viewerActivityBinding.reloadTextView.setOnClickListener {
-            loadPage()
+            reloadPage()
         }
         setupChangePageOnFailScreen()
 
@@ -88,9 +91,11 @@ abstract class BaseViewerActivity: AppCompatActivity() {
             if (toggle) {
                 it.viewerProgressBar.visibility = ProgressBar.VISIBLE
                 it.photoView.visibility = View.INVISIBLE
+                it.photoView.imageAlpha = 0
             } else {
                 it.viewerProgressBar.visibility = ProgressBar.GONE
                 it.photoView.visibility = View.VISIBLE
+                it.photoView.imageAlpha = 255
             }
         }
     }
@@ -103,6 +108,33 @@ abstract class BaseViewerActivity: AppCompatActivity() {
             } else {
                 it.loadFailedContainer.visibility = ProgressBar.GONE
                 it.photoView.visibility = View.VISIBLE
+            }
+        }
+    }
+
+    protected fun loadPage () {
+        val myPage = page
+
+        viewerActivityBinding.viewerPageTextView.text = (page + 1).toString()
+        toggleLoadingUi(true)
+        toggleLoadFailedScreen(false)
+
+        lifecycleScope.launch {
+            val pictureUrl = getPictureUrl(page)
+            if (myPage != page) {
+                return@launch
+            }
+
+            if (pictureUrl != null) {
+                showPicture(
+                    pictureUrl, getPageSignature(page),
+                    onPictureReady = { toggleLoadFailedScreen(false) },
+                    onFailed = { toggleLoadFailedScreen(true) },
+                    onFinished = { toggleLoadingUi(false) }
+                )
+            } else {
+                toggleLoadingUi(false)
+                toggleLoadFailedScreen(true)
             }
         }
     }

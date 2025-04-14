@@ -19,6 +19,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.Request
 import okhttp3.Response
 import java.io.File
+import java.net.SocketTimeoutException
 
 abstract class BasePictureFetcher {
     companion object {
@@ -126,14 +127,19 @@ abstract class BasePictureFetcher {
 
         val request = requestBuilder.build()
         return withContext(Dispatchers.IO) {
-            okHttpClient.newCall(request).execute().use { response ->
-                if (response.isSuccessful) {
-                    file.outputStream().use { response.body!!.byteStream().copyTo(it) }
-                    // this line should be after the write-to-file statement
-                    // else the corrupted image might be read
-                    downloadingPages.remove(page)
+            try {
+                okHttpClient.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        file.outputStream().use { response.body!!.byteStream().copyTo(it) }
+                        // this line should be after the write-to-file statement
+                        // else a corrupted image might be read
+                        downloadingPages.remove(page)
+                    }
+                    return@withContext response.isSuccessful
                 }
-                return@withContext response.isSuccessful
+            } catch (e: SocketTimeoutException) {
+                println("[${this@BasePictureFetcher::class.simpleName}.${this@BasePictureFetcher::downloadingPages.name}] socket time out")
+                return@withContext false
             }
         }
     }

@@ -47,6 +47,7 @@ class SearchMarkFragment: Fragment() {
     private lateinit var searchDataset: SearchDatabase
 
     private var focusedSearchMark: SearchMarkEntry? = null
+    private var searchMarkListLastUpdate = 0L
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -56,6 +57,8 @@ class SearchMarkFragment: Fragment() {
         parent = container!!
         searchDataset = SearchDatabase.getInstance(parent.context)
         binding = MainSearchFragmentBinding.inflate(layoutInflater, parent, false)
+
+        searchMarkListLastUpdate = searchDataset.getSearchMarkListUpdateTime()
 
         binding.searchEditText.apply {
             setOnEditorActionListener { _, actionId, event ->
@@ -112,7 +115,8 @@ class SearchMarkFragment: Fragment() {
         binding.toolBarEditButton.setOnClickListener {
             focusedSearchMark!!.let { entry ->
                 SearchMarkDialog(parent.context, layoutInflater).show(
-                    title = "編輯搜尋標記"
+                    title = "編輯搜尋標記",
+                    searchMark = entry.searchMark
                 ) { retSearchMark ->
                     searchDataset.modifySearchMark(entry.id, retSearchMark)
                     deFocusSearchMark(doModifyBindingStyle = false)
@@ -142,6 +146,13 @@ class SearchMarkFragment: Fragment() {
     override fun onResume() {
         super.onResume()
         binding.searchEditText.text.clear()
+
+        searchDataset.getSearchMarkListUpdateTime().let {
+            if (it != searchMarkListLastUpdate) {
+                refreshSearchMarkWrapper()
+                searchMarkListLastUpdate = it
+            }
+        }
     }
 
     @SuppressLint("ClickableViewAccessibility")

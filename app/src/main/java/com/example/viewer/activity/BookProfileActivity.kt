@@ -180,25 +180,6 @@ class BookProfileActivity: AppCompatActivity() {
         rootBinding.progressBar.visibility = if (toggle) ProgressBar.VISIBLE else ProgressBar.GONE
     }
 
-    private fun addFilterOutTag (cat: String, value: String) {
-        toggleProgressBar(true)
-        CoroutineScope(Dispatchers.IO).launch {
-            val searchDataset = SearchDatabase.getInstance(baseContext)
-            val excludeTags = searchDataset.getExcludeTag().toMutableMap()
-            val values = excludeTags[cat]?.toMutableList() ?: mutableListOf()
-
-            if (!values.contains(value)) {
-                excludeTags[cat] = values.apply { add(value) }
-                searchDataset.storeExcludeTag(excludeTags)
-            }
-
-            withContext(Dispatchers.Main) {
-                Toast.makeText(baseContext, "已加至濾除列表", Toast.LENGTH_SHORT).show()
-                toggleProgressBar(false)
-            }
-        }
-    }
-
     private fun showReadSettingDialog (author: String, bookId: String) {
         val bookDatabase = BookDatabase.getInstance(baseContext)
 
@@ -292,6 +273,30 @@ class BookProfileActivity: AppCompatActivity() {
         }
 
         dialog.show()
+    }
+
+    private fun addFilterOutTag (cat: String, value: String) {
+        toggleProgressBar(true)
+        CoroutineScope(Dispatchers.IO).launch {
+            val searchDataset = SearchDatabase.getInstance(baseContext)
+            val excludeTags = searchDataset.getExcludeTag().toMutableMap()
+            val values = excludeTags[cat]?.toMutableList() ?: mutableListOf()
+
+            if (!values.contains(value)) {
+                excludeTags[cat] = values.apply { add(value) }
+                searchDataset.storeExcludeTag(excludeTags)
+            }
+
+            withContext(Dispatchers.Main) {
+                toggleProgressBar(false)
+                ConfirmDialog(this@BookProfileActivity, layoutInflater).show(
+                    "已濾除標籤，返回搜尋？",
+                    positiveCallback = {
+                        this@BookProfileActivity.finish()
+                    }
+                )
+            }
+        }
     }
 
     /**

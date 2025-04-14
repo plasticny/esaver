@@ -73,7 +73,9 @@ class EPictureFetcher: BasePictureFetcher {
             println("[${this::class.simpleName}.${this::getPageUrl.name}] load next p $p")
 
             withContext(Dispatchers.IO) {
-                Jsoup.connect("${bookUrl}/?p=$p").get()
+                val url = "${bookUrl}/?p=$p"
+                println("[${this@EPictureFetcher::class.simpleName}.${this@EPictureFetcher::getPageUrl.name}]\nfetching page url from $url")
+                Jsoup.connect(url).get()
             }.select("#gdt a").map { it.attr("href") }.let {
                 pageUrlSegment -> pageUrls.addAll(pageUrlSegment)
             }

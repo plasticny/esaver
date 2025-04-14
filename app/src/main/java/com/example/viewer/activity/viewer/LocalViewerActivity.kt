@@ -18,6 +18,7 @@ import com.example.viewer.dialog.ConfirmDialog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.plus
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
@@ -114,32 +115,27 @@ class LocalViewerActivity: BaseViewerActivity() {
         }
     }
 
-    override fun loadPage () {
+    override fun reloadPage() {
         val myPage = page
 
         viewerActivityBinding.viewerPageTextView.text = (page + 1).toString()
         toggleLoadingUi(true)
         toggleLoadFailedScreen(false)
 
-        lifecycleScope.launch {
-            val pictureUrl = fetcher.getPictureUrl(page)
+        resetPageSignature(page)
+        // download the picture again
+        CoroutineScope(Dispatchers.IO).launch {
+            fetcher.savePicture(page)
             if (myPage != page) {
                 return@launch
             }
-
-            if (pictureUrl != null) {
-                showPicture(
-                    pictureUrl, getPageSignature(page),
-                    onPictureReady = { toggleLoadFailedScreen(false) },
-                    onFailed = { toggleLoadFailedScreen(true) },
-                    onFinished = { toggleLoadingUi(false) }
-                )
-            } else {
-                toggleLoadingUi(false)
-                toggleLoadFailedScreen(true)
+            withContext(Dispatchers.Main) {
+                loadPage()
             }
         }
     }
+
+    override suspend fun getPictureUrl(page: Int): String? = fetcher.getPictureUrl(page)
 
     private fun preloadPage (page: Int) {
         if (page < firstPage || page > lastPage) {
@@ -230,9 +226,8 @@ class LocalViewerActivity: BaseViewerActivity() {
         }
 
         dialogViewBinding.reloadButton.setOnClickListener {
-            resetPageSignature(page)
-            loadPage()
             dialog.dismiss()
+            reloadPage()
         }
 
         dialog.show()

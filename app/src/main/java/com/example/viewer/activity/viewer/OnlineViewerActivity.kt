@@ -33,33 +33,6 @@ class OnlineViewerActivity: BaseViewerActivity() {
 
     override fun onPageTextClicked() = Unit
 
-    override fun loadPage() {
-        val myPage = page
-
-        viewerActivityBinding.viewerPageTextView.text = (page + 1).toString()
-        toggleLoadingUi(true)
-        toggleLoadFailedScreen(false)
-
-        lifecycleScope.launch {
-            val pictureUrl = getPictureUrl(page)
-            if (myPage != page) {
-                return@launch
-            }
-
-            if (pictureUrl != null) {
-                showPicture(
-                    pictureUrl, getPageSignature(page),
-                    onPictureReady = { toggleLoadFailedScreen(false) },
-                    onFailed = { toggleLoadFailedScreen(true) },
-                    onFinished = { toggleLoadingUi(false) }
-                )
-            } else {
-                toggleLoadingUi(false)
-                toggleLoadFailedScreen(true)
-            }
-        }
-    }
-
     override fun prevPage() {
         if (page > firstPage) {
             page--
@@ -86,6 +59,24 @@ class OnlineViewerActivity: BaseViewerActivity() {
         }
     }
 
+    override fun reloadPage() = loadPage()
+
+    override suspend fun getPictureUrl (page: Int): String? {
+        println("[${this::class.simpleName}.${this::getPictureUrl.name}] $page")
+
+        if (page < firstPage || page > lastPage) {
+            throw Exception("page out of range")
+        }
+
+        if (pictureUrls[page] == null) {
+            pictureUrls[page] = withContext(Dispatchers.IO) {
+                fetcher.getPictureUrl(page)
+            }
+        }
+
+        return pictureUrls[page]
+    }
+
     private fun preloadPage (page: Int) {
         if (page < firstPage || page > lastPage) {
             throw Exception("page out of range")
@@ -98,21 +89,5 @@ class OnlineViewerActivity: BaseViewerActivity() {
                 )
             }
         }
-    }
-
-    private suspend fun getPictureUrl (page: Int): String? {
-        println("[${this::class.simpleName}.${this::getPictureUrl.name}] $page")
-
-        if (page < firstPage || page > lastPage) {
-            throw Exception("page out of range")
-        }
-
-        if (pictureUrls[page] == null) {
-            pictureUrls[page] = withContext(Dispatchers.IO) {
-                 fetcher.getPictureUrl(page)
-            }
-        }
-
-        return pictureUrls[page]
     }
 }
