@@ -18,8 +18,8 @@ import com.example.viewer.databinding.SearchBookBinding
 import com.example.viewer.database.SearchDatabase
 import com.example.viewer.database.SearchDatabase.Companion.SearchMark
 import com.example.viewer.database.SearchDatabase.Companion.Category
-import com.example.viewer.dialog.PositiveButtonStyle
 import com.example.viewer.dialog.SearchMarkDialog
+import com.example.viewer.dialog.SimpleEditTextDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -84,28 +84,48 @@ class SearchActivity: AppCompatActivity() {
 
         binding.searchMarkNameContainer.setOnClickListener {
             SearchMarkDialog(this, layoutInflater).show(
-                title = "編輯搜尋",
+                title = if (isTemporarySearch) "編輯搜尋" else "編輯搜尋標記",
+                showNameField = !isTemporarySearch,
                 searchMark = if (isTemporarySearch) SearchMark(
                     name = "",
                     categories = searchMark.categories,
                     keyword = searchMark.keyword,
                     tags = searchMark.tags
                 ) else searchMark,
-                positiveButtonStyle = PositiveButtonStyle.SAVE
-            ) { retSearchMark ->
-                if (isTemporarySearch) {
-                    searchMarkId = searchDataSet.addSearchMark(retSearchMark)
-                    allSearchMarkIds = searchDataSet.getAllSearchMarkIds()
-                    position = allSearchMarkIds.indexOf(searchMarkId)
-                    isTemporarySearch = false
-                    Toast.makeText(baseContext, "已儲存", Toast.LENGTH_SHORT).show()
-                } else {
-                    searchDataSet.modifySearchMark(searchMarkId, retSearchMark)
+                showSaveButton = true,
+                showSearchButton = true,
+                saveCb = { retSearchMark ->
+                    if (isTemporarySearch) {
+                        SimpleEditTextDialog(this@SearchActivity, layoutInflater).show (
+                            title = "儲存為搜尋標記",
+                            hint = "起個名字",
+                            validator = { it.trim().isNotEmpty() }
+                        ) { name ->
+                            val saveSearchMark = SearchMark(
+                                name = name,
+                                categories = retSearchMark.categories,
+                                keyword = retSearchMark.keyword,
+                                tags = retSearchMark.tags
+                            )
+                            searchMarkId = searchDataSet.addSearchMark(saveSearchMark)
+                            allSearchMarkIds = searchDataSet.getAllSearchMarkIds()
+                            position = allSearchMarkIds.indexOf(searchMarkId)
+                            isTemporarySearch = false
+                            Toast.makeText(baseContext, "已儲存", Toast.LENGTH_SHORT).show()
+                            searchMark = saveSearchMark
+                            lifecycleScope.launch { reset() }
+                        }
+                    } else {
+                        searchDataSet.modifySearchMark(searchMarkId, retSearchMark)
+                        searchMark = retSearchMark
+                        lifecycleScope.launch { reset() }
+                    }
+                },
+                searchCb = { retSearchMark ->
+                    searchMark = retSearchMark
+                    lifecycleScope.launch { reset() }
                 }
-
-                searchMark = retSearchMark
-                lifecycleScope.launch { reset() }
-            }
+            )
         }
 
         binding.prevSearchMarkButton.apply {

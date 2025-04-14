@@ -112,7 +112,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="標籤"
+            android:text="@string/tag"
             android:textColor="@color/grey"
             android:textSize="16sp" />
 
@@ -156,21 +156,43 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/cancel_button"
-            android:layout_width="60dp"
+            android:layout_width="90dp"
             android:layout_height="wrap_content"
-            android:fontFamily="@font/font_awesome"
-            android:text="@string/fa_xmark"
+            android:fontFamily="@font/icon_button_font"
+            android:text="@string/icon_button_cancel"
             android:textColor="@color/black"
             android:theme="@style/Theme.MaterialComponents.Light"
             android:backgroundTint="@color/grey"/>
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/positive_button"
-            android:layout_width="60dp"
+            android:id="@+id/save_button"
+            android:layout_width="90dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
-            android:fontFamily="@font/font_awesome"
-            android:text="@string/fa_floppy_disk"
+            android:fontFamily="@font/icon_button_font"
+            android:text="@string/icon_button_save"
+            android:textColor="@color/black"
+            android:theme="@style/Theme.MaterialComponents.Light"
+            android:backgroundTint="@color/grey"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/search_button"
+            android:layout_width="90dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:fontFamily="@font/icon_button_font"
+            android:text="@string/icon_button_search"
+            android:textColor="@color/black"
+            android:theme="@style/Theme.MaterialComponents.Light"
+            android:backgroundTint="@color/grey"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/confirm_button"
+            android:layout_width="90dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:fontFamily="@font/icon_button_font"
+            android:text="@string/icon_button_confirm"
             android:textColor="@color/black"
             android:theme="@style/Theme.MaterialComponents.Light"
             android:backgroundTint="@color/grey"/>

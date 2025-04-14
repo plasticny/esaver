@@ -81,7 +81,7 @@ class EPictureFetcher: BasePictureFetcher {
             println("[${this::class.simpleName}.${this::getPageUrl.name}] load next p $p")
 
             val doc = withContext(Dispatchers.IO) {
-                val url = "${bookUrl}/?p=$p&nw=always"
+                val url = if (isBookWarning(bookUrl)) "${bookUrl}/?p=$p&nw=always" else "${bookUrl}/?p=$p"
                 println("[${this@EPictureFetcher::class.simpleName}.${this@EPictureFetcher::getPageUrl.name}]\nfetching page url from $url")
                 Jsoup.connect(url).get()
             }

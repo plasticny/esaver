@@ -13,7 +13,7 @@ import com.example.viewer.databinding.SearchMarkDialogBinding
 import com.example.viewer.databinding.SearchMarkDialogTagBinding
 
 class SearchMarkDialog (
-    context: Context,
+    private val context: Context,
     private val layoutInflater: LayoutInflater,
 ) {
     companion object {
@@ -24,15 +24,24 @@ class SearchMarkDialog (
     private val dialogBinding = SearchMarkDialogBinding.inflate(layoutInflater)
     private val dialog = AlertDialog.Builder(context).setView(dialogBinding.root).create()
 
+    private var showNameField: Boolean = false
+    private var selectedCats: MutableSet<Category> = mutableSetOf()
+    private var tagBindings: MutableList<SearchMarkDialogTagBinding> = mutableListOf()
+
     fun show (
         title: String? = null,
         searchMark: SearchMark? = null,
         showNameField: Boolean = true,
-        positiveButtonStyle: PositiveButtonStyle = PositiveButtonStyle.SAVE,
-        positiveCb: ((SearchMark) -> Unit)? = null
+        showSaveButton: Boolean = false,
+        showSearchButton: Boolean = false,
+        showConfirmButton: Boolean = false,
+        saveCb: ((SearchMark) -> Unit)? = null,
+        searchCb: ((SearchMark) -> Unit)? = null,
+        confirmCb: ((SearchMark) -> Unit)? = null
     ) {
-        val selectedCats = searchMark?.categories?.toMutableSet() ?: Category.entries.toMutableSet()
-        val tagBindings = mutableListOf<SearchMarkDialogTagBinding>()
+        this.showNameField = showNameField
+        selectedCats = searchMark?.categories?.toMutableSet() ?: Category.entries.toMutableSet()
+        tagBindings = mutableListOf()
 
         dialogBinding.titleTextView.apply {
             if (title == null) {
@@ -91,35 +100,54 @@ class SearchMarkDialog (
             dialog.dismiss()
         }
 
-        // positive button
-        dialogBinding.positiveButton.apply {
-            text = context.getString(positiveButtonStyle.iconTextId)
-
-            setOnClickListener {
-                if (showNameField && dialogBinding.nameEditText.text.isEmpty()) {
-                    Toast.makeText(context, "名字不能為空", Toast.LENGTH_SHORT).show()
-                    return@setOnClickListener
-                }
-
-                if (positiveCb != null) {
-                    for (v in tagBindings) {
-                        println(v.spinner.getItems<String>()[v.spinner.selectedIndex])
+        dialogBinding.saveButton.apply {
+            if (showSaveButton) {
+                visibility = View.VISIBLE
+                setOnClickListener {
+                    saveCb?.let {
+                        if (!checkValid()) {
+                            return@setOnClickListener
+                        }
+                        it(constructSearchMark())
                     }
-
-                    positiveCb(SearchMark(
-                        name = if (showNameField) dialogBinding.nameEditText.text.toString() else "",
-                        categories = selectedCats.toList(),
-                        keyword = dialogBinding.keywordEditText.text.toString(),
-                        tags = tagBindings.mapNotNull {
-                            if (it.spinner.selectedIndex == 0) {
-                                return@mapNotNull null
-                            }
-                            TAGS[it.spinner.selectedIndex] to it.editText.text.toString()
-                        }.groupBy({it.first}, {it.second})
-                    ))
+                    dialog.dismiss()
                 }
+            } else {
+                visibility = View.GONE
+            }
+        }
 
-                dialog.dismiss()
+        dialogBinding.searchButton.apply {
+            if (showSearchButton) {
+                visibility = View.VISIBLE
+                setOnClickListener {
+                    searchCb?.let {
+                        if (!checkValid()) {
+                            return@setOnClickListener
+                        }
+                        it(constructSearchMark())
+                    }
+                    dialog.dismiss()
+                }
+            } else {
+                visibility = View.GONE
+            }
+        }
+
+        dialogBinding.confirmButton.apply {
+            if (showConfirmButton) {
+                visibility = View.VISIBLE
+                setOnClickListener {
+                    confirmCb?.let {
+                        if (!checkValid()) {
+                            return@setOnClickListener
+                        }
+                        it(constructSearchMark())
+                    }
+                    dialog.dismiss()
+                }
+            } else {
+                visibility = View.GONE
             }
         }
 
@@ -136,6 +164,33 @@ class SearchMarkDialog (
         }
 
     /**
+     * check the filled in information is valid
+     */
+    private fun checkValid (): Boolean {
+        if (showNameField && dialogBinding.nameEditText.text.isEmpty()) {
+            Toast.makeText(context, "名字不能為空", Toast.LENGTH_SHORT).show()
+            return false
+        }
+        return true
+    }
+
+    /**
+     * construct a search mark base on what user filled
+     */
+    private fun constructSearchMark (): SearchMark =
+        SearchMark(
+            name = if (showNameField) dialogBinding.nameEditText.text.toString() else "",
+            categories = selectedCats.toList(),
+            keyword = dialogBinding.keywordEditText.text.toString(),
+            tags = tagBindings.mapNotNull {
+                if (it.spinner.selectedIndex == 0) {
+                    return@mapNotNull null
+                }
+                TAGS[it.spinner.selectedIndex] to it.editText.text.toString()
+            }.groupBy({it.first}, {it.second})
+        )
+
+    /**
      * Given a value, add it if it not exist, else remove it
      *
      * @return boolean represent that the value is in the set after the operation
@@ -148,14 +203,4 @@ class SearchMarkDialog (
             this.add(value)
         }
     }
-}
-
-enum class PositiveButtonStyle {
-    SAVE {
-        override val iconTextId = R.string.fa_floppy_disk
-    },
-    SEARCH {
-        override val iconTextId = R.string.fa_magnifying_glass
-    };
-    abstract val iconTextId: Int
 }

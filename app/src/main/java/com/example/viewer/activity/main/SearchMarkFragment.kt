@@ -24,10 +24,7 @@ import com.example.viewer.databinding.SearchMarkBinding
 import com.example.viewer.databinding.SearchMarkDialogTagBinding
 import com.example.viewer.database.SearchDatabase
 import com.example.viewer.database.SearchDatabase.Companion.SearchMark
-import com.example.viewer.database.SearchDatabase.Companion.Category
-import com.example.viewer.database.Tags
 import com.example.viewer.dialog.ConfirmDialog
-import com.example.viewer.dialog.PositiveButtonStyle
 import com.example.viewer.dialog.SearchMarkDialog
 
 data class SearchMarkEntry (
@@ -85,25 +82,28 @@ class SearchMarkFragment: Fragment() {
                     title = "進階搜尋",
                     searchMark = searchMark,
                     showNameField = false,
-                    positiveButtonStyle = PositiveButtonStyle.SEARCH
-                ) { retSearchMark ->
-                    SearchActivity.startTmpSearch(
-                        context,
-                        retSearchMark.categories,
-                        retSearchMark.keyword,
-                        retSearchMark.tags
-                    )
-                }
+                    showSearchButton = true,
+                    searchCb = { retSearchMark ->
+                        SearchActivity.startTmpSearch(
+                            context,
+                            retSearchMark.categories,
+                            retSearchMark.keyword,
+                            retSearchMark.tags
+                        )
+                    }
+                )
             }
         }
 
         binding.addButton.setOnClickListener {
             SearchMarkDialog(parent.context, layoutInflater).show(
-                title = "新增搜尋標記"
-            ) { retSearchMark ->
-                searchDataset.addSearchMark(retSearchMark)
-                refreshSearchMarkWrapper()
-            }
+                title = "新增搜尋標記",
+                showConfirmButton = true,
+                confirmCb = { retSearchMark ->
+                    searchDataset.addSearchMark(retSearchMark)
+                    refreshSearchMarkWrapper()
+                }
+            )
         }
 
         binding.toolBarFilterOutButton.setOnClickListener {
@@ -116,12 +116,14 @@ class SearchMarkFragment: Fragment() {
             focusedSearchMark!!.let { entry ->
                 SearchMarkDialog(parent.context, layoutInflater).show(
                     title = "編輯搜尋標記",
-                    searchMark = entry.searchMark
-                ) { retSearchMark ->
-                    searchDataset.modifySearchMark(entry.id, retSearchMark)
-                    deFocusSearchMark(doModifyBindingStyle = false)
-                    refreshSearchMarkWrapper()
-                }
+                    searchMark = entry.searchMark,
+                    showConfirmButton = true,
+                    confirmCb = { retSearchMark ->
+                        searchDataset.modifySearchMark(entry.id, retSearchMark)
+                        deFocusSearchMark(doModifyBindingStyle = false)
+                        refreshSearchMarkWrapper()
+                    }
+                )
             }
         }
 
