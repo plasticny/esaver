@@ -112,6 +112,7 @@ class BookDatabase (context: Context): BaseDatabase() {
             }
             return byteArrayPreferencesKey("${author}_bookIds")
         }
+        fun authorListUpdateTime () = longPreferencesKey("authorListUpdateTime")
     }
 
     //
@@ -215,6 +216,8 @@ class BookDatabase (context: Context): BaseDatabase() {
             return
         }
 
+        var authorListUpdated = false
+
         if (!getAllAuthors().contains(newAuthor)) {
             println("[BookDataset] addAuthor $newAuthor")
             val authors = (readFromByteArray<List<String>>(storeKeys.allAuthors()) ?: listOf()).toMutableList()
@@ -223,6 +226,7 @@ class BookDatabase (context: Context): BaseDatabase() {
             }
             authors.add(newAuthor)
             storeAsByteArray(storeKeys.allAuthors(), authors.sorted())
+            authorListUpdated = true
         }
 
         addAuthorBookId(newAuthor, bookId)
@@ -234,8 +238,17 @@ class BookDatabase (context: Context): BaseDatabase() {
             assertAuthorExist(oldAuthor)
             authors.remove(oldAuthor)
             storeAsByteArray(storeKeys.allAuthors(), authors)
+            authorListUpdated = true
+        }
+
+        if (authorListUpdated) {
+            store(storeKeys.authorListUpdateTime(), System.currentTimeMillis())
         }
     }
+    /**
+     * update: instead or remove author
+     */
+    fun authorListUpdateTime () = read(storeKeys.authorListUpdateTime()) ?: 0
 
     fun getBookMarks (bookId: String) = readFromByteArray<List<Int>>(storeKeys.bookBookMarks(bookId)) ?: listOf()
     fun addBookMark (bookId: String, page: Int) {

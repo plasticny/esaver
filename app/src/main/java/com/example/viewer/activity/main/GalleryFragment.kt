@@ -16,6 +16,7 @@ import com.example.viewer.BookAdder
 import com.example.viewer.BookGallery
 import com.example.viewer.database.BookSource
 import com.example.viewer.R
+import com.example.viewer.database.BookDatabase
 import com.example.viewer.databinding.MainGalleryFragmentBinding
 import kotlinx.coroutines.launch
 
@@ -23,6 +24,8 @@ class GalleryFragment: Fragment() {
     private lateinit var ctx: Context
     private lateinit var binding: MainGalleryFragmentBinding
     private lateinit var bookGallery: BookGallery
+
+    private var authorListLastUpdate = 0L
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -32,6 +35,8 @@ class GalleryFragment: Fragment() {
         ctx = container!!.context
         binding = MainGalleryFragmentBinding.inflate(layoutInflater, container, false)
         bookGallery = BookGallery(ctx, layoutInflater, binding.recyclerView)
+
+        authorListLastUpdate = BookDatabase.getInstance(ctx).authorListUpdateTime()
 
 //        binding.addImageView.setOnClickListener {
 //            if (Util.isInternetAvailable(ctx)) {
@@ -69,7 +74,13 @@ class GalleryFragment: Fragment() {
 
     override fun onResume() {
         super.onResume()
-        bookGallery.refresh()
+        BookDatabase.getInstance(ctx).authorListUpdateTime().let {
+            if (it != authorListLastUpdate) {
+                bookGallery.refreshAuthor()
+                authorListLastUpdate = it
+            }
+        }
+        bookGallery.refreshBooks()
     }
 
     private fun showAddDialog () {
