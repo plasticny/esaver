@@ -2,13 +2,22 @@ package com.example.viewer.activity
 
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.os.Bundle
+import android.view.Gravity
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Button
+import android.widget.FrameLayout
 import android.widget.ProgressBar
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.viewer.BookRecord
 import com.example.viewer.R
@@ -62,9 +71,11 @@ class SearchActivity: AppCompatActivity() {
     private var searchMarkId = -1
     private var position = -1
     private var next: String? = null // for load more books
-    private var bookRecords = mutableListOf<BookRecord>()
     private var lastExcludeTagUpdateTime = 0L
     private var isTemporarySearch = false
+
+    private val recyclerViewAdapter: RecyclerViewAdapter
+        get() = binding.recyclerView.adapter as RecyclerViewAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -81,6 +92,13 @@ class SearchActivity: AppCompatActivity() {
         position = allSearchMarkIds.indexOf(searchMarkId)
 
         binding = SearchActivityBinding.inflate(layoutInflater)
+
+        binding.recyclerView.apply {
+            layoutManager = LinearLayoutManager(context)
+            adapter = RecyclerViewAdapter(this@SearchActivity, layoutInflater) {
+                lifecycleScope.launch { loadMoreBooks() }
+            }
+        }
 
         binding.searchMarkNameContainer.setOnClickListener {
             SearchMarkDialog(this, layoutInflater).show(
@@ -157,12 +175,6 @@ class SearchActivity: AppCompatActivity() {
             }
         }
 
-        binding.loadMoreButton.apply {
-            setOnClickListener {
-                lifecycleScope.launch { loadMoreBooks() }
-            }
-        }
-
         lifecycleScope.launch { reset() }
 
         setContentView(binding.root)
@@ -174,9 +186,9 @@ class SearchActivity: AppCompatActivity() {
         searchDataSet.lastExcludeTagUpdateTime().let { newTime ->
             if (newTime != lastExcludeTagUpdateTime) {
                 println("[${this::class.simpleName}.${this::onResume.name}] re-filter books")
-                binding.searchBookWrapper.removeAllViews()
-                bookRecords = excludeTagFilter(bookRecords).toMutableList()
-                addBookViews(bookRecords)
+                recyclerViewAdapter.getBooks()?.let {
+                    recyclerViewAdapter.refreshBooks(excludeTagFilter(it))
+                }
                 lastExcludeTagUpdateTime = newTime
             }
         }
@@ -184,7 +196,6 @@ class SearchActivity: AppCompatActivity() {
 
     private suspend fun reset () {
         next = null
-        bookRecords.clear()
 
         binding.searchMarkName.text = searchMark.name
 
@@ -194,12 +205,7 @@ class SearchActivity: AppCompatActivity() {
             binding.nextSearchMarkButton.visibility = if (position == allSearchMarkIds.lastIndex) Button.INVISIBLE else Button.VISIBLE
         }
 
-        binding.searchBookWrapper.removeAllViews()
-
-        // hide these views while loading
-        binding.loadMoreButton.visibility = View.INVISIBLE
-        binding.noMoreTextView.visibility = View.INVISIBLE
-
+        recyclerViewAdapter.clearBooks()
         loadMoreBooks()
     }
 
@@ -215,38 +221,8 @@ class SearchActivity: AppCompatActivity() {
             return
         }
 
-        addBookViews(books)
-        bookRecords.addAll(books)
-
-        // change visibility of load more button and no more text
-        if (next != null) {
-            binding.loadMoreButton.visibility = View.VISIBLE
-            binding.noMoreTextView.visibility = View.GONE
-        } else {
-            binding.loadMoreButton.visibility = View.GONE
-            binding.noMoreTextView.visibility = View.VISIBLE
-        }
-    }
-
-    private fun addBookViews (books: List<BookRecord>) {
-        books.forEach { bookRecord ->
-            binding.searchBookWrapper.addView(
-                SearchBookBinding.inflate(layoutInflater, binding.searchBookWrapper, false).apply {
-                    Glide.with(this.root).load(bookRecord.coverUrl).into(searchBookImageView)
-                    searchBookTitleTextView.text = bookRecord.title
-                    pageNumTextView.text = baseContext.getString(R.string.n_page, bookRecord.pageNum)
-                    searchBookCatTextView.apply {
-                        text = bookRecord.cat
-                        setTextColor(context.getColor(Util.categoryFromName(bookRecord.cat).color))
-                    }
-                    root.setOnClickListener {
-                        val intent = Intent(baseContext, BookProfileActivity::class.java)
-                        intent.putExtra("book_record", bookRecord)
-                        startActivity(intent)
-                    }
-                }.root
-            )
-        }
+        recyclerViewAdapter.addBooks(books)
+        recyclerViewAdapter.toggleLoadMoreButton(next != null)
     }
 
     /**
@@ -305,45 +281,6 @@ class SearchActivity: AppCompatActivity() {
         }
     }
 
-    private fun SearchMark.url (next: String?): String {
-        val fCatsValue = if (categories.isNotEmpty()) {
-            1023 - categories.sumOf { it.value }
-        } else null
-
-        // f search
-        var fSearch = ""
-        if (keyword.isNotEmpty()) {
-            fSearch += "$keyword+"
-        }
-        if (tags.isNotEmpty()) {
-            val tokens = mutableListOf<String>()
-            tags.forEach { entry ->
-                val cat = entry.key
-                for (value in entry.value) {
-                    if (value.contains(' ')) {
-                        tokens.add("${cat}%3A\"${value}%24\"")
-                    } else {
-                        tokens.add("${cat}%3A${value}%24")
-                    }
-                }
-            }
-            fSearch += tokens.joinToString(" ")
-        }
-
-        var ret = "https://e-hentai.org/"
-        if (fCatsValue != null || fSearch.isNotEmpty()) {
-            ret += "?"
-        }
-        fCatsValue?.let { ret += "f_cats=$it&" }
-        if (fSearch.isNotEmpty()) {
-            ret += "f_search=$fSearch&"
-        }
-        ret += "inline_set=dm_e&"
-        next?.let { ret += "next=$next" }
-
-        return ret
-    }
-
     private fun excludeTagFilter (books: List<BookRecord>): List<BookRecord> {
         val excludeTags = searchDataSet.getExcludeTag()
         return books.filter { book ->
@@ -359,4 +296,226 @@ class SearchActivity: AppCompatActivity() {
             true
         }
     }
+}
+
+private class RecyclerViewAdapter (
+    private val activity: SearchActivity,
+    private val layoutInflater: LayoutInflater,
+    private val loadMoreCb: () -> Unit
+): RecyclerView.Adapter<RecyclerViewAdapter.Companion.ViewHolder>() {
+    companion object {
+        class ViewHolder (val container: FrameLayout): RecyclerView.ViewHolder(container)
+    }
+
+    private lateinit var bookRecyclerView: RecyclerView
+    private lateinit var loadMoreButton: Button
+    private lateinit var noMoreTextView: TextView
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder =
+        ViewHolder(
+            FrameLayout(activity).apply {
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT
+                )
+            }
+        )
+
+    override fun getItemCount(): Int = 3
+
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        holder.container.addView(
+            when (position) {
+                0 -> createBookRecyclerView().also { bookRecyclerView = it }
+                1 -> createLoadMoreButton().also { loadMoreButton = it }
+                2 -> createNoMoreTextView().also { noMoreTextView = it }
+                else -> throw Exception("Unexpected position $position")
+            }
+        )
+    }
+
+    fun toggleLoadMoreButton (toggle: Boolean) {
+        if (toggle) {
+            getLoadMoreButton()?.visibility = View.VISIBLE
+            getNoMoreTextView()?.visibility = View.GONE
+        } else {
+            getLoadMoreButton()?.visibility = View.GONE
+            getNoMoreTextView()?.visibility = View.VISIBLE
+        }
+    }
+
+    fun getBooks () = getBookRecyclerViewAdapter()?.getBooks()
+
+    fun addBooks (books: List<BookRecord>) =
+        getBookRecyclerViewAdapter()?.addBooks(books)
+
+    fun refreshBooks (books: List<BookRecord>) =
+        getBookRecyclerViewAdapter()?.refreshBooks(books)
+
+    fun clearBooks () =
+        getBookRecyclerViewAdapter()?.clear()
+
+    private fun createBookRecyclerView (): RecyclerView =
+        RecyclerView(activity).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            )
+            layoutManager = GridLayoutManager(context, 2)
+            adapter = BookRecyclerViewAdapter(layoutInflater, activity)
+        }
+
+    private fun createLoadMoreButton (): Button =
+        Button(activity).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                activity.resources.displayMetrics.widthPixels - Util.dp2px(context, 24F),
+                Util.dp2px(context, 60F)
+            )
+
+            backgroundTintList = ColorStateList.valueOf(context.getColor(R.color.darkgrey))
+            text = context.getString(R.string.load_more)
+            setTextColor(context.getColor(R.color.grey))
+            visibility = View.INVISIBLE
+
+            setOnClickListener {
+                loadMoreCb()
+            }
+        }
+
+    private fun createNoMoreTextView (): TextView =
+        TextView(activity).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                activity.resources.displayMetrics.widthPixels - Util.dp2px(context, 24F),
+                Util.dp2px(context, 60F)
+            )
+
+            gravity = Gravity.CENTER
+            text = context.getString(R.string.there_is_no_more)
+            setTextColor(context.getColor(R.color.grey))
+            visibility = View.INVISIBLE
+        }
+
+    private fun getBookRecyclerViewAdapter (): BookRecyclerViewAdapter? {
+        if (!this::bookRecyclerView.isInitialized) {
+            return null
+        }
+        return bookRecyclerView.adapter as BookRecyclerViewAdapter
+    }
+
+    private fun getLoadMoreButton (): Button? {
+        if(!this::loadMoreButton.isInitialized) {
+            return null
+        }
+        return loadMoreButton
+    }
+
+    private fun getNoMoreTextView (): TextView? {
+        if(!this::noMoreTextView.isInitialized) {
+            return null
+        }
+        return noMoreTextView
+    }
+}
+
+private class BookRecyclerViewAdapter(
+    private val layoutInflater: LayoutInflater,
+    private val activity: SearchActivity
+): RecyclerView.Adapter<BookRecyclerViewAdapter.Companion.ViewHolder>() {
+    companion object {
+        class ViewHolder (val binding: SearchBookBinding): RecyclerView.ViewHolder(binding.root)
+    }
+
+    private val bookRecords = mutableListOf<BookRecord>()
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder =
+        ViewHolder(SearchBookBinding.inflate(layoutInflater, parent, false))
+
+    override fun getItemCount(): Int = bookRecords.size
+
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        val binding = holder.binding
+        val bookRecord = bookRecords[position]
+
+        binding.searchBookImageView.let {
+            Glide.with(it.context).load(bookRecord.coverUrl).into(it)
+        }
+
+        binding.searchBookTitleTextView.text = bookRecord.title
+
+        binding.pageNumTextView.apply {
+            text = context.getString(R.string.n_page, bookRecord.pageNum)
+        }
+
+        binding.searchBookCatTextView.apply {
+            text = bookRecord.cat
+            setTextColor(context.getColor(Util.categoryFromName(bookRecord.cat).color))
+        }
+
+        binding.root.apply {
+            setOnClickListener {
+                val intent = Intent(activity, BookProfileActivity::class.java)
+                intent.putExtra("book_record", bookRecord)
+                activity.startActivity(intent)
+            }
+        }
+    }
+
+    fun getBooks (): List<BookRecord> = bookRecords
+
+    fun addBooks (books: List<BookRecord>) {
+        val positionStart = bookRecords.size
+        bookRecords.addAll(books)
+        notifyItemRangeInserted(positionStart, books.size)
+    }
+
+    fun refreshBooks (books: List<BookRecord>) {
+        bookRecords.clear()
+        bookRecords.addAll(books)
+        notifyDataSetChanged()
+    }
+
+    fun clear () {
+        val size = bookRecords.size
+        bookRecords.clear()
+        notifyItemRangeRemoved(0, size)
+    }
+}
+
+private fun SearchMark.url (next: String?): String {
+    val fCatsValue = if (categories.isNotEmpty()) {
+        1023 - categories.sumOf { it.value }
+    } else null
+
+    // f search
+    var fSearch = ""
+    if (keyword.isNotEmpty()) {
+        fSearch += "$keyword+"
+    }
+    if (tags.isNotEmpty()) {
+        val tokens = mutableListOf<String>()
+        tags.forEach { entry ->
+            val cat = entry.key
+            for (value in entry.value) {
+                if (value.contains(' ')) {
+                    tokens.add("${cat}%3A\"${value}%24\"")
+                } else {
+                    tokens.add("${cat}%3A${value}%24")
+                }
+            }
+        }
+        fSearch += tokens.joinToString(" ")
+    }
+
+    var ret = "https://e-hentai.org/"
+    if (fCatsValue != null || fSearch.isNotEmpty()) {
+        ret += "?"
+    }
+    fCatsValue?.let { ret += "f_cats=$it&" }
+    if (fSearch.isNotEmpty()) {
+        ret += "f_search=$fSearch&"
+    }
+    ret += "inline_set=dm_e&"
+    next?.let { ret += "next=$next" }
+
+    return ret
 }
