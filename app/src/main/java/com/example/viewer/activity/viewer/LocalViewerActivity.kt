@@ -52,8 +52,9 @@ class LocalViewerActivity: BaseViewerActivity() {
 
         super.onCreate(savedInstanceState)
 
-        if (page + 1 <= lastPage) {
-            preloadPage(page + 1)
+        nextPageOf(page)?.let { p1 ->
+            preloadPage(p1)
+            nextPageOf(p1)?.let { p2 -> preloadPage(p2) }
         }
     }
 
@@ -66,11 +67,14 @@ class LocalViewerActivity: BaseViewerActivity() {
         BookmarkDialog(this, layoutInflater, bookId, page) { bookMarkPage ->
             page = bookMarkPage
             loadPage()
-            if (page + 1 <= lastPage) {
-                preloadPage(page + 1)
+
+            nextPageOf(page)?.let { p1 ->
+                preloadPage(p1)
+                nextPageOf(p1)?.let { p2 -> preloadPage(p2) }
             }
-            if (page - 1 >= firstPage) {
-                preloadPage(page - 1)
+            prevPageOf(page)?.let { p1 ->
+                preloadPage(p1)
+                prevPageOf(p1)?.let { p2 -> preloadPage(p2) }
             }
         }.show()
 
@@ -89,28 +93,22 @@ class LocalViewerActivity: BaseViewerActivity() {
             )
         }
         else if (page < lastPage) {
-            page++
-            while (skipPageSet.contains(page)) {
-                page++
-            }
+            page = nextPageOf(page)!!
             loadPage()
-
-            if (page + 1 <= lastPage) {
-                preloadPage(page + 1)
+            nextPageOf(page)?.let { p1 ->
+                preloadPage(p1)
+                nextPageOf(p1)?.let { p2 -> preloadPage(p2) }
             }
         }
     }
 
     override fun prevPage () {
         if (page > firstPage) {
-            page--
-            while (skipPageSet.contains(page)) {
-                page--
-            }
+            page = prevPageOf(page)!!
             loadPage()
-
-            if (page - 1 >= firstPage) {
-                preloadPage(page - 1)
+            prevPageOf(page)?.let { p1 ->
+                preloadPage(p1)
+                prevPageOf(p1)?.let { p2 -> preloadPage(p2) }
             }
         }
     }
@@ -139,7 +137,7 @@ class LocalViewerActivity: BaseViewerActivity() {
 
     private fun preloadPage (page: Int) {
         if (page < firstPage || page > lastPage) {
-            throw Exception("page out of range")
+            return
         }
 
         lifecycleScope.launch {
@@ -277,5 +275,29 @@ class LocalViewerActivity: BaseViewerActivity() {
                 toggleLoadingUi(false)
             }
         }
+    }
+
+    private fun nextPageOf (page: Int): Int? {
+        if (page == lastPage) {
+            return null
+        }
+
+        var ret = page + 1
+        while (skipPageSet.contains(ret)) {
+            ret++
+        }
+        return ret
+    }
+
+    private fun prevPageOf (page: Int): Int? {
+        if (page == firstPage) {
+            return null
+        }
+
+        var ret = page - 1
+        while (skipPageSet.contains(ret)) {
+            ret--
+        }
+        return ret
     }
 }

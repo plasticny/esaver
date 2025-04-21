@@ -24,9 +24,8 @@ class OnlineViewerActivity: BaseViewerActivity() {
 
         super.onCreate(savedInstanceState)
 
-        if (page + 1 <= lastPage) {
-            preloadPage(page + 1)
-        }
+        preloadPage(page + 1)
+        preloadPage(page + 2)
     }
 
     override fun onImageLongClicked(): Boolean = true
@@ -37,12 +36,8 @@ class OnlineViewerActivity: BaseViewerActivity() {
         if (page > firstPage) {
             page--
             loadPage()
-
-            (page - 1).let {
-                if (it >= firstPage) {
-                    preloadPage(it)
-                }
-            }
+            preloadPage(page - 1)
+            preloadPage(page - 2)
         }
     }
 
@@ -50,12 +45,8 @@ class OnlineViewerActivity: BaseViewerActivity() {
         if (page < lastPage) {
             page++
             loadPage()
-
-            (page + 1).let {
-                if (it <= lastPage) {
-                    preloadPage(it)
-                }
-            }
+            preloadPage(page + 1)
+            preloadPage(page + 2)
         }
     }
 
@@ -68,18 +59,14 @@ class OnlineViewerActivity: BaseViewerActivity() {
             throw Exception("page out of range")
         }
 
-        if (pictureUrls[page] == null) {
-            pictureUrls[page] = withContext(Dispatchers.IO) {
-                fetcher.getPictureUrl(page)
-            }
+        return pictureUrls[page] ?: withContext(Dispatchers.IO) {
+            fetcher.getPictureUrl(page).also { pictureUrls[page] = it }
         }
-
-        return pictureUrls[page]
     }
 
     private fun preloadPage (page: Int) {
         if (page < firstPage || page > lastPage) {
-            throw Exception("page out of range")
+            return
         }
         lifecycleScope.launch {
             getPictureUrl(page)?.let {

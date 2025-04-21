@@ -70,6 +70,7 @@ class SearchActivity: AppCompatActivity() {
     private var next: String? = null // for load more books
     private var lastExcludeTagUpdateTime = 0L
     private var isTemporarySearch = false
+    private var reseting = false
     private var doNoMoreAlerted = false
 
     private val recyclerViewAdapter: BookRecyclerViewAdapter
@@ -98,6 +99,10 @@ class SearchActivity: AppCompatActivity() {
                 override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                     super.onScrolled(recyclerView, dx, dy)
 
+                    if (reseting) {
+                        return
+                    }
+
                     // trigger load more book
                     if (next == null) {
                         if (!doNoMoreAlerted) {
@@ -106,6 +111,7 @@ class SearchActivity: AppCompatActivity() {
                         }
                         return
                     }
+
                     val lm = layoutManager as GridLayoutManager
                     if (lm.findLastCompletelyVisibleItemPosition() == recyclerViewAdapter.itemCount - 1) {
                         lifecycleScope.launch { loadMoreBooks() }
@@ -209,7 +215,10 @@ class SearchActivity: AppCompatActivity() {
     }
 
     private suspend fun reset () {
+        reseting = true
+
         next = null
+        doNoMoreAlerted = false
 
         binding.searchMarkName.text = searchMark.name
 
@@ -221,6 +230,8 @@ class SearchActivity: AppCompatActivity() {
 
         recyclerViewAdapter.clear()
         loadMoreBooks()
+
+        reseting = false
     }
 
     private suspend fun loadMoreBooks () {
