@@ -23,6 +23,7 @@ import com.example.viewer.databinding.BookProfileTagBinding
 import com.example.viewer.database.BookDatabase
 import com.example.viewer.database.BookSource
 import com.example.viewer.database.SearchDatabase
+import com.example.viewer.databinding.DialogBookInfoBinding
 import com.example.viewer.databinding.DialogTagBinding
 import com.example.viewer.databinding.LocalReadSettingDialogBinding
 import com.example.viewer.dialog.ConfirmDialog
@@ -59,8 +60,6 @@ class BookProfileActivity: AppCompatActivity() {
         rootBinding.coverImageView.let {
             Glide.with(baseContext).load(bookRecord.coverUrl).into(it)
         }
-
-        rootBinding.idTextView.text = bookRecord.id
 
         rootBinding.titleTextView.text = bookRecord.title
 
@@ -128,6 +127,10 @@ class BookProfileActivity: AppCompatActivity() {
                     showReadSettingDialog(bookRecord.author!!, bookRecord.id)
                 }
             }
+        }
+
+        rootBinding.infoButtonWrapper.setOnClickListener {
+            showInfoDialog()
         }
 
         rootBinding.deleteButtonWrapper.apply {
@@ -282,6 +285,15 @@ class BookProfileActivity: AppCompatActivity() {
                 tags = mapOf(Pair(category, listOf(value)))
             )
         }
+
+        dialog.show()
+    }
+
+    private fun showInfoDialog () {
+        val dialogViewBinding = DialogBookInfoBinding.inflate(layoutInflater)
+        val dialog = AlertDialog.Builder(this).setView(dialogViewBinding.root).create()
+
+        dialogViewBinding.urlTextView.text = bookRecord.url
 
         dialog.show()
     }

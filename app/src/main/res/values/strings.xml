@@ -19,6 +19,7 @@
     <string name="fa_wrench">\uf0ad</string>
     <string name="fa_arrows_rotate">\uf021</string>
     <string name="fa_triangle_exclamation">\uf071</string>
+    <string name="fa_circle_info">\uf05a</string>
 <!--  string for icon button  -->
     <string name="icon_button_cancel"><i>\uf00d</i> 取消</string>
     <string name="icon_button_save"><i>\uf0c7</i> 保存</string>
@@ -70,4 +71,6 @@
     <string name="there_is_no_more">沒有更多了</string>
     <string name="contain_offensive_context">含有令人不適的內容</string>
     <string name="tag">標籤</string>
+    <string name="source_url">來源URL</string>
+    <string name="detail_info">詳細資訊</string>
 </resources>

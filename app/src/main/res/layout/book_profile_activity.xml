@@ -44,12 +44,6 @@
             android:orientation="vertical">
 
             <TextView
-                android:id="@+id/id_TextView"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textColor="@color/grey"/>
-
-            <TextView
                 android:id="@+id/title_textView"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
@@ -146,8 +140,6 @@
 
             </LinearLayout>
 
-            <!--  buttons when book is not saved  -->
-
             <LinearLayout
                 android:id="@+id/save_button_wrapper"
                 android:layout_width="wrap_content"
@@ -172,8 +164,6 @@
                     android:text="@string/save_to_gallery"/>
 
             </LinearLayout>
-
-            <!--  buttons when book is saved  -->
 
             <LinearLayout
                 android:id="@+id/local_setting_button_wrapper"
@@ -201,6 +191,31 @@
             </LinearLayout>
 
             <LinearLayout
+                android:id="@+id/info_button_wrapper"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="50dp"
+                android:orientation="vertical"
+                android:gravity="center_horizontal">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/font_awesome"
+                    android:textColor="@color/white"
+                    android:textSize="24sp"
+                    android:text="@string/fa_circle_info"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/white"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/detail_info"/>
+
+            </LinearLayout>
+
+            <LinearLayout
                 android:id="@+id/delete_button_wrapper"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -224,7 +239,6 @@
                     android:text="@string/delete"/>
 
             </LinearLayout>
-
 
         </LinearLayout>
 
