@@ -1,6 +1,7 @@
 package com.example.viewer.activity.viewer
 
 import android.os.Bundle
+import android.view.View
 import androidx.lifecycle.lifecycleScope
 import com.example.viewer.BookRecord
 import com.example.viewer.fetcher.EPictureFetcher
@@ -12,6 +13,8 @@ class OnlineViewerActivity: BaseViewerActivity() {
     private lateinit var bookRecord: BookRecord
     private lateinit var fetcher: EPictureFetcher
     private lateinit var pictureUrls: MutableList<String?>
+
+    override val enableBookmarkButton = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         bookRecord = intent.getParcelableExtra("book_record", BookRecord::class.java)!!
@@ -29,8 +32,6 @@ class OnlineViewerActivity: BaseViewerActivity() {
     }
 
     override fun onImageLongClicked(): Boolean = true
-
-    override fun onPageTextClicked() = Unit
 
     override fun prevPage() {
         if (page > firstPage) {

@@ -49,14 +49,14 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-<!--  page text  -->
+<!--  Bottom toolbar and page number textview  -->
 
-    <RelativeLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/toolbar_container"
         android:layout_width="match_parent"
         android:layout_height="60dp"
-        android:gravity="center"
+        android:background="@color/transparent_darkgery"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="@+id/viewer_tmp_image_vew"
         app:layout_constraintStart_toStartOf="parent">
 
         <androidx.cardview.widget.CardView
@@ -65,7 +65,11 @@
             android:layout_height="wrap_content"
             android:backgroundTint="#3EFFFFFF"
             app:cardCornerRadius="8dp"
-            app:cardElevation="0dp">
+            app:cardElevation="0dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent">
 
             <TextView
                 android:id="@+id/viewer_page_TextView"
@@ -79,7 +83,22 @@
 
         </androidx.cardview.widget.CardView>
 
-    </RelativeLayout>
+        <TextView
+            android:id="@+id/bookmark_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="32dp"
+            android:fontFamily="@font/font_awesome"
+            android:text="@string/fa_bookmark"
+            android:textColor="@color/white"
+            android:textSize="20sp"
+            android:visibility="gone"
+            android:alpha="0"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"/>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
     <ImageView
         android:id="@+id/viewer_tmp_image_vew"

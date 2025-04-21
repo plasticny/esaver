@@ -45,12 +45,30 @@ class LocalViewerActivity: BaseViewerActivity() {
     @Volatile
     private var askingNextBook = false
 
+    override val enableBookmarkButton = true
+
     override fun onCreate(savedInstanceState: Bundle?) {
         bookDataset = BookDatabase.getInstance(baseContext)
         bookId = intent.getStringExtra("bookId")!!
         prepareBook(bookId)
 
         super.onCreate(savedInstanceState)
+
+        viewerActivityBinding.bookmarkButton.setOnClickListener {
+            BookmarkDialog(this, layoutInflater, bookId, page) { bookMarkPage ->
+                page = bookMarkPage
+                loadPage()
+
+                nextPageOf(page)?.let { p1 ->
+                    preloadPage(p1)
+                    nextPageOf(p1)?.let { p2 -> preloadPage(p2) }
+                }
+                prevPageOf(page)?.let { p1 ->
+                    preloadPage(p1)
+                    prevPageOf(p1)?.let { p2 -> preloadPage(p2) }
+                }
+            }.show()
+        }
 
         nextPageOf(page)?.let { p1 ->
             preloadPage(p1)
@@ -62,21 +80,6 @@ class LocalViewerActivity: BaseViewerActivity() {
         showImageDialog()
         return true
     }
-
-    override fun onPageTextClicked() =
-        BookmarkDialog(this, layoutInflater, bookId, page) { bookMarkPage ->
-            page = bookMarkPage
-            loadPage()
-
-            nextPageOf(page)?.let { p1 ->
-                preloadPage(p1)
-                nextPageOf(p1)?.let { p2 -> preloadPage(p2) }
-            }
-            prevPageOf(page)?.let { p1 ->
-                preloadPage(p1)
-                prevPageOf(p1)?.let { p2 -> preloadPage(p2) }
-            }
-        }.show()
 
     override fun nextPage () {
         if (page == lastPage && !askingNextBook) {

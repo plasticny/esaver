@@ -1,6 +1,12 @@
 package com.example.viewer.activity.viewer
 
+import android.animation.Animator
+import android.animation.Animator.AnimatorListener
+import android.animation.ObjectAnimator
+import android.animation.ValueAnimator
 import android.annotation.SuppressLint
+import android.graphics.Rect
+import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.view.GestureDetector
@@ -17,6 +23,8 @@ import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
 import com.bumptech.glide.signature.ObjectKey
+import com.example.viewer.R
+import com.example.viewer.Util
 import com.example.viewer.databinding.ViewerActivityBinding
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -27,8 +35,9 @@ abstract class BaseViewerActivity: AppCompatActivity() {
         const val SCROLL_THRESHOLD = 50
     }
 
+    protected abstract val enableBookmarkButton: Boolean
+
     protected abstract fun onImageLongClicked(): Boolean
-    protected abstract fun onPageTextClicked()
     protected abstract fun prevPage()
     protected abstract fun nextPage()
     protected abstract fun reloadPage()
@@ -43,6 +52,8 @@ abstract class BaseViewerActivity: AppCompatActivity() {
 
     private val pageSignatures = mutableMapOf<Int, ObjectKey>()
 
+    private var showingToolBar = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -53,8 +64,10 @@ abstract class BaseViewerActivity: AppCompatActivity() {
         }
         setupChangePageOnImage()
 
-        viewerActivityBinding.pageTextWrapper.setOnClickListener {
-            onPageTextClicked()
+        viewerActivityBinding.pageTextWrapper.apply {
+            setOnClickListener {
+                toggleToolBar()
+            }
         }
 
         viewerActivityBinding.reloadIcon.setOnClickListener {
@@ -84,6 +97,20 @@ abstract class BaseViewerActivity: AppCompatActivity() {
             }
         }
         return super.onKeyDown(keyCode, event)
+    }
+
+    override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
+        ev?.let {
+            if (showingToolBar && ev.action == MotionEvent.ACTION_DOWN) {
+                val viewRect = Rect().also {
+                    viewerActivityBinding.toolbarContainer.getGlobalVisibleRect(it)
+                }
+                if (!viewRect.contains(ev.x.toInt(), ev.y.toInt())) {
+                    toggleToolBar(false)
+                }
+            }
+        }
+        return super.dispatchTouchEvent(ev)
     }
 
     protected fun toggleLoadingUi (toggle: Boolean) {
@@ -226,6 +253,48 @@ abstract class BaseViewerActivity: AppCompatActivity() {
             }
             true
         }
+    }
+
+    private fun toggleToolBar (toggle: Boolean = !showingToolBar) {
+        if (toggle == showingToolBar) {
+            return
+        }
+
+        viewerActivityBinding.toolbarContainer.apply {
+            ValueAnimator.ofArgb(
+                (background as ColorDrawable).color,
+                if (toggle) getColor(R.color.half_transparent_darkgery) else getColor(R.color.transparent_darkgery)
+            ).apply {
+                duration = 250
+                addUpdateListener { setBackgroundColor(animatedValue as Int) }
+            }.start()
+        }
+
+        viewerActivityBinding.bookmarkButton.apply {
+            if(!enableBookmarkButton) {
+                return@apply
+            }
+
+            if (toggle) {
+                visibility = View.VISIBLE
+            }
+            ValueAnimator.ofFloat(alpha, 1 - alpha).apply {
+                duration = 250
+                addUpdateListener { alpha = animatedValue as Float }
+                if (!toggle) {
+                    addListener(object: AnimatorListener {
+                        override fun onAnimationStart(animation: Animator) = Unit
+                        override fun onAnimationEnd(animation: Animator) {
+                            visibility = View.GONE
+                        }
+                        override fun onAnimationCancel(animation: Animator) = Unit
+                        override fun onAnimationRepeat(animation: Animator) = Unit
+                    })
+                }
+            }.start()
+        }
+
+        showingToolBar = toggle
     }
 }
 
