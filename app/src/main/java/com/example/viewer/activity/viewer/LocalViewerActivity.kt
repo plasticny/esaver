@@ -46,6 +46,7 @@ class LocalViewerActivity: BaseViewerActivity() {
     private var askingNextBook = false
 
     override val enableBookmarkButton = true
+    override val enableJumpToButton = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         bookDataset = BookDatabase.getInstance(baseContext)
@@ -56,23 +57,8 @@ class LocalViewerActivity: BaseViewerActivity() {
 
         viewerActivityBinding.bookmarkButton.setOnClickListener {
             BookmarkDialog(this, layoutInflater, bookId, page) { bookMarkPage ->
-                page = bookMarkPage
-                loadPage()
-
-                nextPageOf(page)?.let { p1 ->
-                    preloadPage(p1)
-                    nextPageOf(p1)?.let { p2 -> preloadPage(p2) }
-                }
-                prevPageOf(page)?.let { p1 ->
-                    preloadPage(p1)
-                    prevPageOf(p1)?.let { p2 -> preloadPage(p2) }
-                }
+                toPage(bookMarkPage)
             }.show()
-        }
-
-        nextPageOf(page)?.let { p1 ->
-            preloadPage(p1)
-            nextPageOf(p1)?.let { p2 -> preloadPage(p2) }
         }
     }
 
@@ -98,10 +84,6 @@ class LocalViewerActivity: BaseViewerActivity() {
         else if (page < lastPage) {
             page = nextPageOf(page)!!
             loadPage()
-            nextPageOf(page)?.let { p1 ->
-                preloadPage(p1)
-                nextPageOf(p1)?.let { p2 -> preloadPage(p2) }
-            }
         }
     }
 
@@ -109,10 +91,6 @@ class LocalViewerActivity: BaseViewerActivity() {
         if (page > firstPage) {
             page = prevPageOf(page)!!
             loadPage()
-            prevPageOf(page)?.let { p1 ->
-                preloadPage(p1)
-                prevPageOf(p1)?.let { p2 -> preloadPage(p2) }
-            }
         }
     }
 
@@ -137,6 +115,18 @@ class LocalViewerActivity: BaseViewerActivity() {
     }
 
     override suspend fun getPictureUrl(page: Int): String? = fetcher.getPictureUrl(page)
+
+    override fun loadPage() {
+        super.loadPage()
+        nextPageOf(page)?.let { p1 ->
+            preloadPage(p1)
+            nextPageOf(p1)?.let { p2 -> preloadPage(p2) }
+        }
+        prevPageOf(page)?.let { p1 ->
+            preloadPage(p1)
+            prevPageOf(p1)?.let { p2 -> preloadPage(p2) }
+        }
+    }
 
     private fun preloadPage (page: Int) {
         if (page < firstPage || page > lastPage) {

@@ -15,6 +15,7 @@ class OnlineViewerActivity: BaseViewerActivity() {
     private lateinit var pictureUrls: MutableList<String?>
 
     override val enableBookmarkButton = false
+    override val enableJumpToButton = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         bookRecord = intent.getParcelableExtra("book_record", BookRecord::class.java)!!
@@ -26,9 +27,6 @@ class OnlineViewerActivity: BaseViewerActivity() {
         pictureUrls = MutableList(bookRecord.pageNum) { null }
 
         super.onCreate(savedInstanceState)
-
-        preloadPage(page + 1)
-        preloadPage(page + 2)
     }
 
     override fun onImageLongClicked(): Boolean = true
@@ -37,8 +35,6 @@ class OnlineViewerActivity: BaseViewerActivity() {
         if (page > firstPage) {
             page--
             loadPage()
-            preloadPage(page - 1)
-            preloadPage(page - 2)
         }
     }
 
@@ -46,12 +42,18 @@ class OnlineViewerActivity: BaseViewerActivity() {
         if (page < lastPage) {
             page++
             loadPage()
-            preloadPage(page + 1)
-            preloadPage(page + 2)
         }
     }
 
     override fun reloadPage() = loadPage()
+
+    override fun loadPage() {
+        super.loadPage()
+        preloadPage(page + 1)
+        preloadPage(page + 2)
+        preloadPage(page - 1)
+        preloadPage(page - 2)
+    }
 
     override suspend fun getPictureUrl (page: Int): String? {
         println("[${this::class.simpleName}.${this::getPictureUrl.name}] $page")

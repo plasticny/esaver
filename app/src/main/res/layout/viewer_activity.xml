@@ -84,6 +84,21 @@
         </androidx.cardview.widget.CardView>
 
         <TextView
+            android:id="@+id/jumpTo_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="24dp"
+            android:fontFamily="@font/font_awesome"
+            android:text="@string/fa_right_to_bracket"
+            android:textColor="@color/white"
+            android:textSize="20sp"
+            android:visibility="gone"
+            android:alpha="0"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/bookmark_button"/>
+
+        <TextView
             android:id="@+id/bookmark_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -99,6 +114,8 @@
             app:layout_constraintEnd_toEndOf="parent"/>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
+
+<!--  others  -->
 
     <ImageView
         android:id="@+id/viewer_tmp_image_vew"

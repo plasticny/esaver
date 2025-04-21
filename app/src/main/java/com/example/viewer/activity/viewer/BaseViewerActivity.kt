@@ -15,6 +15,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.widget.ImageView
 import android.widget.ProgressBar
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
@@ -26,6 +27,7 @@ import com.bumptech.glide.signature.ObjectKey
 import com.example.viewer.R
 import com.example.viewer.Util
 import com.example.viewer.databinding.ViewerActivityBinding
+import com.example.viewer.dialog.SimpleEditTextDialog
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
@@ -36,6 +38,7 @@ abstract class BaseViewerActivity: AppCompatActivity() {
     }
 
     protected abstract val enableBookmarkButton: Boolean
+    protected abstract val enableJumpToButton: Boolean
 
     protected abstract fun onImageLongClicked(): Boolean
     protected abstract fun prevPage()
@@ -67,6 +70,29 @@ abstract class BaseViewerActivity: AppCompatActivity() {
         viewerActivityBinding.pageTextWrapper.apply {
             setOnClickListener {
                 toggleToolBar()
+            }
+        }
+
+        viewerActivityBinding.jumpToButton.apply {
+            if (enableJumpToButton) {
+                setOnClickListener {
+                    SimpleEditTextDialog(this@BaseViewerActivity, layoutInflater).show(
+                        title = "跳至頁面",
+                        validator = {
+                            try {
+                                val valid = (it.toInt() - 1) in firstPage..lastPage
+                                if (!valid) {
+                                    Toast.makeText(baseContext, "頁數超出範圍", Toast.LENGTH_SHORT).show()
+                                }
+                                valid
+                            } catch (e: Exception) {
+                                Toast.makeText(baseContext, "輸入錯誤", Toast.LENGTH_SHORT).show()
+                                false
+                            }
+                        },
+                        positiveCb = { toPage(it.toInt() - 1) }
+                    )
+                }
             }
         }
 
@@ -139,7 +165,15 @@ abstract class BaseViewerActivity: AppCompatActivity() {
         }
     }
 
-    protected fun loadPage () {
+    protected fun toPage (page: Int) {
+        if (page < firstPage || page > lastPage) {
+            throw Exception("page out of range")
+        }
+        this.page = page
+        loadPage()
+    }
+
+    protected open fun loadPage () {
         val myPage = page
 
         viewerActivityBinding.viewerPageTextView.text = (page + 1).toString()
@@ -270,8 +304,32 @@ abstract class BaseViewerActivity: AppCompatActivity() {
             }.start()
         }
 
+        viewerActivityBinding.jumpToButton.apply {
+            if (!enableJumpToButton) {
+                return@apply
+            }
+
+            if (toggle) {
+                visibility = View.VISIBLE
+            }
+            ValueAnimator.ofFloat(alpha, 1 - alpha).apply {
+                duration = 250
+                addUpdateListener { alpha = animatedValue as Float }
+                if (!toggle) {
+                    addListener(object: AnimatorListener {
+                        override fun onAnimationStart(animation: Animator) = Unit
+                        override fun onAnimationEnd(animation: Animator) {
+                            visibility = View.GONE
+                        }
+                        override fun onAnimationCancel(animation: Animator) = Unit
+                        override fun onAnimationRepeat(animation: Animator) = Unit
+                    })
+                }
+            }.start()
+        }
+
         viewerActivityBinding.bookmarkButton.apply {
-            if(!enableBookmarkButton) {
+            if (!enableBookmarkButton) {
                 return@apply
             }
 

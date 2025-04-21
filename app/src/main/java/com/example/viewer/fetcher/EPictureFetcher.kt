@@ -75,7 +75,7 @@ class EPictureFetcher: BasePictureFetcher {
             }
         }
 
-        if (page > pageUrls.lastIndex) {
+        while (page > pageUrls.lastIndex) {
             gettingPageUrl = true
 
             println("[${this::class.simpleName}.${this::getPageUrl.name}] load next p $p")
@@ -102,9 +102,9 @@ class EPictureFetcher: BasePictureFetcher {
             } else {
                 p++
             }
-
-            gettingPageUrl = false
         }
+        gettingPageUrl = false
+
         return pageUrls[page]
     }
 }
