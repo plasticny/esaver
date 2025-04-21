@@ -2,21 +2,16 @@ package com.example.viewer.activity
 
 import android.content.Context
 import android.content.Intent
-import android.content.res.ColorStateList
 import android.os.Bundle
-import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
-import android.widget.FrameLayout
 import android.widget.ProgressBar
-import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
-import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.viewer.BookRecord
@@ -69,13 +64,16 @@ class SearchActivity: AppCompatActivity() {
 
     @Volatile
     private var searchMarkId = -1
+    @Volatile
+    private var loadingMore = false
     private var position = -1
     private var next: String? = null // for load more books
     private var lastExcludeTagUpdateTime = 0L
     private var isTemporarySearch = false
+    private var doNoMoreAlerted = false
 
-    private val recyclerViewAdapter: RecyclerViewAdapter
-        get() = binding.recyclerView.adapter as RecyclerViewAdapter
+    private val recyclerViewAdapter: BookRecyclerViewAdapter
+        get() = binding.recyclerView.adapter as BookRecyclerViewAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -94,10 +92,26 @@ class SearchActivity: AppCompatActivity() {
         binding = SearchActivityBinding.inflate(layoutInflater)
 
         binding.recyclerView.apply {
-            layoutManager = LinearLayoutManager(context)
-            adapter = RecyclerViewAdapter(this@SearchActivity, layoutInflater) {
-                lifecycleScope.launch { loadMoreBooks() }
-            }
+            layoutManager = GridLayoutManager(context, 2)
+            adapter = BookRecyclerViewAdapter(layoutInflater, this@SearchActivity)
+            addOnScrollListener(object: RecyclerView.OnScrollListener() {
+                override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                    super.onScrolled(recyclerView, dx, dy)
+
+                    // trigger load more book
+                    if (next == null) {
+                        if (!doNoMoreAlerted) {
+                            Toast.makeText(baseContext, "沒有更多了", Toast.LENGTH_LONG).show()
+                            doNoMoreAlerted = true
+                        }
+                        return
+                    }
+                    val lm = layoutManager as GridLayoutManager
+                    if (lm.findLastCompletelyVisibleItemPosition() == recyclerViewAdapter.itemCount - 1) {
+                        lifecycleScope.launch { loadMoreBooks() }
+                    }
+                }
+            })
         }
 
         binding.searchMarkNameContainer.setOnClickListener {
@@ -205,11 +219,16 @@ class SearchActivity: AppCompatActivity() {
             binding.nextSearchMarkButton.visibility = if (position == allSearchMarkIds.lastIndex) Button.INVISIBLE else Button.VISIBLE
         }
 
-        recyclerViewAdapter.clearBooks()
+        recyclerViewAdapter.clear()
         loadMoreBooks()
     }
 
     private suspend fun loadMoreBooks () {
+        if (loadingMore) {
+            return
+        }
+        loadingMore = true
+
         val mySearchId = searchMarkId
 
         binding.searchProgressBar.visibility = ProgressBar.VISIBLE
@@ -222,7 +241,8 @@ class SearchActivity: AppCompatActivity() {
         }
 
         recyclerViewAdapter.addBooks(books)
-        recyclerViewAdapter.toggleLoadMoreButton(next != null)
+
+        loadingMore = false
     }
 
     /**
@@ -298,125 +318,6 @@ class SearchActivity: AppCompatActivity() {
     }
 }
 
-private class RecyclerViewAdapter (
-    private val activity: SearchActivity,
-    private val layoutInflater: LayoutInflater,
-    private val loadMoreCb: () -> Unit
-): RecyclerView.Adapter<RecyclerViewAdapter.Companion.ViewHolder>() {
-    companion object {
-        class ViewHolder (val container: FrameLayout): RecyclerView.ViewHolder(container)
-    }
-
-    private lateinit var bookRecyclerView: RecyclerView
-    private lateinit var loadMoreButton: Button
-    private lateinit var noMoreTextView: TextView
-
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder =
-        ViewHolder(
-            FrameLayout(activity).apply {
-                layoutParams = FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                    FrameLayout.LayoutParams.WRAP_CONTENT
-                )
-            }
-        )
-
-    override fun getItemCount(): Int = 3
-
-    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.container.addView(
-            when (position) {
-                0 -> createBookRecyclerView().also { bookRecyclerView = it }
-                1 -> createLoadMoreButton().also { loadMoreButton = it }
-                2 -> createNoMoreTextView().also { noMoreTextView = it }
-                else -> throw Exception("Unexpected position $position")
-            }
-        )
-    }
-
-    fun toggleLoadMoreButton (toggle: Boolean) {
-        if (toggle) {
-            getLoadMoreButton()?.visibility = View.VISIBLE
-            getNoMoreTextView()?.visibility = View.GONE
-        } else {
-            getLoadMoreButton()?.visibility = View.GONE
-            getNoMoreTextView()?.visibility = View.VISIBLE
-        }
-    }
-
-    fun getBooks () = getBookRecyclerViewAdapter()?.getBooks()
-
-    fun addBooks (books: List<BookRecord>) =
-        getBookRecyclerViewAdapter()?.addBooks(books)
-
-    fun refreshBooks (books: List<BookRecord>) =
-        getBookRecyclerViewAdapter()?.refreshBooks(books)
-
-    fun clearBooks () =
-        getBookRecyclerViewAdapter()?.clear()
-
-    private fun createBookRecyclerView (): RecyclerView =
-        RecyclerView(activity).apply {
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
-            )
-            layoutManager = GridLayoutManager(context, 2)
-            adapter = BookRecyclerViewAdapter(layoutInflater, activity)
-        }
-
-    private fun createLoadMoreButton (): Button =
-        Button(activity).apply {
-            layoutParams = FrameLayout.LayoutParams(
-                activity.resources.displayMetrics.widthPixels - Util.dp2px(context, 24F),
-                Util.dp2px(context, 60F)
-            )
-
-            backgroundTintList = ColorStateList.valueOf(context.getColor(R.color.darkgrey))
-            text = context.getString(R.string.load_more)
-            setTextColor(context.getColor(R.color.grey))
-            visibility = View.INVISIBLE
-
-            setOnClickListener {
-                loadMoreCb()
-            }
-        }
-
-    private fun createNoMoreTextView (): TextView =
-        TextView(activity).apply {
-            layoutParams = FrameLayout.LayoutParams(
-                activity.resources.displayMetrics.widthPixels - Util.dp2px(context, 24F),
-                Util.dp2px(context, 60F)
-            )
-
-            gravity = Gravity.CENTER
-            text = context.getString(R.string.there_is_no_more)
-            setTextColor(context.getColor(R.color.grey))
-            visibility = View.INVISIBLE
-        }
-
-    private fun getBookRecyclerViewAdapter (): BookRecyclerViewAdapter? {
-        if (!this::bookRecyclerView.isInitialized) {
-            return null
-        }
-        return bookRecyclerView.adapter as BookRecyclerViewAdapter
-    }
-
-    private fun getLoadMoreButton (): Button? {
-        if(!this::loadMoreButton.isInitialized) {
-            return null
-        }
-        return loadMoreButton
-    }
-
-    private fun getNoMoreTextView (): TextView? {
-        if(!this::noMoreTextView.isInitialized) {
-            return null
-        }
-        return noMoreTextView
-    }
-}
-
 private class BookRecyclerViewAdapter(
     private val layoutInflater: LayoutInflater,
     private val activity: SearchActivity
@@ -426,6 +327,11 @@ private class BookRecyclerViewAdapter(
     }
 
     private val bookRecords = mutableListOf<BookRecord>()
+
+//    override fun onViewRecycled(holder: ViewHolder) {
+//        super.onViewRecycled(holder)
+//        println(holder.bindingAdapterPosition)
+//    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder =
         ViewHolder(SearchBookBinding.inflate(layoutInflater, parent, false))
