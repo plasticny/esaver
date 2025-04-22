@@ -6,7 +6,6 @@ import android.os.Bundle
 import android.view.View
 import android.widget.Button
 import android.widget.ProgressBar
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -25,16 +24,13 @@ import com.example.viewer.database.BookSource
 import com.example.viewer.database.SearchDatabase
 import com.example.viewer.databinding.DialogBookInfoBinding
 import com.example.viewer.databinding.DialogTagBinding
-import com.example.viewer.databinding.LocalReadSettingDialogBinding
 import com.example.viewer.dialog.ConfirmDialog
-import com.example.viewer.dialog.SelectAuthorDialog
+import com.example.viewer.dialog.LocalReadSettingDialog
 import com.example.viewer.fetcher.EPictureFetcher
-import com.google.gson.JsonIOException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.jsoup.Jsoup
 import java.io.File
 
 /**
@@ -124,7 +120,14 @@ class BookProfileActivity: AppCompatActivity() {
             visibility = if (isBookStored) View.VISIBLE else View.GONE
             setOnClickListener {
                 if (isBookStored) {
-                    showReadSettingDialog(bookRecord.author!!, bookRecord.id)
+                    LocalReadSettingDialog(this@BookProfileActivity, layoutInflater).show(
+                        bookRecord.id, bookRecord.author!!,
+                        onApplied = { coverPageUpdated ->
+                            if (coverPageUpdated) {
+                                refreshCoverPage()
+                            }
+                        }
+                    )
                 }
             }
         }
@@ -192,75 +195,6 @@ class BookProfileActivity: AppCompatActivity() {
 
     private fun toggleProgressBar (toggle: Boolean) {
         rootBinding.progressBar.visibility = if (toggle) ProgressBar.VISIBLE else ProgressBar.GONE
-    }
-
-    private fun showReadSettingDialog (author: String, bookId: String) {
-        val bookDatabase = BookDatabase.getInstance(baseContext)
-
-        val dialogViewBinding = LocalReadSettingDialogBinding.inflate(layoutInflater)
-        val dialog = AlertDialog.Builder(this).setView(dialogViewBinding.root).create()
-
-        val authorEditText = dialogViewBinding.profileDialogAuthorEditText.apply {
-            setText(author)
-        }
-        val coverPageEditText = dialogViewBinding.profileDialogCoverPageEditText.apply {
-            setText((bookDatabase.getBookCoverPage(bookId) + 1).toString())
-        }
-        val skipPageEditText = dialogViewBinding.profileDialogSkipPagesEditText.apply {
-            setText(bookDatabase.getBookSkipPages(bookId).joinToString(",") { (it + 1).toString() })
-        }
-
-        dialogViewBinding.searchAuthorButton.setOnClickListener {
-            if (bookDatabase.getUserAuthors().isEmpty()) {
-                Toast.makeText(baseContext, "沒有作者可以選擇", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            SelectAuthorDialog(this@BookProfileActivity, layoutInflater).show {
-                author -> authorEditText.setText(author)
-            }
-        }
-
-        dialogViewBinding.profileDialogApplyButton.setOnClickListener {
-            val authorText = authorEditText.text.toString().trim()
-            val coverPageText = coverPageEditText.text.toString().trim()
-            val skipPageText = skipPageEditText.text.toString().trim()
-
-            if (authorText.isEmpty()) {
-                Toast.makeText(baseContext, "作者不能為空", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            if (authorText.isEmpty()) {
-                Toast.makeText(baseContext, "封面頁不能為空", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            // update author and cover page
-            if (authorText != author) {
-                bookDatabase.changeAuthor(bookId, author, authorText)
-            }
-            coverPageText.toInt().let {
-                if (it != bookDatabase.getBookCoverPage(bookId) + 1) {
-                    bookDatabase.setBookCoverPage(bookId, it - 1)
-                    refreshCoverPage()
-                }
-            }
-
-            // update skip pages
-            val newSkipPages = mutableListOf<Int>()
-            for (token in skipPageText.split(',')) {
-                try {
-                    newSkipPages.add(token.trim().toInt() - 1)
-                }
-                catch (e: Exception) {
-                    println("[reading skip page] token '$token' cannot convert into int")
-                }
-            }
-            bookDatabase.setBookSkipPages(bookId, newSkipPages)
-
-            dialog.dismiss()
-        }
-
-        dialog.show()
     }
 
     private fun showTagDialog (category: String, value: String) {

@@ -180,6 +180,11 @@ class LocalViewerActivity: BaseViewerActivity() {
                 bookDataset.setBookSkipPages(bookId, skipPageSet.toMutableList().also { it.add(page) })
                 skipPageSet = bookDataset.getBookSkipPages(bookId).toSet()
 
+                if (bookDataset.getBookCoverPage(bookId) != page) {
+                    // image file of skipped page is no longer needed
+                    File(bookFolder, page.toString()).delete()
+                }
+
                 if (page == firstPage) {
                     firstPage++
                     nextPage()

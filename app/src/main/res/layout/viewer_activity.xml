@@ -87,7 +87,7 @@
             android:id="@+id/jumpTo_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="24dp"
+            android:layout_marginEnd="32dp"
             android:fontFamily="@font/font_awesome"
             android:text="@string/fa_right_to_bracket"
             android:textColor="@color/white"
