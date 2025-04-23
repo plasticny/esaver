@@ -11,7 +11,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.example.viewer.BookAdder
-import com.example.viewer.BookRecord
+import com.example.viewer.struct.BookRecord
 import com.example.viewer.R
 import com.example.viewer.Util
 import com.example.viewer.activity.main.MainActivity
@@ -25,8 +25,10 @@ import com.example.viewer.database.SearchDatabase
 import com.example.viewer.databinding.DialogBookInfoBinding
 import com.example.viewer.databinding.DialogTagBinding
 import com.example.viewer.dialog.ConfirmDialog
+import com.example.viewer.dialog.EditExcludeTagDialog
 import com.example.viewer.dialog.LocalReadSettingDialog
 import com.example.viewer.fetcher.EPictureFetcher
+import com.example.viewer.struct.ExcludeTagRecord
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -207,10 +209,7 @@ class BookProfileActivity: AppCompatActivity() {
         dialogViewBinding.valueTextView.text = value
 
         dialogViewBinding.excludeButton.setOnClickListener {
-            ConfirmDialog(this@BookProfileActivity, layoutInflater).show(
-                "濾除 $translatedCategory: $value ?",
-                positiveCallback = { addFilterOutTag(category, value) }
-            )
+            addFilterOutTag(category, value)
         }
 
         dialogViewBinding.searchButton.setOnClickListener {
@@ -232,29 +231,27 @@ class BookProfileActivity: AppCompatActivity() {
         dialog.show()
     }
 
-    private fun addFilterOutTag (cat: String, value: String) {
-        toggleProgressBar(true)
-        CoroutineScope(Dispatchers.IO).launch {
-            val searchDataset = SearchDatabase.getInstance(baseContext)
-            val excludeTags = searchDataset.getExcludeTag().toMutableMap()
-            val values = excludeTags[cat]?.toMutableList() ?: mutableListOf()
-
-            if (!values.contains(value)) {
-                excludeTags[cat] = values.apply { add(value) }
-                searchDataset.storeExcludeTag(excludeTags)
-            }
-
-            withContext(Dispatchers.Main) {
-                toggleProgressBar(false)
-                ConfirmDialog(this@BookProfileActivity, layoutInflater).show(
-                    "已濾除標籤，返回搜尋？",
-                    positiveCallback = {
-                        this@BookProfileActivity.finish()
-                    }
-                )
+    private fun addFilterOutTag (tagCategory: String, tagValue: String) =
+        EditExcludeTagDialog(this, layoutInflater).show(
+            ExcludeTagRecord(
+                mapOf(tagCategory to listOf(tagValue)),
+                SearchDatabase.Companion.Category.entries.toSet()
+            )
+        ) { recordToSave ->
+            toggleProgressBar(true)
+            CoroutineScope(Dispatchers.IO).launch {
+                SearchDatabase.getInstance(baseContext).addExcludeTag(recordToSave)
+                withContext(Dispatchers.Main) {
+                    toggleProgressBar(false)
+                    ConfirmDialog(this@BookProfileActivity, layoutInflater).show(
+                        "已濾除標籤，返回搜尋？",
+                        positiveCallback = {
+                            this@BookProfileActivity.finish()
+                        }
+                    )
+                }
             }
         }
-    }
 
     /**
      * only for profile of stored book

@@ -56,7 +56,7 @@
     <string name="read">閱讀</string>
     <string name="save_to_gallery">存至書庫</string>
     <string name="n_page">%1$d頁</string>
-    <string name="filter_out_tag">濾除標籤</string>
+    <string name="filter_out">濾除</string>
     <string name="load_more">加載更多</string>
     <string name="keyword">關鍵字</string>
     <string name="non_h">非H</string>

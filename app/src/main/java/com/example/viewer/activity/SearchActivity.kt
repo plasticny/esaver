@@ -14,7 +14,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import com.example.viewer.BookRecord
+import com.example.viewer.struct.BookRecord
 import com.example.viewer.R
 import com.example.viewer.Util
 import com.example.viewer.databinding.SearchActivityBinding
@@ -70,7 +70,7 @@ class SearchActivity: AppCompatActivity() {
     private var next: String? = null // for load more books
     private var lastExcludeTagUpdateTime = 0L
     private var isTemporarySearch = false
-    private var reseting = false
+    private var reseting = true
     private var doNoMoreAlerted = false
 
     private val recyclerViewAdapter: BookRecyclerViewAdapter
@@ -122,21 +122,16 @@ class SearchActivity: AppCompatActivity() {
         }
 
         binding.searchMarkNameContainer.setOnClickListener {
-            SearchMarkDialog(this, layoutInflater).show(
-                title = if (isTemporarySearch) "編輯搜尋" else "編輯搜尋標記",
-                showNameField = !isTemporarySearch,
-                searchMark = if (isTemporarySearch) SearchMark(
-                    name = "",
-                    categories = searchMark.categories,
-                    keyword = searchMark.keyword,
-                    tags = searchMark.tags
-                ) else searchMark,
-                showSaveButton = true,
-                showSearchButton = true,
+            SearchMarkDialog(this, layoutInflater).apply {
+                title = if (isTemporarySearch) "編輯搜尋" else "編輯搜尋標記"
+                showNameField = !isTemporarySearch
+                showSaveButton = true
+                showSearchButton = true
+                showConfirmButton = true
                 saveCb = { retSearchMark ->
                     if (isTemporarySearch) {
                         SimpleEditTextDialog(this@SearchActivity, layoutInflater).show (
-                            title = "儲存為搜尋標記",
+                            title = "標記這個搜尋",
                             hint = "起個名字",
                             validator = { it.trim().isNotEmpty() }
                         ) { name ->
@@ -159,12 +154,12 @@ class SearchActivity: AppCompatActivity() {
                         searchMark = retSearchMark
                         lifecycleScope.launch { reset() }
                     }
-                },
+                }
                 searchCb = { retSearchMark ->
                     searchMark = retSearchMark
                     lifecycleScope.launch { reset() }
                 }
-            )
+            }.show(searchMark)
         }
 
         binding.prevSearchMarkButton.apply {
@@ -230,7 +225,12 @@ class SearchActivity: AppCompatActivity() {
         }
 
         recyclerViewAdapter.clear()
-        loadMoreBooks()
+        if (isSearchMarkExcluded(searchMark)) {
+            doNoMoreAlerted = true
+            Toast.makeText(baseContext, "所有書都被濾除了", Toast.LENGTH_SHORT).show()
+        } else {
+            loadMoreBooks()
+        }
 
         reseting = false
     }
@@ -314,19 +314,22 @@ class SearchActivity: AppCompatActivity() {
     }
 
     private fun excludeTagFilter (books: List<BookRecord>): List<BookRecord> {
-        val excludeTags = searchDataSet.getExcludeTag()
-        return books.filter { book ->
-            for (entry in book.tags) {
-                val cat = entry.key
-                if (!excludeTags.containsKey(cat)) {
-                    continue
-                }
-                if (excludeTags.getValue(cat).intersect(entry.value.toSet()).isNotEmpty()) {
-                    return@filter false
+        val excludeTagEntries = searchDataSet.getAllExcludeTag()
+        return books.filterNot {
+            book -> excludeTagEntries.any { it.second.excluded(book) }.also {
+                if (it) {
+                    println("[${this::class.simpleName}.${this::excludeTagFilter.name}] ${book.id} is excluded")
                 }
             }
-            true
         }
+    }
+
+    /**
+     * @return if the search mark is excluded by any exclude tag record
+     */
+    private fun isSearchMarkExcluded (searchMark: SearchMark): Boolean {
+        val excludeTagEntries = searchDataSet.getAllExcludeTag()
+        return excludeTagEntries.any { it.second.excluded(searchMark) }
     }
 }
 
@@ -339,11 +342,6 @@ private class BookRecyclerViewAdapter(
     }
 
     private val bookRecords = mutableListOf<BookRecord>()
-
-//    override fun onViewRecycled(holder: ViewHolder) {
-//        super.onViewRecycled(holder)
-//        println(holder.bindingAdapterPosition)
-//    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder =
         ViewHolder(SearchBookBinding.inflate(layoutInflater, parent, false))

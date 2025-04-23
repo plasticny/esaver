@@ -1,4 +1,4 @@
-package com.example.viewer
+package com.example.viewer.struct
 
 import android.os.Bundle
 import android.os.Parcel

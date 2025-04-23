@@ -91,7 +91,10 @@ class LocalReadSettingDialog (
     private fun updateSkipPages (bookId: String, text: String, originSkipPages: List<Int>) {
         val coverPage = bookDatabase.getBookCoverPage(bookId)
         val updatedSkipPages = skipPageStringToList(text)
-        println(updatedSkipPages)
+
+        if (updatedSkipPages == originSkipPages) {
+            return
+        }
 
         val newSkipPages = updatedSkipPages.minus(originSkipPages.toSet())
         if (newSkipPages.isNotEmpty()) {
@@ -108,9 +111,7 @@ class LocalReadSettingDialog (
             }
         }
 
-        if (updatedSkipPages != originSkipPages) {
-            bookDatabase.setBookSkipPages(bookId, updatedSkipPages)
-        }
+        bookDatabase.setBookSkipPages(bookId, updatedSkipPages)
     }
 
     private fun skipPagesListToString (skipPages: List<Int>): String {

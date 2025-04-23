@@ -12,8 +12,8 @@ import com.example.viewer.database.SearchDatabase.Companion.SearchMark
 import com.example.viewer.databinding.SearchMarkDialogBinding
 import com.example.viewer.databinding.SearchMarkDialogTagBinding
 
-class SearchMarkDialog (
-    private val context: Context,
+open class SearchMarkDialog (
+    protected val context: Context,
     private val layoutInflater: LayoutInflater,
 ) {
     companion object {
@@ -24,36 +24,53 @@ class SearchMarkDialog (
     private val dialogBinding = SearchMarkDialogBinding.inflate(layoutInflater)
     private val dialog = AlertDialog.Builder(context).setView(dialogBinding.root).create()
 
-    private var showNameField: Boolean = false
     private var selectedCats: MutableSet<Category> = mutableSetOf()
     private var tagBindings: MutableList<SearchMarkDialogTagBinding> = mutableListOf()
 
-    fun show (
-        title: String? = null,
-        searchMark: SearchMark? = null,
-        showNameField: Boolean = true,
-        showSaveButton: Boolean = false,
-        showSearchButton: Boolean = false,
-        showConfirmButton: Boolean = false,
-        saveCb: ((SearchMark) -> Unit)? = null,
-        searchCb: ((SearchMark) -> Unit)? = null,
-        confirmCb: ((SearchMark) -> Unit)? = null
-    ) {
-        this.showNameField = showNameField
-        selectedCats = searchMark?.categories?.toMutableSet() ?: Category.entries.toMutableSet()
-        tagBindings = mutableListOf()
-
-        dialogBinding.titleTextView.apply {
-            if (title == null) {
-                visibility = View.GONE
-            } else {
-                text = title
+    var title: String = ""
+        set (value) {
+            field = value
+            dialogBinding.titleTextView.apply {
+                if (value.isEmpty()) {
+                    visibility = View.GONE
+                } else {
+                    visibility = View.VISIBLE
+                    text = value
+                }
             }
         }
+    var showNameField: Boolean = true
+        set (value) {
+            field = value
+            dialogBinding.nameFieldContainer.visibility = if (value) View.VISIBLE else View.GONE
+        }
+    var showKeywordField: Boolean = true
+        set (value) {
+            field = value
+            dialogBinding.keywordFieldContainer.visibility = if (value) View.VISIBLE else View.GONE
+        }
+    var showSaveButton: Boolean = false
+        set (value) {
+            field = value
+            dialogBinding.saveButton.visibility = if (value) View.VISIBLE else View.GONE
+        }
+    var showSearchButton: Boolean = false
+        set (value) {
+            field = value
+            dialogBinding.searchButton.visibility = if (value) View.VISIBLE else View.GONE
+        }
+    var showConfirmButton: Boolean = false
+        set (value) {
+            field = value
+            dialogBinding.confirmButton.visibility = if (value) View.VISIBLE else View.GONE
+        }
+    var saveCb: ((SearchMark) -> Unit)? = null
+    var searchCb: ((SearchMark) -> Unit)? = null
+    var confirmCb: ((SearchMark) -> Unit)? = null
 
-        // name field
-        dialogBinding.nameFieldContainer.visibility = if (showNameField) View.VISIBLE else View.GONE
-        dialogBinding.nameEditText.setText(searchMark?.name ?: "")
+    init {
+        dialogBinding.titleTextView.visibility = View.GONE
+        dialogBinding.nameFieldContainer.visibility = View.VISIBLE
 
         // category buttons
         listOf(
@@ -63,31 +80,14 @@ class SearchMarkDialog (
             Pair(dialogBinding.catNonH, Category.NonH)
         ).forEach { (view, category) ->
             view.apply {
-                val selectedColor = context.getColor(category.color)
-                val deselectedColor = context.getColor(R.color.grey)
-                setBackgroundColor(
-                    if (selectedCats.contains(category)) selectedColor else deselectedColor
-                )
                 setOnClickListener {
-                    setBackgroundColor(
-                        if (selectedCats.toggle(category)) selectedColor else deselectedColor
-                    )
+                    setBackgroundColor(context.getColor(
+                        if (selectedCats.toggle(category)) category.color else R.color.grey
+                    ))
                 }
             }
         }
 
-        // keyword
-        dialogBinding.keywordEditText.setText(searchMark?.keyword ?: "")
-
-        // tags
-        searchMark?.tags?.forEach { entry ->
-            val cat = entry.key
-            for (value in entry.value) {
-                val tagBinding = createSearchMarkDialogTag(cat, value)
-                tagBindings.add(tagBinding)
-                dialogBinding.tagWrapper.addView(tagBinding.root)
-            }
-        }
         dialogBinding.addTagButton.apply {
             setOnClickListener {
                 val tagBinding = createSearchMarkDialogTag()
@@ -101,53 +101,79 @@ class SearchMarkDialog (
         }
 
         dialogBinding.saveButton.apply {
-            if (showSaveButton) {
-                visibility = View.VISIBLE
-                setOnClickListener {
-                    saveCb?.let {
-                        if (!checkValid()) {
-                            return@setOnClickListener
-                        }
-                        it(constructSearchMark())
+            visibility = View.GONE
+            setOnClickListener {
+                val searchMark = constructSearchMark()
+                saveCb?.let {
+                    if (!checkValid(searchMark)) {
+                        return@setOnClickListener
                     }
-                    dialog.dismiss()
+                    it(searchMark)
                 }
-            } else {
-                visibility = View.GONE
+                dialog.dismiss()
             }
         }
 
         dialogBinding.searchButton.apply {
-            if (showSearchButton) {
-                visibility = View.VISIBLE
-                setOnClickListener {
-                    searchCb?.let {
-                        if (!checkValid()) {
-                            return@setOnClickListener
-                        }
-                        it(constructSearchMark())
+            visibility = View.GONE
+            setOnClickListener {
+                val searchMark = constructSearchMark()
+                searchCb?.let {
+                    if (!checkValid(searchMark)) {
+                        return@setOnClickListener
                     }
-                    dialog.dismiss()
+                    it(searchMark)
                 }
-            } else {
-                visibility = View.GONE
+                dialog.dismiss()
             }
         }
 
         dialogBinding.confirmButton.apply {
-            if (showConfirmButton) {
-                visibility = View.VISIBLE
-                setOnClickListener {
-                    confirmCb?.let {
-                        if (!checkValid()) {
-                            return@setOnClickListener
-                        }
-                        it(constructSearchMark())
+            visibility = View.GONE
+            setOnClickListener {
+                val searchMark = constructSearchMark()
+                confirmCb?.let {
+                    if (!checkValid(searchMark)) {
+                        return@setOnClickListener
                     }
-                    dialog.dismiss()
+                    it(searchMark)
                 }
-            } else {
-                visibility = View.GONE
+                dialog.dismiss()
+            }
+        }
+    }
+
+    fun show (searchMark: SearchMark? = null) {
+        selectedCats = searchMark?.categories?.toMutableSet() ?: Category.entries.toMutableSet()
+        tagBindings = mutableListOf()
+
+        // name field
+        dialogBinding.nameEditText.setText(searchMark?.name ?: "")
+
+        // keyword
+        dialogBinding.keywordEditText.setText(searchMark?.keyword ?: "")
+
+        // tags
+        searchMark?.tags?.forEach { entry ->
+            val cat = entry.key
+            for (value in entry.value) {
+                val tagBinding = createSearchMarkDialogTag(cat, value)
+                tagBindings.add(tagBinding)
+                dialogBinding.tagWrapper.addView(tagBinding.root)
+            }
+        }
+
+        // category button
+        listOf(
+            Pair(dialogBinding.catDoujinshi, Category.Doujinshi),
+            Pair(dialogBinding.catManga, Category.Manga),
+            Pair(dialogBinding.catArtistCg, Category.ArtistCG),
+            Pair(dialogBinding.catNonH, Category.NonH)
+        ).forEach { (view, category) ->
+            view.apply {
+                setBackgroundColor(context.getColor(
+                    if (selectedCats.contains(category)) category.color else R.color.grey
+                ))
             }
         }
 
@@ -166,8 +192,8 @@ class SearchMarkDialog (
     /**
      * check the filled in information is valid
      */
-    private fun checkValid (): Boolean {
-        if (showNameField && dialogBinding.nameEditText.text.isEmpty()) {
+    protected open fun checkValid (item: SearchMark): Boolean {
+        if (showNameField && item.name.isEmpty()) {
             Toast.makeText(context, "名字不能為空", Toast.LENGTH_SHORT).show()
             return false
         }

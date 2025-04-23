@@ -1,9 +1,8 @@
 package com.example.viewer.activity.viewer
 
 import android.os.Bundle
-import android.view.View
 import androidx.lifecycle.lifecycleScope
-import com.example.viewer.BookRecord
+import com.example.viewer.struct.BookRecord
 import com.example.viewer.fetcher.EPictureFetcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

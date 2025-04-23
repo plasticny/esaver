@@ -86,6 +86,7 @@
         android:layout_alignParentBottom="true"
         android:layout_marginEnd="20dp"
         android:layout_marginBottom="80dp"
+        android:visibility="gone"
         android:indeterminate="true"
         android:indeterminateTint="@color/white"/>
 
