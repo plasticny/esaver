@@ -1,23 +1,20 @@
 package com.example.viewer.fetcher
 
 import android.content.Context
-import android.graphics.drawable.Drawable
-import android.widget.Toast
-import com.bumptech.glide.Glide
-import com.bumptech.glide.RequestBuilder
-import com.bumptech.glide.RequestManager
-import com.bumptech.glide.load.engine.DiskCacheStrategy
-import com.bumptech.glide.request.RequestListener
-import com.bumptech.glide.request.RequestOptions
-import com.bumptech.glide.signature.ObjectKey
 import com.example.viewer.database.BookSource
 import com.example.viewer.database.BookDatabase
 import com.example.viewer.Util
-import com.example.viewer.fetcher.HiPictureFetcher.Companion.okHttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.MediaType
+import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.Response
+import okhttp3.ResponseBody
+import okio.Buffer
+import okio.BufferedSource
+import okio.ForwardingSource
+import okio.Okio
+import okio.buffer
 import java.io.File
 import java.net.SocketTimeoutException
 
@@ -31,6 +28,7 @@ abstract class BasePictureFetcher {
                 BookSource.Hi -> HiPictureFetcher(context, bookId)
             }
         }
+        private val okHttpClient = OkHttpClient()
     }
 
     abstract suspend fun savePicture (page: Int): Boolean
@@ -107,7 +105,8 @@ abstract class BasePictureFetcher {
     protected suspend fun downloadPicture (
         page: Int,
         url: String,
-        headers: Map<String, String> = mapOf()
+        headers: Map<String, String> = mapOf(),
+        progressListener: ((contentLength: Long, downloadLength: Long) -> Unit)? = null
     ): Boolean {
         println("[BasePictureFetcher.downloadPicture] $url")
 
@@ -120,15 +119,27 @@ abstract class BasePictureFetcher {
         downloadingPages.add(page)
 
         val file = File(bookFolder, page.toString())
-        val requestBuilder = Request.Builder().url(url)
-        for (header in headers) {
-            requestBuilder.addHeader(header.key, header.value)
-        }
 
-        val request = requestBuilder.build()
+        val downloadClient = progressListener?.let {
+            okHttpClient.newBuilder()
+                .addInterceptor { chain ->
+                    chain.proceed(chain.request()).run {
+                        newBuilder().body(
+                            ProgressResponseBody(body!!, progressListener)
+                        ).build()
+                    }
+                }.build()
+        } ?: okHttpClient
+
+        val request = Request.Builder().url(url).apply {
+            for (header in headers) {
+                addHeader(header.key, header.value)
+            }
+        }.build()
+
         return withContext(Dispatchers.IO) {
             try {
-                okHttpClient.newCall(request).execute().use { response ->
+                downloadClient.newCall(request).execute().use { response ->
                     if (response.isSuccessful) {
                         file.outputStream().use { response.body!!.byteStream().copyTo(it) }
                         // this line should be after the write-to-file statement
@@ -155,4 +166,25 @@ abstract class BasePictureFetcher {
             throw Exception("only fetcher construct with local book config call this function")
         }
     }
+}
+
+private class ProgressResponseBody (
+    private val responseBody: ResponseBody,
+    private val progressListener: (contentLength: Long, downloadLength: Long) -> Unit
+): ResponseBody() {
+    private var bufferedSource =
+        object: ForwardingSource(responseBody.source()) {
+            private var totalBytesRead = 0L
+            override fun read(sink: Buffer, byteCount: Long): Long =
+                super.read(sink, byteCount).also {
+                    totalBytesRead += if (it == -1L) 0 else it
+                    progressListener(contentLength(), totalBytesRead)
+                }
+        }.buffer()
+
+    override fun contentLength(): Long = responseBody.contentLength()
+
+    override fun contentType(): MediaType? = responseBody.contentType()
+
+    override fun source(): BufferedSource = bufferedSource
 }

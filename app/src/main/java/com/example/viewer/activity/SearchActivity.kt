@@ -106,10 +106,6 @@ class SearchActivity: AppCompatActivity() {
 
                     // trigger load more book
                     if (next == null) {
-                        if (!doNoMoreAlerted) {
-                            Toast.makeText(baseContext, "沒有更多了", Toast.LENGTH_LONG).show()
-                            doNoMoreAlerted = true
-                        }
                         return
                     }
 
@@ -127,7 +123,6 @@ class SearchActivity: AppCompatActivity() {
                 showNameField = !isTemporarySearch
                 showSaveButton = true
                 showSearchButton = true
-                showConfirmButton = true
                 saveCb = { retSearchMark ->
                     if (isTemporarySearch) {
                         SimpleEditTextDialog(this@SearchActivity, layoutInflater).show (
@@ -156,7 +151,15 @@ class SearchActivity: AppCompatActivity() {
                     }
                 }
                 searchCb = { retSearchMark ->
-                    searchMark = retSearchMark
+                    searchMark =
+                        if (isTemporarySearch)
+                            SearchMark (
+                                name = getString(R.string.search),
+                                categories = retSearchMark.categories,
+                                keyword = retSearchMark.keyword,
+                                tags = retSearchMark.tags
+                            )
+                        else retSearchMark
                     lifecycleScope.launch { reset() }
                 }
             }.show(searchMark)
@@ -263,13 +266,17 @@ class SearchActivity: AppCompatActivity() {
     private suspend fun fetchBooks (): List<BookRecord> {
         val doc = withContext(Dispatchers.IO) {
             Jsoup.connect(
-                searchMark.url(next).also { println("[SearchActivity.fetchBooks] $it") }
+                searchMark.url(next).also { println("[SearchActivity.fetchBooks] fetch book from\n$it") }
             ).get()
         }
 
         next = doc.selectFirst("#unext")?.attribute("href")?.let { attr ->
             val tokens = attr.value.split("next=")
             if (tokens.size == 1) {
+                if (!doNoMoreAlerted) {
+                    Toast.makeText(baseContext, "沒有更多了", Toast.LENGTH_LONG).show()
+                    doNoMoreAlerted = true
+                }
                 return@let null
             }
             return@let tokens.last().trim()
@@ -300,7 +307,6 @@ class SearchActivity: AppCompatActivity() {
                             return@let text.trim().split(' ').first().toInt()
                         }
                     }
-                    println(url)
                     throw Exception("page num is not found")
                 },
                 tags = mutableMapOf<String, List<String>>().apply {

@@ -74,9 +74,8 @@ class LocalViewerActivity: BaseViewerActivity() {
                 "已到尾頁，到下一本書嗎？",
                 positiveCallback = {
                     nextBook()
-                    askingNextBook = false
                 },
-                negativeCallback = {
+                finishCb = {
                     askingNextBook = false
                 }
             )
@@ -118,14 +117,15 @@ class LocalViewerActivity: BaseViewerActivity() {
 
     override fun loadPage() {
         super.loadPage()
-        nextPageOf(page)?.let { p1 ->
-            preloadPage(p1)
-            nextPageOf(p1)?.let { p2 -> preloadPage(p2) }
-        }
-        prevPageOf(page)?.let { p1 ->
-            preloadPage(p1)
-            prevPageOf(p1)?.let { p2 -> preloadPage(p2) }
-        }
+
+        val np = nextPageOf(page)
+        val pp = prevPageOf(page)
+
+        np?.let { nextPageOf(np)?.let { preloadPage(it) } }
+        pp?.let { prevPageOf(pp)?.let { preloadPage(it) } }
+
+        np?.let { preloadPage(it) }
+        pp?.let { preloadPage(it) }
     }
 
     private fun preloadPage (page: Int) {

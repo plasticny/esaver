@@ -14,17 +14,15 @@ import java.net.URL
  * Note: this fetcher always fetch for a stored book
  */
 class HiPictureFetcher (context: Context, bookId: String): BasePictureFetcher(context, bookId) {
-    companion object {
-        private data class PictureInfo (
-            val hash: String,
-            val haswebp: Int,
-            val hasavif: Int
-        )
-        private data class GalleryInfo (
-            val files: List<PictureInfo>
-        )
-        val okHttpClient = OkHttpClient()
-    }
+    private data class PictureInfo (
+        val hash: String,
+        val haswebp: Int,
+        val hasavif: Int
+    )
+
+    private data class GalleryInfo (
+        val files: List<PictureInfo>
+    )
 
     private inner class GG {
         val b: String

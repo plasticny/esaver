@@ -408,9 +408,9 @@ private class ChangePageGestureListener (
 
     private fun changePage (e1: MotionEvent, e2: MotionEvent) {
         if (e2.x - e1.x > 0) {
-            prevPageCallback()
-        } else {
             nextPageCallback()
+        } else {
+            prevPageCallback()
         }
     }
 }
