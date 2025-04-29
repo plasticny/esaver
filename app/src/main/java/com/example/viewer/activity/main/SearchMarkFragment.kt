@@ -7,9 +7,11 @@ import android.content.Intent
 import android.content.res.ColorStateList
 import android.os.Bundle
 import android.view.DragEvent
+import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.EditorInfo
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
@@ -19,12 +21,14 @@ import com.example.viewer.activity.SearchActivity
 import com.example.viewer.databinding.FilterOutDialogBinding
 import com.example.viewer.databinding.MainSearchFragmentBinding
 import com.example.viewer.databinding.SearchMarkBinding
-import com.example.viewer.databinding.SearchMarkDialogBinding
 import com.example.viewer.databinding.SearchMarkDialogTagBinding
 import com.example.viewer.database.SearchDatabase
 import com.example.viewer.database.SearchDatabase.Companion.SearchMark
 import com.example.viewer.database.SearchDatabase.Companion.Category
+import com.example.viewer.database.Tags
 import com.example.viewer.dialog.ConfirmDialog
+import com.example.viewer.dialog.PositiveButtonStyle
+import com.example.viewer.dialog.SearchMarkDialog
 
 data class SearchMarkEntry (
     val id: Int,
@@ -43,20 +47,7 @@ class SearchMarkFragment: Fragment() {
     private lateinit var searchDataset: SearchDatabase
 
     private var focusedSearchMark: SearchMarkEntry? = null
-
-    /**
-     * Given a value, add it if it not exist, else remove it
-     *
-     * @return boolean represent that the value is in the set after the operation
-     */
-    private fun <T> MutableSet<T>.toggle(value: T): Boolean {
-        return if (this.contains(value)) {
-            this.remove(value)
-            false
-        } else {
-            this.add(value)
-        }
-    }
+    private var searchMarkListLastUpdate = 0L
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -67,8 +58,49 @@ class SearchMarkFragment: Fragment() {
         searchDataset = SearchDatabase.getInstance(parent.context)
         binding = MainSearchFragmentBinding.inflate(layoutInflater, parent, false)
 
+        searchMarkListLastUpdate = searchDataset.getSearchMarkListUpdateTime()
+
+        binding.searchEditText.apply {
+            setOnEditorActionListener { _, actionId, event ->
+                if (actionId == EditorInfo.IME_ACTION_SEARCH) {
+                    if (event?.action == null || event.action == KeyEvent.ACTION_UP) {
+                        SearchActivity.startTmpSearch(
+                            context, keyword = text.toString().trim()
+                        )
+                    }
+                }
+                true
+            }
+        }
+
+        binding.advanceSearchButton.apply {
+            setOnClickListener {
+                val searchMark = SearchMark (
+                    name = "",
+                    categories = listOf(),
+                    keyword = binding.searchEditText.text.toString().trim(),
+                    tags = mapOf()
+                )
+                SearchMarkDialog(context, layoutInflater).show(
+                    title = "進階搜尋",
+                    searchMark = searchMark,
+                    showNameField = false,
+                    positiveButtonStyle = PositiveButtonStyle.SEARCH
+                ) { retSearchMark ->
+                    SearchActivity.startTmpSearch(
+                        context,
+                        retSearchMark.categories,
+                        retSearchMark.keyword,
+                        retSearchMark.tags
+                    )
+                }
+            }
+        }
+
         binding.addButton.setOnClickListener {
-            openSearchMarkDialog { retSearchMark ->
+            SearchMarkDialog(parent.context, layoutInflater).show(
+                title = "新增搜尋標記"
+            ) { retSearchMark ->
                 searchDataset.addSearchMark(retSearchMark)
                 refreshSearchMarkWrapper()
             }
@@ -82,7 +114,10 @@ class SearchMarkFragment: Fragment() {
 
         binding.toolBarEditButton.setOnClickListener {
             focusedSearchMark!!.let { entry ->
-                openSearchMarkDialog(entry.searchMark) { retSearchMark ->
+                SearchMarkDialog(parent.context, layoutInflater).show(
+                    title = "編輯搜尋標記",
+                    searchMark = entry.searchMark
+                ) { retSearchMark ->
                     searchDataset.modifySearchMark(entry.id, retSearchMark)
                     deFocusSearchMark(doModifyBindingStyle = false)
                     refreshSearchMarkWrapper()
@@ -106,6 +141,18 @@ class SearchMarkFragment: Fragment() {
         refreshSearchMarkWrapper()
 
         return binding.root
+    }
+
+    override fun onResume() {
+        super.onResume()
+        binding.searchEditText.text.clear()
+
+        searchDataset.getSearchMarkListUpdateTime().let {
+            if (it != searchMarkListLastUpdate) {
+                refreshSearchMarkWrapper()
+                searchMarkListLastUpdate = it
+            }
+        }
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -202,91 +249,6 @@ class SearchMarkFragment: Fragment() {
         searchMarkBinding.name.setTextColor(parent.context.getColor(R.color.black))
         searchMarkBinding.root.backgroundTintList = ColorStateList.valueOf(parent.context.getColor(R.color.grey))
         focusedSearchMark = SearchMarkEntry(id, searchMark, searchMarkBinding)
-    }
-
-    private fun openSearchMarkDialog (
-        searchMark: SearchMark? = null,
-        saveCb: ((SearchMark) -> Unit)? = null
-    ) {
-        val dialogBinding = SearchMarkDialogBinding.inflate(layoutInflater, parent, false)
-        val dialog = AlertDialog.Builder(parent.context)
-            .setView(dialogBinding.root)
-            .create()
-
-        val selectedCats = searchMark?.categories?.toMutableSet() ?: Category.entries.toMutableSet()
-        val tagBindings = mutableListOf<SearchMarkDialogTagBinding>()
-
-        dialogBinding.nameEditText.setText(searchMark?.name ?: "")
-
-        // category buttons
-        listOf(
-            Pair(dialogBinding.catDoujinshi, Category.Doujinshi),
-            Pair(dialogBinding.catManga, Category.Manga),
-            Pair(dialogBinding.catArtistCg, Category.ArtistCG),
-            Pair(dialogBinding.catNonH, Category.NonH)
-        ).forEach { (view, category) ->
-            view.apply {
-                val selectedColor = context.getColor(category.color)
-                val deselectedColor = context.getColor(R.color.grey)
-                setBackgroundColor(
-                    if (selectedCats.contains(category)) selectedColor else deselectedColor
-                )
-                setOnClickListener {
-                    setBackgroundColor(
-                        if (selectedCats.toggle(category)) selectedColor else deselectedColor
-                    )
-                }
-            }
-        }
-
-        // keyword
-        dialogBinding.keywordEditText.setText(searchMark?.keyword ?: "")
-
-        // tags
-        searchMark?.tags?.forEach { entry ->
-            val cat = entry.key
-            for (value in entry.value) {
-                val tagBinding = createSearchMarkDialogTag(dialogBinding.tagWrapper, cat, value)
-                tagBindings.add(tagBinding)
-                dialogBinding.tagWrapper.addView(tagBinding.root)
-            }
-        }
-        dialogBinding.addTagButton.apply {
-            setOnClickListener {
-                val tagBinding = createSearchMarkDialogTag(dialogBinding.tagWrapper)
-                tagBindings.add(tagBinding)
-                dialogBinding.tagWrapper.addView(tagBinding.root, 0)
-            }
-        }
-
-        // save button
-        dialogBinding.saveButton.apply {
-            setOnClickListener {
-                if (dialogBinding.nameEditText.text.isEmpty()) {
-                    Toast.makeText(context, "名字不能為空", Toast.LENGTH_SHORT).show()
-                    return@setOnClickListener
-                }
-
-                if (saveCb != null) {
-                    val retSearchMark = SearchMark(
-                        name = dialogBinding.nameEditText.text.toString(),
-                        categories = selectedCats.toList(),
-                        keyword = dialogBinding.keywordEditText.text.toString(),
-                        tags = tagBindings.mapNotNull {
-                            if (it.spinner.selectedIndex == 0) {
-                                return@mapNotNull null
-                            }
-                            TAGS[it.spinner.selectedIndex] to it.editText.text.toString()
-                        }.groupBy({it.first}, {it.second})
-                    )
-                    saveCb(retSearchMark)
-                }
-
-                dialog.dismiss()
-            }
-        }
-
-        dialog.show()
     }
 
     private fun openFilterOutDialog () {

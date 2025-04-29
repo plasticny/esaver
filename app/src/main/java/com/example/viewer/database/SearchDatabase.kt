@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.viewer.R
+import com.example.viewer.Util
 import java.io.File
 
 typealias Tags = Map<String, List<String>>
@@ -20,6 +21,7 @@ private val Context.searchDataStore: DataStore<Preferences> by preferencesDataSt
 class SearchDatabase (context: Context): BaseDatabase() {
     companion object {
         const val TAG = "searchDB"
+        const val TEMP_SEARCH_MARK_ID = -1
 
         @Volatile
         private var instance: SearchDatabase? = null
@@ -55,24 +57,16 @@ class SearchDatabase (context: Context): BaseDatabase() {
 
             abstract val color: Int
             abstract val value: Int
-
-            companion object {
-                fun fromString (string: String): Category = when (string) {
-                    "Doujinshi" -> categoryEntries[0]
-                    "Manga" -> categoryEntries[1]
-                    "Artist CG" -> categoryEntries[2]
-                    "Non-H" -> categoryEntries[3]
-                    else -> throw Exception("unexpected string $string")
-                }
-            }
         }
-        private val categoryEntries = Category.entries
     }
 
     override val dataStore = context.searchDataStore
 
     private val keys = object {
         fun nextId () = intPreferencesKey("${TAG}_nextSearchMarkId")
+        /**
+         * search mark with id -1 is temporary search mark
+         */
         fun allSearchMarkIds () = byteArrayPreferencesKey("${TAG}_searchMarkIds")
         fun searchMarkName (id: Int) = stringPreferencesKey("${TAG}_searchMarkName_$id")
         /**
@@ -81,6 +75,7 @@ class SearchDatabase (context: Context): BaseDatabase() {
         fun searchMarkCats (id: Int) = byteArrayPreferencesKey("${TAG}_searchMarkCats_$id")
         fun searchMarkKeyword (id: Int) = stringPreferencesKey("${TAG}_searchMarkKeyword_$id")
         fun searchMarkTags (id: Int) = byteArrayPreferencesKey("${TAG}_searchMarkTags_$id")
+        fun searchMarkListLastUpdate () = longPreferencesKey("${TAG}_searchMarkListLastUpdate")
         fun excludeTags () = byteArrayPreferencesKey("${TAG}_excludeTags")
         fun excludeTagLastUpdate () = longPreferencesKey("${TAG}_excludeTagLastUpdate")
     }
@@ -130,16 +125,22 @@ class SearchDatabase (context: Context): BaseDatabase() {
             keys.allSearchMarkIds(),
             getAllSearchMarkIds().toMutableList().also { it.remove(id) }
         )
+
+        store(keys.searchMarkListLastUpdate(), System.currentTimeMillis())
     }
+    /**
+     * @return id of added search mark
+     */
     fun addSearchMark (searchMark: SearchMark): Int {
         val id = getNextId()
         storeSearchMark(id, searchMark)
         storeAsByteArray(keys.allSearchMarkIds(), getAllSearchMarkIds().toMutableList().apply { add(id) })
+        store(keys.searchMarkListLastUpdate(), System.currentTimeMillis())
         return id
     }
     fun getSearchMark (id: Int): SearchMark = SearchMark(
         name = read(keys.searchMarkName(id))!!,
-        categories = readFromByteArray<List<Int>>(keys.searchMarkCats(id))!!.map { categoryEntries[it] },
+        categories = readFromByteArray<List<Int>>(keys.searchMarkCats(id))!!.map { Util.categoryFromOrdinal(it) },
         keyword = read(keys.searchMarkKeyword(id)) ?: "",
         tags = readFromByteArray<Tags>(keys.searchMarkTags(id))!!
     )
@@ -149,6 +150,11 @@ class SearchDatabase (context: Context): BaseDatabase() {
         }
         storeSearchMark(id, searchMark)
     }
+    fun setTmpSearchMark (searchMark: SearchMark) = storeSearchMark(TEMP_SEARCH_MARK_ID, searchMark)
+    /**
+     * update: insert or remove
+     */
+    fun getSearchMarkListUpdateTime () = read(keys.searchMarkListLastUpdate()) ?: 0
 
     //
     // exclude tag

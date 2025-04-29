@@ -4,11 +4,13 @@ import android.annotation.SuppressLint
 import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.view.GestureDetector
+import android.view.KeyEvent
 import android.view.MotionEvent
+import android.view.View
 import android.widget.ImageView
 import android.widget.ProgressBar
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.GlideException
@@ -16,6 +18,7 @@ import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
 import com.bumptech.glide.signature.ObjectKey
 import com.example.viewer.databinding.ViewerActivityBinding
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 
 abstract class BaseViewerActivity: AppCompatActivity() {
@@ -26,9 +29,10 @@ abstract class BaseViewerActivity: AppCompatActivity() {
 
     protected abstract fun onImageLongClicked(): Boolean
     protected abstract fun onPageTextClicked()
-    protected abstract fun loadPage()
     protected abstract fun prevPage()
     protected abstract fun nextPage()
+    protected abstract fun reloadPage()
+    protected abstract suspend fun getPictureUrl (page: Int): String?
 
     protected lateinit var viewerActivityBinding: ViewerActivityBinding
 
@@ -49,24 +53,88 @@ abstract class BaseViewerActivity: AppCompatActivity() {
         }
         setupChangePageOnImage()
 
-        viewerActivityBinding.pageTextViewContainer.setOnClickListener {
+        viewerActivityBinding.pageTextWrapper.setOnClickListener {
             onPageTextClicked()
         }
-//        setupChangePageOnPageText()
+
+        viewerActivityBinding.reloadIcon.setOnClickListener {
+            reloadPage()
+        }
+        viewerActivityBinding.reloadTextView.setOnClickListener {
+            reloadPage()
+        }
+        setupChangePageOnFailScreen()
 
         setContentView(viewerActivityBinding.root)
 
         loadPage()
     }
 
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (event != null) {
+            when (keyCode) {
+                KeyEvent.KEYCODE_VOLUME_UP -> {
+                    prevPage()
+                    return true
+                }
+                KeyEvent.KEYCODE_VOLUME_DOWN -> {
+                    nextPage()
+                    return true
+                }
+            }
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
     protected fun toggleLoadingUi (toggle: Boolean) {
         viewerActivityBinding.let {
             if (toggle) {
                 it.viewerProgressBar.visibility = ProgressBar.VISIBLE
+                it.photoView.visibility = View.INVISIBLE
                 it.photoView.imageAlpha = 0
             } else {
                 it.viewerProgressBar.visibility = ProgressBar.GONE
+                it.photoView.visibility = View.VISIBLE
                 it.photoView.imageAlpha = 255
+            }
+        }
+    }
+
+    protected fun toggleLoadFailedScreen (toggle: Boolean) {
+        viewerActivityBinding.let {
+            if (toggle) {
+                it.loadFailedContainer.visibility = ProgressBar.VISIBLE
+                it.photoView.visibility = View.INVISIBLE
+            } else {
+                it.loadFailedContainer.visibility = ProgressBar.GONE
+                it.photoView.visibility = View.VISIBLE
+            }
+        }
+    }
+
+    protected fun loadPage () {
+        val myPage = page
+
+        viewerActivityBinding.viewerPageTextView.text = (page + 1).toString()
+        toggleLoadingUi(true)
+        toggleLoadFailedScreen(false)
+
+        lifecycleScope.launch {
+            val pictureUrl = getPictureUrl(page)
+            if (myPage != page) {
+                return@launch
+            }
+
+            if (pictureUrl != null) {
+                showPicture(
+                    pictureUrl, getPageSignature(page),
+                    onPictureReady = { toggleLoadFailedScreen(false) },
+                    onFailed = { toggleLoadFailedScreen(true) },
+                    onFinished = { toggleLoadingUi(false) }
+                )
+            } else {
+                toggleLoadingUi(false)
+                toggleLoadFailedScreen(true)
             }
         }
     }
@@ -101,8 +169,6 @@ abstract class BaseViewerActivity: AppCompatActivity() {
             })
             .into(imageView)
     }
-
-    protected fun alertLoadPictureFailed () = Toast.makeText(baseContext, "讀取圖片失敗", Toast.LENGTH_SHORT).show()
 
     protected fun getPageSignature (page: Int): ObjectKey {
         if (!pageSignatures.containsKey(page)) {
@@ -144,14 +210,15 @@ abstract class BaseViewerActivity: AppCompatActivity() {
     }
 
     @SuppressLint("ClickableViewAccessibility")
-    private fun setupChangePageOnPageText () {
+    private fun setupChangePageOnFailScreen () {
         val listener = ChangePageGestureListener(
             FLIP_THRESHOLD, SCROLL_THRESHOLD,
-            { prevPage() }, { nextPage() }
+            prevPageCallback = { prevPage() },
+            nextPageCallback = { nextPage() }
         )
         val detector = GestureDetector(this, listener)
 
-        viewerActivityBinding.pageTextViewContainer.setOnTouchListener { v, event ->
+        viewerActivityBinding.loadFailedContainer.setOnTouchListener { v, event ->
             v.performClick()
             detector.onTouchEvent(event)
             if (event.action == MotionEvent.ACTION_UP) {
@@ -177,13 +244,11 @@ private class ChangePageGestureListener (
     ): Boolean {
         // change page on fling
         if (e1 != null && isMotionHorizontal(e1, e2)) {
-            if (abs(e2.x - e1.x) > flipThreshold) {
-                return false
+            if (abs(e2.x - e1.x) <= flipThreshold) {
+                changePage(e1, e2)
             }
-            changePage(e1, e2)
-            return true
         }
-        return false
+        return true
     }
 
     override fun onScroll(

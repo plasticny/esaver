@@ -1,75 +1,55 @@
 package com.example.viewer.activity
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.os.Parcel
-import android.os.Parcelable
+import android.view.View
 import android.widget.Button
 import android.widget.ProgressBar
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
+import com.example.viewer.BookRecord
 import com.example.viewer.R
+import com.example.viewer.Util
 import com.example.viewer.databinding.SearchActivityBinding
 import com.example.viewer.databinding.SearchBookBinding
 import com.example.viewer.database.SearchDatabase
 import com.example.viewer.database.SearchDatabase.Companion.SearchMark
 import com.example.viewer.database.SearchDatabase.Companion.Category
+import com.example.viewer.dialog.PositiveButtonStyle
+import com.example.viewer.dialog.SearchMarkDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
 
+/**
+ * intExtra: searchMarkId; -1 for temporary search mark
+ */
 class SearchActivity: AppCompatActivity() {
     companion object {
-        data class BookRecord (
-            val id: String,
-            val url: String,
-            val coverUrl: String,
-            val cat: String,
-            val title: String,
-            val pageNum: Int,
-            val tags: Map<String, List<String>>
-        ): Parcelable {
-            companion object CREATOR : Parcelable.Creator<BookRecord> {
-                override fun createFromParcel(parcel: Parcel): BookRecord {
-                    return BookRecord(parcel)
-                }
-
-                override fun newArray(size: Int): Array<BookRecord?> {
-                    return arrayOfNulls(size)
-                }
-            }
-
-            constructor(parcel: Parcel) : this(
-                parcel.readString()!!,
-                parcel.readString()!!,
-                parcel.readString()!!,
-                parcel.readString()!!,
-                parcel.readString()!!,
-                parcel.readInt(),
-                parcel.readBundle(ClassLoader.getSystemClassLoader())!!.let { bundle ->
-                    bundle.keySet().associateWith { bundle.getStringArray(it)!!.toList() }
+        /**
+         * @param context context of an activity
+         */
+        fun startTmpSearch (
+            context: Context,
+            categories: List<Category> = Category.entries.toList(),
+            keyword: String = "",
+            tags: Map<String, List<String>> = mapOf()
+        ) {
+            SearchDatabase.getInstance(context).setTmpSearchMark(
+                SearchMark(
+                    name = context.getString(R.string.search),
+                    categories, keyword, tags
+                )
+            )
+            context.startActivity(
+                Intent(context, SearchActivity::class.java).apply {
+                    putExtra("searchMarkId", SearchDatabase.TEMP_SEARCH_MARK_ID)
                 }
             )
-
-            override fun writeToParcel(parcel: Parcel, flags: Int) {
-                parcel.writeString(id)
-                parcel.writeString(url)
-                parcel.writeString(coverUrl)
-                parcel.writeString(cat)
-                parcel.writeString(title)
-                parcel.writeInt(pageNum)
-                parcel.writeBundle(Bundle().apply {
-                    for ((key, value) in tags) {
-                        putStringArray(key, value.toTypedArray())
-                    }
-                })
-            }
-
-            override fun describeContents(): Int {
-                return 0
-            }
         }
     }
 
@@ -78,11 +58,13 @@ class SearchActivity: AppCompatActivity() {
     private lateinit var binding: SearchActivityBinding
     private lateinit var allSearchMarkIds: List<Int>
 
+    @Volatile
     private var searchMarkId = -1
     private var position = -1
-    private var next: String? = null
+    private var next: String? = null // for load more books
     private var bookRecords = mutableListOf<BookRecord>()
     private var lastExcludeTagUpdateTime = 0L
+    private var isTemporarySearch = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -93,45 +75,77 @@ class SearchActivity: AppCompatActivity() {
 
         searchMarkId = intent.getIntExtra("searchMarkId", -1)
         searchMark = searchDataSet.getSearchMark(searchMarkId)
+        isTemporarySearch = searchMarkId == -1
 
         // search mark position
         position = allSearchMarkIds.indexOf(searchMarkId)
 
         binding = SearchActivityBinding.inflate(layoutInflater)
 
-        setContentView(binding.root)
+        binding.searchMarkNameContainer.setOnClickListener {
+            SearchMarkDialog(this, layoutInflater).show(
+                title = "編輯搜尋",
+                searchMark = if (isTemporarySearch) SearchMark(
+                    name = "",
+                    categories = searchMark.categories,
+                    keyword = searchMark.keyword,
+                    tags = searchMark.tags
+                ) else searchMark,
+                positiveButtonStyle = PositiveButtonStyle.SAVE
+            ) { retSearchMark ->
+                if (isTemporarySearch) {
+                    searchMarkId = searchDataSet.addSearchMark(retSearchMark)
+                    allSearchMarkIds = searchDataSet.getAllSearchMarkIds()
+                    position = allSearchMarkIds.indexOf(searchMarkId)
+                    isTemporarySearch = false
+                    Toast.makeText(baseContext, "已儲存", Toast.LENGTH_SHORT).show()
+                } else {
+                    searchDataSet.modifySearchMark(searchMarkId, retSearchMark)
+                }
+
+                searchMark = retSearchMark
+                lifecycleScope.launch { reset() }
+            }
+        }
 
         binding.prevSearchMarkButton.apply {
+            if (isTemporarySearch) {
+                visibility = View.INVISIBLE
+            }
             setOnClickListener {
                 if (position == 0) {
                     return@setOnClickListener
                 }
-                searchMark = searchDataSet.getSearchMark(allSearchMarkIds[--position])
+                val id = allSearchMarkIds[--position]
+                searchMark = searchDataSet.getSearchMark(id)
+                searchMarkId = id
                 lifecycleScope.launch { reset() }
             }
         }
         binding.nextSearchMarkButton.apply {
+            if (isTemporarySearch) {
+                visibility = View.INVISIBLE
+            }
             setOnClickListener {
                 if (position == allSearchMarkIds.lastIndex) {
                     return@setOnClickListener
                 }
-                searchMark = searchDataSet.getSearchMark(allSearchMarkIds[++position])
+                val id = allSearchMarkIds[++position]
+                searchMark = searchDataSet.getSearchMark(id)
+                searchMarkId = id
                 lifecycleScope.launch { reset() }
             }
         }
 
         binding.loadMoreButton.apply {
             setOnClickListener {
-                lifecycleScope.launch {
-                    loadMoreBooks()
-                    if (next == null){
-                        visibility = Button.INVISIBLE
-                    }
-                }
+                lifecycleScope.launch { loadMoreBooks() }
             }
         }
 
         lifecycleScope.launch { reset() }
+
+        setContentView(binding.root)
     }
 
     override fun onResume() {
@@ -154,25 +168,44 @@ class SearchActivity: AppCompatActivity() {
 
         binding.searchMarkName.text = searchMark.name
 
-        binding.prevSearchMarkButton.visibility = if (position == 0) Button.INVISIBLE else Button.VISIBLE
-        binding.nextSearchMarkButton.visibility = if (position == allSearchMarkIds.lastIndex) Button.INVISIBLE else Button.VISIBLE
+        if (!isTemporarySearch) {
+            // no need to update these button if temporary search mark
+            binding.prevSearchMarkButton.visibility = if (position == 0) Button.INVISIBLE else Button.VISIBLE
+            binding.nextSearchMarkButton.visibility = if (position == allSearchMarkIds.lastIndex) Button.INVISIBLE else Button.VISIBLE
+        }
 
         binding.searchBookWrapper.removeAllViews()
 
-        binding.loadMoreButton.visibility = Button.INVISIBLE
+        // hide these views while loading
+        binding.loadMoreButton.visibility = View.INVISIBLE
+        binding.noMoreTextView.visibility = View.INVISIBLE
+
         loadMoreBooks()
-        if (next != null) {
-            binding.loadMoreButton.visibility = Button.VISIBLE
-        }
     }
 
     private suspend fun loadMoreBooks () {
+        val mySearchId = searchMarkId
+
         binding.searchProgressBar.visibility = ProgressBar.VISIBLE
         val books = excludeTagFilter(fetchBooks())
         binding.searchProgressBar.visibility = ProgressBar.GONE
 
+        // if the search mark changed, terminate this function
+        if (mySearchId != searchMarkId) {
+            return
+        }
+
         addBookViews(books)
         bookRecords.addAll(books)
+
+        // change visibility of load more button and no more text
+        if (next != null) {
+            binding.loadMoreButton.visibility = View.VISIBLE
+            binding.noMoreTextView.visibility = View.GONE
+        } else {
+            binding.loadMoreButton.visibility = View.GONE
+            binding.noMoreTextView.visibility = View.VISIBLE
+        }
     }
 
     private fun addBookViews (books: List<BookRecord>) {
@@ -184,7 +217,7 @@ class SearchActivity: AppCompatActivity() {
                     pageNumTextView.text = baseContext.getString(R.string.n_page, bookRecord.pageNum)
                     searchBookCatTextView.apply {
                         text = bookRecord.cat
-                        setTextColor(context.getColor(Category.fromString(bookRecord.cat).color))
+                        setTextColor(context.getColor(Util.categoryFromName(bookRecord.cat).color))
                     }
                     root.setOnClickListener {
                         val intent = Intent(baseContext, BookProfileActivity::class.java)
@@ -206,7 +239,7 @@ class SearchActivity: AppCompatActivity() {
             ).get()
         }
 
-        next = doc.selectFirst("#unext")!!.attribute("href")?.let { attr ->
+        next = doc.selectFirst("#unext")?.attribute("href")?.let { attr ->
             val tokens = attr.value.split("next=")
             if (tokens.size == 1) {
                 return@let null

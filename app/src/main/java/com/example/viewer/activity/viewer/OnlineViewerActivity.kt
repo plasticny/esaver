@@ -1,10 +1,8 @@
 package com.example.viewer.activity.viewer
 
 import android.os.Bundle
-import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
-import com.bumptech.glide.Glide
-import com.example.viewer.activity.SearchActivity.Companion.BookRecord
+import com.example.viewer.BookRecord
 import com.example.viewer.fetcher.EPictureFetcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -35,31 +33,6 @@ class OnlineViewerActivity: BaseViewerActivity() {
 
     override fun onPageTextClicked() = Unit
 
-    override fun loadPage() {
-        val myPage = page
-
-        viewerActivityBinding.viewerPageTextView.text = (page + 1).toString()
-        toggleLoadingUi(true)
-
-        lifecycleScope.launch {
-            val pictureUrl = getPictureUrl(page)
-            if (myPage != page) {
-                return@launch
-            }
-
-            if (pictureUrl != null) {
-                showPicture(
-                    pictureUrl, getPageSignature(page),
-                    onFailed = { alertLoadPictureFailed() },
-                    onFinished = { toggleLoadingUi(false) }
-                )
-            } else {
-                alertLoadPictureFailed()
-                toggleLoadingUi(false)
-            }
-        }
-    }
-
     override fun prevPage() {
         if (page > firstPage) {
             page--
@@ -86,6 +59,24 @@ class OnlineViewerActivity: BaseViewerActivity() {
         }
     }
 
+    override fun reloadPage() = loadPage()
+
+    override suspend fun getPictureUrl (page: Int): String? {
+        println("[${this::class.simpleName}.${this::getPictureUrl.name}] $page")
+
+        if (page < firstPage || page > lastPage) {
+            throw Exception("page out of range")
+        }
+
+        if (pictureUrls[page] == null) {
+            pictureUrls[page] = withContext(Dispatchers.IO) {
+                fetcher.getPictureUrl(page)
+            }
+        }
+
+        return pictureUrls[page]
+    }
+
     private fun preloadPage (page: Int) {
         if (page < firstPage || page > lastPage) {
             throw Exception("page out of range")
@@ -98,21 +89,5 @@ class OnlineViewerActivity: BaseViewerActivity() {
                 )
             }
         }
-    }
-
-    private suspend fun getPictureUrl (page: Int): String? {
-        println("[${this::class.simpleName}.${this::getPictureUrl.name}] $page")
-
-        if (page < firstPage || page > lastPage) {
-            throw Exception("page out of range")
-        }
-
-        if (pictureUrls[page] == null) {
-            pictureUrls[page] = withContext(Dispatchers.IO) {
-                 fetcher.getPictureUrl(page)
-            }
-        }
-
-        return pictureUrls[page]
     }
 }

@@ -9,6 +9,11 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.example.viewer.BookRecord
+import com.example.viewer.Util
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.jsoup.Jsoup
 import java.io.File
 
 enum class BookSource (val keyString: String) {
@@ -28,23 +33,6 @@ class BookDatabase (context: Context): BaseDatabase() {
         fun getInstance (context: Context) = instance ?: synchronized(this) {
             instance ?: BookDatabase(context).also { instance = it }
         }
-
-        data class Book (
-            val id: String,
-            val url: String,
-            val pageNum: Int,
-            val source: String,
-            val coverPage: Int,
-            val skipPages: List<Int>,
-            val lastViewTime: Long,
-            val p: Int? = null,
-            val pageUrls: List<String>? = null,
-        )
-
-        data class Author (
-            val name: String,
-            val bookIds: List<String>
-        )
     }
 
     override val dataStore = context.bookDataStore
@@ -61,17 +49,28 @@ class BookDatabase (context: Context): BaseDatabase() {
             assertBookIdExist(bookId)
             return stringPreferencesKey("${bookId}_url")
         }
+        fun bookTitle (bookId: String): Preferences.Key<String> {
+            assertBookIdExist(bookId)
+            return stringPreferencesKey("${bookId}_title")
+        }
         fun bookPageUrls (bookId: String): Preferences.Key<ByteArray> {
             assertBookIdExist(bookId)
             return byteArrayPreferencesKey("${bookId}_pageUrls")
         }
-        fun bookP (bookId: String): Preferences.Key<Int> {
-            assertBookIdExist(bookId)
-            return intPreferencesKey("${bookId}_P")
-        }
         fun bookPageNum (bookId: String): Preferences.Key<Int> {
             assertBookIdExist(bookId)
             return intPreferencesKey("${bookId}_pageNum")
+        }
+        fun bookCatOrdinal (bookId: String): Preferences.Key<Int> {
+            assertBookIdExist(bookId)
+            return intPreferencesKey("${bookId}_catOrdinal")
+        }
+        /**
+         * Map<String, List<String>>
+         */
+        fun bookTags (bookId: String): Preferences.Key<ByteArray> {
+            assertBookIdExist(bookId)
+            return byteArrayPreferencesKey("${bookId}_tags")
         }
         fun bookSource (bookId: String): Preferences.Key<String> {
             assertBookIdExist(bookId)
@@ -81,6 +80,10 @@ class BookDatabase (context: Context): BaseDatabase() {
             // 0 for first page, pageNum - 1 for last page
             assertBookIdExist(bookId)
             return intPreferencesKey("${bookId}_coverPage")
+        }
+        fun bookP (bookId: String): Preferences.Key<Int> {
+            assertBookIdExist(bookId)
+            return intPreferencesKey("${bookId}_P")
         }
         fun bookSkipPages (bookId: String): Preferences.Key<ByteArray> {
             // 0 for first page, pageNum - 1 for last page
@@ -118,31 +121,75 @@ class BookDatabase (context: Context): BaseDatabase() {
     fun addBook (
         id: String,
         url: String,
-        source: BookSource,
-        pageNum: Int
+        category: SearchDatabase.Companion.Category,
+        title: String,
+        pageNum: Int,
+        tags: Map<String, List<String>>,
+        source: BookSource
     ) {
         if (pageNum < 1) {
             throw Exception("Invalid pageNum $pageNum")
         }
 
+        // id
         addBookId(id)
+        // url
         store(storeKeys.bookUrl(id), url)
-        store(storeKeys.bookSource(id), source.keyString)
-        addAuthorBookId(NO_AUTHOR, id)
+        // cover
         setBookCoverPage(id, 0)
+        // category
+        store(storeKeys.bookCatOrdinal(id), category.ordinal)
+        // title
+        store(storeKeys.bookTitle(id), title)
+        // total page
         store(storeKeys.bookPageNum(id), pageNum)
+        // tags
+        storeAsByteArray(storeKeys.bookTags(id), tags)
+
+        addAuthorBookId(NO_AUTHOR, id)
+        store(storeKeys.bookSource(id), source.keyString)
         if (source == BookSource.E) {
             store(storeKeys.bookP(id), 0)
             setBookPageUrls(id, listOf())
         }
     }
 
+    /**
+     * @param author author of the return book record;
+     * this function doesn't read book's author from db, so the author of returned book record will be null if this is not provided
+     */
+    fun getBook (context: Context, id: String, author: String? = null): BookRecord {
+        assertBookIdExist(id)
+        return BookRecord(
+            id = id,
+            url = getBookUrl(id),
+            coverUrl = getBookCoverPage(id).let { page ->
+                val folder = File(context.getExternalFilesDir(null), id)
+                val coverPageFile = File(folder, page.toString())
+                if (coverPageFile.exists()) {
+                    coverPageFile.path
+                } else {
+                    File(folder, "0").path
+                }
+            },
+            cat = Util.categoryFromOrdinal(read(storeKeys.bookCatOrdinal(id))!!).name,
+            title = read(storeKeys.bookTitle(id))!!,
+            pageNum = getBookPageNum(id),
+            tags = readFromByteArray<Map<String, List<String>>>(storeKeys.bookTags(id)) ?: mapOf(),
+            author = author
+        )
+    }
+
+
     fun removeBook (id: String, bookAuthor: String): Boolean {
         try {
             removeAuthorBookId(bookAuthor, id)
 
-            remove(storeKeys.bookPageNum(id))
             remove(storeKeys.bookUrl(id))
+            remove(storeKeys.bookTitle(id))
+            remove(storeKeys.bookPageNum(id))
+            remove(storeKeys.bookCatOrdinal(id))
+            remove(storeKeys.bookTags(id))
             remove(storeKeys.bookCoverPage(id))
             remove(storeKeys.bookSkipPages(id))
             remove(storeKeys.bookLastViewTime(id))
@@ -160,6 +207,8 @@ class BookDatabase (context: Context): BaseDatabase() {
             return false
         }
     }
+
+    fun isBookStored (id: String): Boolean = getAllBookIds().contains(id)
 
     fun changeAuthor (bookId: String, oldAuthor: String, newAuthor: String) {
         if (oldAuthor == newAuthor) {
@@ -221,7 +270,7 @@ class BookDatabase (context: Context): BaseDatabase() {
         storeAsByteArray(storeKeys.allBookIds(), ids.toList())
     }
     private fun assertBookIdExist (bookId: String) {
-        if (!getAllBookIds().contains(bookId)) {
+        if (!isBookStored(bookId)) {
             throw Exception("bookId $bookId not exist")
         }
     }
@@ -271,6 +320,9 @@ class BookDatabase (context: Context): BaseDatabase() {
     }
 
     fun getAuthorBookIds (author: String) = readFromByteArray<List<String>>(storeKeys.authorBookIds(author)) ?: listOf()
+    /**
+     * @param author this function supposes this author is exist in the database
+     */
     private fun addAuthorBookId (author: String, bookId: String) {
         val bookIds = getAuthorBookIds(author).toMutableList()
         if (bookIds.contains(bookId)) {

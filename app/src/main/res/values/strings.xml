@@ -13,6 +13,11 @@
     <string name="fa_right_to_bracket">\uf2f6</string>
     <string name="fa_bookmark">\uf02e</string>
     <string name="fa_magnifying_glass">\uf002</string>
+    <string name="fa_filter">\uf0b0</string>
+    <string name="fa_download">\uf019</string>
+    <string name="fa_book_open">\uf518</string>
+    <string name="fa_wrench">\uf0ad</string>
+    <string name="fa_arrows_rotate">\uf021</string>
 <!--  strings  -->
     <string name="app_name">eSaver</string>
     <string name="enter_url">輸入URL</string>
@@ -20,6 +25,7 @@
     <string name="downloaded">已下載</string>
     <string name="not_downloaded">未下載</string>
     <string name="confirm">確定</string>
+    <string name="delete">刪除</string>
     <string name="doDelete">刪除?</string>
     <string name="noName">佚名</string>
     <string name="apply">應用</string>
@@ -51,4 +57,9 @@
     <string name="other">其他</string>
     <string name="bookmark">書籤</string>
     <string name="no_bookmark">沒有書籤</string>
+    <string name="local_setting">本地設定</string>
+    <string name="exclude_tag">濾除標籤</string>
+    <string name="search_tag">搜尋標籤</string>
+    <string name="load_image_failed_retry">圖片讀取失敗\n點擊重試</string>
+    <string name="there_is_no_more">沒有更多了</string>
 </resources>

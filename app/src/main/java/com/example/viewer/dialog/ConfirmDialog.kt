@@ -19,12 +19,12 @@ class ConfirmDialog (
         val dialog = AlertDialog.Builder(context).setView(binding.root).create()
         binding.messageTextView.text = message
         binding.positiveButton.setOnClickListener {
-            positiveCallback?.invoke()
             dialog.dismiss()
+            positiveCallback?.invoke()
         }
         binding.negativeButton.setOnClickListener {
-            negativeCallback?.invoke()
             dialog.dismiss()
+            negativeCallback?.invoke()
         }
         dialog.show()
     }
