@@ -2,11 +2,14 @@ package com.example.viewer.activity.viewer
 
 import android.os.Bundle
 import androidx.lifecycle.lifecycleScope
+import com.example.viewer.R
 import com.example.viewer.struct.BookRecord
 import com.example.viewer.fetcher.EPictureFetcher
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.floor
 
 class OnlineViewerActivity: BaseViewerActivity() {
     private lateinit var bookRecord: BookRecord
@@ -66,9 +69,24 @@ class OnlineViewerActivity: BaseViewerActivity() {
             throw Exception("page out of range")
         }
 
-        return pictureUrls[page] ?: withContext(Dispatchers.IO) {
-            fetcher.savePicture(page)?.path.also { pictureUrls[page] = it }
+        if (pictureUrls[page] == null) {
+            if (this.page == page) {
+                viewerActivityBinding.progressTextView.text = getString(R.string.n_percent, 0)
+            }
+            withContext(Dispatchers.IO) {
+                fetcher.savePicture(page) { total, downloaded ->
+                    if (this@OnlineViewerActivity.page == page) {
+                        CoroutineScope(Dispatchers.Main).launch {
+                            viewerActivityBinding.progressTextView.text = getString(
+                                R.string.n_percent, floor(downloaded.toDouble() / total * 100).toInt()
+                            )
+                        }
+                    }
+                }
+            }?.path.also { pictureUrls[page] = it }
         }
+
+        return pictureUrls[page]
     }
 
     private fun preloadPage (page: Int) {
