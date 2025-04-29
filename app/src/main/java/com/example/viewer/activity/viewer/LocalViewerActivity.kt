@@ -3,9 +3,7 @@ package com.example.viewer.activity.viewer
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
-import android.net.Uri
 import android.os.Bundle
-import android.view.KeyEvent
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.lifecycleScope
@@ -20,7 +18,6 @@ import com.example.viewer.dialog.ConfirmDialog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.plus
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
@@ -43,7 +40,7 @@ class LocalViewerActivity: BaseViewerActivity() {
     private lateinit var skipPageSet: Set<Int>
 
     private val bookFolder: File
-        get() = fetcher.bookFolder!!
+        get() = fetcher.bookFolder
 
     @Volatile
     private var askingNextBook = false
@@ -103,7 +100,6 @@ class LocalViewerActivity: BaseViewerActivity() {
         toggleLoadingUi(true)
         toggleLoadFailedScreen(false)
 
-        resetPageSignature(page)
         // download the picture again
         CoroutineScope(Dispatchers.IO).launch {
             fetcher.savePicture(page)
@@ -153,12 +149,7 @@ class LocalViewerActivity: BaseViewerActivity() {
             if (!File(bookFolder, page.toString()).exists() && !Util.isInternetAvailable(baseContext)) {
                 return@launch
             }
-            getPictureUrl(page)?.let {
-                showPicture(
-                    it, getPageSignature(page),
-                    imageView = viewerActivityBinding.viewerTmpImageVew
-                )
-            }
+            getPictureUrl(page)
         }
     }
 
@@ -284,7 +275,6 @@ class LocalViewerActivity: BaseViewerActivity() {
 
             // refresh page
             withContext(Dispatchers.Main) {
-                resetPageSignature(page)
                 loadPage()
                 toggleLoadingUi(false)
             }

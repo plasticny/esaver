@@ -5,11 +5,9 @@ import android.content.Intent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.GridLayoutManager
@@ -19,7 +17,6 @@ import com.example.viewer.activity.BookProfileActivity
 import com.example.viewer.activity.viewer.LocalViewerActivity
 import com.example.viewer.database.BookDatabase
 import com.example.viewer.dialog.SelectAuthorDialog
-import com.google.android.flexbox.FlexboxLayout
 import java.io.File
 import kotlin.math.ceil
 

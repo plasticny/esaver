@@ -2,37 +2,26 @@ package com.example.viewer.activity.viewer
 
 import android.animation.Animator
 import android.animation.Animator.AnimatorListener
-import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.graphics.Rect
 import android.graphics.drawable.ColorDrawable
-import android.graphics.drawable.Drawable
+import android.net.Uri
 import android.os.Bundle
 import android.view.GestureDetector
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
-import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.DataSource
-import com.bumptech.glide.load.engine.DiskCacheStrategy
-import com.bumptech.glide.load.engine.GlideException
-import com.bumptech.glide.request.RequestListener
-import com.bumptech.glide.request.RequestOptions
-import com.bumptech.glide.request.target.Target
-import com.bumptech.glide.signature.ObjectKey
 import com.example.viewer.R
-import com.example.viewer.Util
 import com.example.viewer.databinding.ViewerActivityBinding
 import com.example.viewer.dialog.SimpleEditTextDialog
 import kotlinx.coroutines.launch
+import java.io.File
 import kotlin.math.abs
-import kotlin.math.sign
 
 abstract class BaseViewerActivity: AppCompatActivity() {
     companion object {
@@ -55,8 +44,6 @@ abstract class BaseViewerActivity: AppCompatActivity() {
     protected var page = -1 // current page num, firstPage to lastPage
     protected var firstPage = -1 // 0 to pageNum - 1
     protected var lastPage = -1 // 0 to pageNum - 1
-
-    private val pageSignatures = mutableMapOf<Int, ObjectKey>()
 
     private var showingToolBar = false
 
@@ -191,7 +178,7 @@ abstract class BaseViewerActivity: AppCompatActivity() {
 
             if (pictureUrl != null) {
                 showPicture(
-                    pictureUrl, getPageSignature(page),
+                    pictureUrl,
                     onPictureReady = { toggleLoadFailedScreen(false) },
                     onFailed = { toggleLoadFailedScreen(true) },
                     onFinished = { toggleLoadingUi(false) }
@@ -203,44 +190,20 @@ abstract class BaseViewerActivity: AppCompatActivity() {
         }
     }
 
-    protected fun showPicture (
+    private fun showPicture (
         url: String,
-        signature: ObjectKey,
-        imageView: ImageView = viewerActivityBinding.photoView,
         onPictureReady: (() -> Unit)? = null,
         onFailed: (() -> Unit)? = null,
         onFinished: (() -> Unit)? = null
-    ) = Glide.with(baseContext)
-            .asDrawable()
-            .signature(signature)
-            .load(url)
-            .listener(object: RequestListener<Drawable> {
-                override fun onResourceReady(
-                    resource: Drawable?, model: Any?, target: Target<Drawable>?, dataSource: DataSource?, isFirstResource: Boolean
-                ): Boolean {
-                    onPictureReady?.invoke()
-                    onFinished?.invoke()
-                    return false
-                }
-                override fun onLoadFailed(
-                    e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean
-                ): Boolean {
-                    onFailed?.invoke()
-                    onFinished?.invoke()
-                    return false
-                }
-            })
-            .into(imageView)
-
-    protected fun getPageSignature (page: Int): ObjectKey {
-        if (!pageSignatures.containsKey(page)) {
-            resetPageSignature(page)
+    ) {
+        val file = File(url)
+        if (file.exists()) {
+            viewerActivityBinding.photoView.setImageURI(Uri.fromFile(file))
+            onPictureReady?.invoke()
+        } else {
+            onFailed?.invoke()
         }
-        return pageSignatures.getValue(page)
-    }
-
-    protected fun resetPageSignature (page: Int) {
-        pageSignatures[page] = ObjectKey(System.currentTimeMillis())
+        onFinished?.invoke()
     }
 
     @SuppressLint("ClickableViewAccessibility")

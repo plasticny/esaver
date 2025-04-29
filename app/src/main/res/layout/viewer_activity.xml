@@ -115,13 +115,7 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-<!--  others  -->
-
-    <ImageView
-        android:id="@+id/viewer_tmp_image_vew"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:visibility="invisible" />
+<!--  progress indicator  -->
 
     <LinearLayout
         android:id="@+id/progress_wrapper"

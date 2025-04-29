@@ -75,13 +75,6 @@ class OnlineViewerActivity: BaseViewerActivity() {
         if (page < firstPage || page > lastPage) {
             return
         }
-        lifecycleScope.launch {
-            getPictureUrl(page)?.let {
-                showPicture(
-                    it, getPageSignature(page),
-                    imageView = viewerActivityBinding.viewerTmpImageVew
-                )
-            }
-        }
+        lifecycleScope.launch { getPictureUrl(page) }
     }
 }
