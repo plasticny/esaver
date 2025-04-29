@@ -1,6 +1,7 @@
 package com.example.viewer.fetcher
 
 import android.content.Context
+import android.os.Environment
 import com.example.viewer.database.BookSource
 import com.example.viewer.database.BookDatabase
 import com.example.viewer.Util
@@ -20,6 +21,8 @@ import java.net.SocketTimeoutException
 
 abstract class BasePictureFetcher {
     companion object {
+        private val okHttpClient = OkHttpClient()
+
         fun getFetcher (context: Context, bookId: String): BasePictureFetcher {
             val source = BookDatabase.getInstance(context).getBookSource(bookId)
             println("[BasePictureFetcher.getFetcher] $source")
@@ -28,10 +31,11 @@ abstract class BasePictureFetcher {
                 BookSource.Hi -> HiPictureFetcher(context, bookId)
             }
         }
-        private val okHttpClient = OkHttpClient()
     }
 
-    abstract suspend fun savePicture (page: Int): Boolean
+    abstract suspend fun savePicture (
+        page: Int, progressListener: ((contentLength: Long, downloadLength: Long) -> Unit)? = null
+    ): File?
     protected abstract suspend fun fetchPictureUrl (page: Int): String?
 
     private val downloadingPages = mutableSetOf<Int>()
@@ -41,7 +45,12 @@ abstract class BasePictureFetcher {
     protected val pageNum: Int
     protected val isLocal: Boolean
 
-    val bookFolder: File?
+    /**
+     * for local book, this will be a folder named by the book id in data folder
+     *
+     * for online book, this will be a folder named "tmp" in data folder
+     */
+    val bookFolder: File
 
     /**
      * for local book
@@ -62,18 +71,25 @@ abstract class BasePictureFetcher {
         this.context = context
         this.pageNum = pageNum
         this.bookId = null
-        this.bookFolder = null
+
+        this.bookFolder = File(context.getExternalFilesDir(null), "tmp").also {
+            if (!it.exists()) {
+                it.mkdirs()
+            } else {
+                for (file in it.listFiles()!!) {
+                    file.delete()
+                }
+            }
+        }
 
         isLocal = false
     }
 
-    suspend fun getPictureUrl (page: Int): String? {
+    suspend fun getPictureUrl (
+        page: Int,
+        progressListener: ((contentLength: Long, downloadLength: Long) -> Unit)? = null
+    ): String? {
         assertPageInRange(page)
-
-        if (!isLocal) {
-            // local fetcher, no need to check storage
-            return fetchPictureUrl(page)
-        }
 
         //
         // check whether picture is stored
@@ -92,8 +108,8 @@ abstract class BasePictureFetcher {
 
         if (!pictureFile.exists()) {
             downloadingPages.add(page) // fetching picture url may take time
-            savePicture(page).let { retFlag ->
-                if (!retFlag) {
+            savePicture(page, progressListener).let {
+                if (it == null) {
                     return null
                 }
             }
@@ -102,18 +118,27 @@ abstract class BasePictureFetcher {
         return pictureFile.path
     }
 
+    fun close () {
+        if (!isLocal) {
+            for (file in bookFolder.listFiles()!!) {
+                file.delete()
+            }
+        }
+    }
+
+    /**
+     * @return downloaded picture file
+     */
     protected suspend fun downloadPicture (
         page: Int,
         url: String,
         headers: Map<String, String> = mapOf(),
         progressListener: ((contentLength: Long, downloadLength: Long) -> Unit)? = null
-    ): Boolean {
+    ): File? {
         println("[BasePictureFetcher.downloadPicture] $url")
 
-        assertCallByLocalBookFetcher()
-
         if(!Util.isInternetAvailable(context)) {
-            return false
+            return null
         }
 
         downloadingPages.add(page)
@@ -145,12 +170,14 @@ abstract class BasePictureFetcher {
                         // this line should be after the write-to-file statement
                         // else a corrupted image might be read
                         downloadingPages.remove(page)
+                        return@withContext file
+                    } else {
+                        return@withContext null
                     }
-                    return@withContext response.isSuccessful
                 }
             } catch (e: SocketTimeoutException) {
                 println("[${this@BasePictureFetcher::class.simpleName}.${this@BasePictureFetcher::downloadingPages.name}] socket time out")
-                return@withContext false
+                return@withContext null
             }
         }
     }
@@ -158,12 +185,6 @@ abstract class BasePictureFetcher {
     protected fun assertPageInRange (page: Int) {
         if (page < 0 || page >= pageNum) {
             throw Exception("page out of range")
-        }
-    }
-
-    private fun assertCallByLocalBookFetcher () {
-        if (bookFolder == null) {
-            throw Exception("only fetcher construct with local book config call this function")
         }
     }
 }

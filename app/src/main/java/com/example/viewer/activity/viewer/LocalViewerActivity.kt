@@ -3,11 +3,13 @@ package com.example.viewer.activity.viewer
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
+import android.net.Uri
 import android.os.Bundle
 import android.view.KeyEvent
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.lifecycleScope
+import com.example.viewer.R
 import com.example.viewer.fetcher.BasePictureFetcher
 import com.example.viewer.database.BookDatabase
 import com.example.viewer.RandomBook
@@ -22,6 +24,7 @@ import kotlinx.coroutines.plus
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
+import kotlin.math.floor
 
 /**
  * string extra: bookId
@@ -113,7 +116,20 @@ class LocalViewerActivity: BaseViewerActivity() {
         }
     }
 
-    override suspend fun getPictureUrl(page: Int): String? = fetcher.getPictureUrl(page)
+    override suspend fun getPictureUrl(page: Int): String? {
+        if (this.page == page) {
+            viewerActivityBinding.progressTextView.text = getString(R.string.n_percent, 0)
+        }
+        return fetcher.getPictureUrl(page) { total, downloaded ->
+            if (this.page == page) {
+                CoroutineScope(Dispatchers.Main).launch {
+                    viewerActivityBinding.progressTextView.text = getString(
+                        R.string.n_percent, floor(downloaded.toDouble() / total * 100).toInt()
+                    )
+                }
+            }
+        }
+    }
 
     override fun loadPage() {
         super.loadPage()
@@ -137,7 +153,7 @@ class LocalViewerActivity: BaseViewerActivity() {
             if (!File(bookFolder, page.toString()).exists() && !Util.isInternetAvailable(baseContext)) {
                 return@launch
             }
-            fetcher.getPictureUrl(page)?.let {
+            getPictureUrl(page)?.let {
                 showPicture(
                     it, getPageSignature(page),
                     imageView = viewerActivityBinding.viewerTmpImageVew

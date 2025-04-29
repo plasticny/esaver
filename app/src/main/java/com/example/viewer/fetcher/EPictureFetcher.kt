@@ -6,9 +6,11 @@ import android.widget.Toast
 import com.example.viewer.Util
 import com.example.viewer.database.BookDatabase
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.jsoup.HttpStatusException
 import org.jsoup.Jsoup
+import java.io.File
 
 class EPictureFetcher: BasePictureFetcher {
     companion object {
@@ -26,30 +28,39 @@ class EPictureFetcher: BasePictureFetcher {
     private var pageUrls: MutableList<String>
     private var p: Int
 
+    /**
+     * for local book
+     */
     constructor (context: Context, bookId: String): super(context, bookId) {
         p = bookDataset.getBookP(bookId)
         bookUrl = bookDataset.getBookUrl(bookId)
         pageUrls = bookDataset.getBookPageUrls(bookId).toMutableList()
     }
 
+    /**
+     * for online book
+     */
     constructor (context: Context, pageNum: Int, bookUrl: String): super(context, pageNum) {
         p = 0
         this.bookUrl = bookUrl
         pageUrls = mutableListOf()
     }
 
-    override suspend fun savePicture(page: Int): Boolean {
+    override suspend fun savePicture(
+        page: Int,
+        progressListener: ((contentLength: Long, downloadLength: Long) -> Unit)?
+    ): File? {
         println("[EPictureFetcher.savePicture] $page")
         assertPageInRange(page)
 
         if (!Util.isInternetAvailable(context)) {
             Toast.makeText(context, "沒有網絡，無法下載", Toast.LENGTH_SHORT).show()
-            return false
+            return null
         }
 
         return fetchPictureUrl(page)?.let {
-            downloadPicture(page, it)
-        } ?: false
+            downloadPicture(page, it, progressListener =  progressListener)
+        }
     }
 
     override suspend fun fetchPictureUrl (page: Int): String? {

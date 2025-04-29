@@ -8,6 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
+import java.io.File
 import java.net.URL
 
 /**
@@ -79,12 +80,15 @@ class HiPictureFetcher (context: Context, bookId: String): BasePictureFetcher(co
         }
     }
 
-    override suspend fun savePicture(page: Int): Boolean {
+    override suspend fun savePicture(
+        page: Int,
+        progressListener: ((contentLength: Long, downloadLength: Long) -> Unit)?
+    ): File? {
         assertPageInRange(page)
 
         if (!Util.isInternetAvailable(context)) {
             Toast.makeText(context, "沒有網絡，無法下載", Toast.LENGTH_SHORT).show()
-            return false
+            return null
         }
 
         return fetchPictureUrl(page)?.let { url ->
@@ -100,8 +104,8 @@ class HiPictureFetcher (context: Context, bookId: String): BasePictureFetcher(co
                 "user-agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 OPR/114.0.0.0 (Edition GX-CN)",
                 "referer" to "https://hitomi.la/reader/${bookId!!}.html"
             )
-            downloadPicture(page, url, headers)
-        } ?: false
+            downloadPicture(page, url, headers, progressListener = progressListener)
+        }
     }
 
     override suspend fun fetchPictureUrl (page: Int): String? {

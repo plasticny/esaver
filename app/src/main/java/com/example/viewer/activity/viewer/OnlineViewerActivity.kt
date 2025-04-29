@@ -28,6 +28,11 @@ class OnlineViewerActivity: BaseViewerActivity() {
         super.onCreate(savedInstanceState)
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        fetcher.close()
+    }
+
     override fun onImageLongClicked(): Boolean = true
 
     override fun prevPage() {
@@ -62,7 +67,7 @@ class OnlineViewerActivity: BaseViewerActivity() {
         }
 
         return pictureUrls[page] ?: withContext(Dispatchers.IO) {
-            fetcher.getPictureUrl(page).also { pictureUrls[page] = it }
+            fetcher.savePicture(page)?.path.also { pictureUrls[page] = it }
         }
     }
 

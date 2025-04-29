@@ -20,8 +20,10 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DataSource
+import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
+import com.bumptech.glide.request.RequestOptions
 import com.bumptech.glide.request.target.Target
 import com.bumptech.glide.signature.ObjectKey
 import com.example.viewer.R
@@ -30,6 +32,7 @@ import com.example.viewer.databinding.ViewerActivityBinding
 import com.example.viewer.dialog.SimpleEditTextDialog
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import kotlin.math.sign
 
 abstract class BaseViewerActivity: AppCompatActivity() {
     companion object {
@@ -142,11 +145,11 @@ abstract class BaseViewerActivity: AppCompatActivity() {
     protected fun toggleLoadingUi (toggle: Boolean) {
         viewerActivityBinding.let {
             if (toggle) {
-                it.viewerProgressBar.visibility = ProgressBar.VISIBLE
+                it.progressWrapper.visibility = ProgressBar.VISIBLE
                 it.photoView.visibility = View.INVISIBLE
                 it.photoView.imageAlpha = 0
             } else {
-                it.viewerProgressBar.visibility = ProgressBar.GONE
+                it.progressWrapper.visibility = ProgressBar.GONE
                 it.photoView.visibility = View.VISIBLE
                 it.photoView.imageAlpha = 255
             }
@@ -207,8 +210,7 @@ abstract class BaseViewerActivity: AppCompatActivity() {
         onPictureReady: (() -> Unit)? = null,
         onFailed: (() -> Unit)? = null,
         onFinished: (() -> Unit)? = null
-    ) {
-        Glide.with(baseContext)
+    ) = Glide.with(baseContext)
             .asDrawable()
             .signature(signature)
             .load(url)
@@ -229,7 +231,6 @@ abstract class BaseViewerActivity: AppCompatActivity() {
                 }
             })
             .into(imageView)
-    }
 
     protected fun getPageSignature (page: Int): ObjectKey {
         if (!pageSignatures.containsKey(page)) {
