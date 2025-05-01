@@ -205,11 +205,11 @@ class BookDatabase (context: Context): BaseDatabase() {
             removeBookId(id)
             return true
         } catch (e: Exception) {
+            println("[${this::class.simpleName}.${this::removeBook.name}] exception")
+            e.printStackTrace()
             return false
         }
     }
-
-    fun removeBook (id: String): Boolean = removeBook(id, findBookAuthor(id)!!)
 
     fun isBookStored (id: String): Boolean = getAllBookIds().contains(id)
 
@@ -233,15 +233,6 @@ class BookDatabase (context: Context): BaseDatabase() {
 
         addAuthorBookId(newAuthor, bookId)
         removeAuthorBookId(oldAuthor, bookId)
-
-        if (oldAuthor != NO_AUTHOR && getAuthorBookIds(oldAuthor).isEmpty()) {
-            println("[BookDataset] removeAuthor $oldAuthor")
-            val authors = (read(storeKeys.allAuthors()) ?: listOf()).toMutableList()
-            assertAuthorExist(oldAuthor)
-            authors.remove(oldAuthor)
-            store(storeKeys.allAuthors(), authors)
-            authorListUpdated = true
-        }
 
         if (authorListUpdated) {
             store(storeKeys.authorListUpdateTime(), System.currentTimeMillis())
@@ -328,18 +319,32 @@ class BookDatabase (context: Context): BaseDatabase() {
         getUserAuthors()
     ) }
     fun getUserAuthors () = read(storeKeys.allAuthors()) ?: listOf() // get authors that user added (without No Author)
-    private fun assertAuthorExist (name: String) {
-        if (!getAllAuthors().contains(name)) {
-            throw Exception("author $name not exist")
-        }
-    }
     private fun findBookAuthor (bookId: String): String? {
         for (author in getAllAuthors()) {
             if (getAuthorBookIds(author).contains(bookId)) {
                 return author
             }
         }
+        println("[${this::class.simpleName}.${this::findBookAuthor.name}] book author not found for $bookId")
         return null
+    }
+    private fun removeAuthor (name: String) {
+        println("[BookDataset] removeAuthor $name")
+
+        assertAuthorExist(name)
+
+        remove(storeKeys.authorBookIds(name))
+
+        val authors = (read(storeKeys.allAuthors()) ?: listOf()).toMutableList()
+        authors.remove(name)
+        store(storeKeys.allAuthors(), authors)
+
+        store(storeKeys.authorListUpdateTime(), System.currentTimeMillis())
+    }
+    private fun assertAuthorExist (name: String) {
+        if (!getAllAuthors().contains(name)) {
+            throw Exception("author $name not exist")
+        }
     }
 
     fun getAuthorBookIds (author: String) = read(storeKeys.authorBookIds(author)) ?: listOf()
@@ -361,7 +366,12 @@ class BookDatabase (context: Context): BaseDatabase() {
             throw Exception("bookId $bookId is not in the list of author $author")
         }
         bookIds.remove(bookId)
-        store(storeKeys.authorBookIds(author), bookIds)
+
+        if (author != NO_AUTHOR && bookIds.isEmpty()) {
+            removeAuthor(author)
+        } else {
+            store(storeKeys.authorBookIds(author), bookIds)
+        }
     }
 
     //

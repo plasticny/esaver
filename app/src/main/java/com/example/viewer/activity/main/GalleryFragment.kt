@@ -76,48 +76,12 @@ class GalleryFragment: Fragment() {
         super.onResume()
         BookDatabase.getInstance(ctx).authorListUpdateTime().let {
             if (it != authorListLastUpdate) {
+                println("[${this::class.simpleName}.${this::onResume.name}] author list updated, refresh")
                 bookGallery.refreshAuthor()
                 authorListLastUpdate = it
             }
         }
         bookGallery.refreshBooks()
-    }
-
-    private fun showAddDialog () {
-        val dialogView = LayoutInflater.from(ctx).inflate(R.layout.add_dialog, null)
-        val dialog = AlertDialog.Builder(ctx)
-            .setView(dialogView)
-            .create()
-
-        val editText = dialogView.findViewById<EditText>(R.id.add_dialog_editText)
-        val addButton = dialogView.findViewById<Button>(R.id.add_dialog_add_button)
-
-        addButton.setOnClickListener {
-            val url = editText.text.toString()
-            if (url.isEmpty()) {
-                Toast.makeText(ctx, "url不能空", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            val bookSource = getBookSource(url)
-            if (bookSource == null) {
-                Toast.makeText(ctx, "錯誤的url", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            dialog.dismiss()
-            lifecycleScope.launch {
-                binding.galleryProgressBar.visibility = ProgressBar.VISIBLE
-                val bookAdder = BookAdder.getBookAdder(ctx, bookSource)
-                bookAdder.addBook(url) { doAdded ->
-                    binding.galleryProgressBar.visibility = ProgressBar.GONE
-                    if (doAdded) {
-                        bookGallery.notifyBookAdded()
-                    }
-                }
-            }
-        }
-        dialog.show()
     }
 
     private fun getBookSource (url: String): BookSource? = when {
