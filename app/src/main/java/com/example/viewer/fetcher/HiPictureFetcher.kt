@@ -68,7 +68,7 @@ class HiPictureFetcher (context: Context, bookId: String): BasePictureFetcher(co
     private var base: String? = null
 
     init {
-        if (pageNum > bookFolder!!.listFiles()!!.size) {
+        if (pageNum > bookFolder.listFiles()!!.size) {
             println("[HiPictureFetcher] get data for constructing url")
 
             if (!Util.isInternetAvailable(context)) {

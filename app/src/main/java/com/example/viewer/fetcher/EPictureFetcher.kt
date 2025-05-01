@@ -1,12 +1,10 @@
 package com.example.viewer.fetcher
 
 import android.content.Context
-import android.view.View
 import android.widget.Toast
 import com.example.viewer.Util
 import com.example.viewer.database.BookDatabase
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.jsoup.HttpStatusException
 import org.jsoup.Jsoup

@@ -239,24 +239,26 @@ class SearchActivity: AppCompatActivity() {
     }
 
     private suspend fun loadMoreBooks () {
-        if (loadingMore) {
+        val mySearchId = searchMarkId
+
+        withContext(Dispatchers.IO) {
+            while (loadingMore) {
+                Thread.sleep(100)
+            }
+        }
+        if (mySearchId != searchMarkId) {
             return
         }
-        loadingMore = true
 
-        val mySearchId = searchMarkId
+        loadingMore = true
 
         binding.searchProgressBar.visibility = ProgressBar.VISIBLE
         val books = excludeTagFilter(fetchBooks())
         binding.searchProgressBar.visibility = ProgressBar.GONE
 
-        // if the search mark changed, terminate this function
-        if (mySearchId != searchMarkId) {
-            return
+        if (mySearchId == searchMarkId) {
+            recyclerViewAdapter.addBooks(books)
         }
-
-        recyclerViewAdapter.addBooks(books)
-
         loadingMore = false
     }
 
@@ -264,13 +266,15 @@ class SearchActivity: AppCompatActivity() {
      * This method will access and change the private variable next
      */
     private suspend fun fetchBooks (): List<BookRecord> {
+        val mySearchId = searchMarkId
+
         val doc = withContext(Dispatchers.IO) {
             Jsoup.connect(
                 searchMark.url(next).also { println("[SearchActivity.fetchBooks] fetch book from\n$it") }
             ).get()
         }
 
-        next = doc.selectFirst("#unext")?.attribute("href")?.let { attr ->
+        val newNext = doc.selectFirst("#unext")?.attribute("href")?.let { attr ->
             val tokens = attr.value.split("next=")
             if (tokens.size == 1) {
                 if (!doNoMoreAlerted) {
@@ -281,6 +285,12 @@ class SearchActivity: AppCompatActivity() {
             }
             return@let tokens.last().trim()
         }
+
+        if (mySearchId != searchMarkId) {
+            println("[${this::class.simpleName}.${this::fetchBooks.name}] terminated")
+            return listOf()
+        }
+        next = newNext
 
         val books = doc.select(".itg.glte > tbody > tr")
         return books.mapNotNull { book ->
