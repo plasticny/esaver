@@ -174,10 +174,17 @@ class BookDatabase (context: Context): BaseDatabase() {
         )
     }
 
-
-    fun removeBook (id: String, bookAuthor: String): Boolean {
+    /**
+     * @param bookAuthor
+     * This function has O(n) complexity on searching who is the author if this is null.
+     * Provide it to gain better performance
+     */
+    fun removeBook (id: String, bookAuthor: String?): Boolean {
         try {
-            removeAuthorBookId(bookAuthor, id)
+            removeAuthorBookId(
+                bookAuthor ?: findBookAuthor(id)!!,
+                id
+            )
 
             remove(storeKeys.bookUrl(id))
             remove(storeKeys.bookTitle(id))
@@ -201,6 +208,8 @@ class BookDatabase (context: Context): BaseDatabase() {
             return false
         }
     }
+
+    fun removeBook (id: String): Boolean = removeBook(id, findBookAuthor(id)!!)
 
     fun isBookStored (id: String): Boolean = getAllBookIds().contains(id)
 
@@ -323,6 +332,14 @@ class BookDatabase (context: Context): BaseDatabase() {
         if (!getAllAuthors().contains(name)) {
             throw Exception("author $name not exist")
         }
+    }
+    private fun findBookAuthor (bookId: String): String? {
+        for (author in getAllAuthors()) {
+            if (getAuthorBookIds(author).contains(bookId)) {
+                return author
+            }
+        }
+        return null
     }
 
     fun getAuthorBookIds (author: String) = read(storeKeys.authorBookIds(author)) ?: listOf()

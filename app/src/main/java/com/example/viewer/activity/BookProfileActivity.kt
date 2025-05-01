@@ -90,8 +90,6 @@ class BookProfileActivity: AppCompatActivity() {
         }
 
         rootBinding.saveButtonWrapper.apply {
-            visibility = if (isBookStored) View.GONE else View.VISIBLE
-
             setOnClickListener {
                 if (isBookStored) {
                     return@setOnClickListener
@@ -103,6 +101,8 @@ class BookProfileActivity: AppCompatActivity() {
                         if (!doAdded) {
                             return@addBook
                         }
+                        isBookStored = true
+                        refreshActionBar()
                         ConfirmDialog(this@BookProfileActivity, layoutInflater).show(
                             "已加入到書庫，返回書庫？",
                             positiveCallback = {
@@ -119,7 +119,6 @@ class BookProfileActivity: AppCompatActivity() {
         }
 
         rootBinding.localSettingButtonWrapper.apply {
-            visibility = if (isBookStored) View.VISIBLE else View.GONE
             setOnClickListener {
                 if (isBookStored) {
                     LocalReadSettingDialog(this@BookProfileActivity, layoutInflater).show(
@@ -139,7 +138,6 @@ class BookProfileActivity: AppCompatActivity() {
         }
 
         rootBinding.deleteButtonWrapper.apply {
-            visibility = if (isBookStored) View.VISIBLE else View.GONE
             setOnClickListener {
                 if (!isBookStored) {
                     return@setOnClickListener
@@ -149,7 +147,7 @@ class BookProfileActivity: AppCompatActivity() {
                     positiveCallback = {
                         toggleProgressBar(true)
                         CoroutineScope(Dispatchers.IO).launch {
-                            deleteBook(bookRecord.author!!, bookRecord.id).let { retFlag ->
+                            deleteBook(bookRecord.id, bookRecord.author).let { retFlag ->
                                 withContext(Dispatchers.Main) {
                                     toggleProgressBar(false)
                                     if (retFlag) {
@@ -172,6 +170,8 @@ class BookProfileActivity: AppCompatActivity() {
         }
 
         setContentView(rootBinding.root)
+
+        refreshActionBar()
     }
 
     override fun onResume() {
@@ -254,6 +254,21 @@ class BookProfileActivity: AppCompatActivity() {
         }
 
     /**
+     * modify buttons in action bar based on the current book stored state
+     */
+    private fun refreshActionBar () {
+        if (isBookStored) {
+            rootBinding.saveButtonWrapper.visibility = View.GONE
+            rootBinding.localSettingButtonWrapper.visibility = View.VISIBLE
+            rootBinding.deleteButtonWrapper.visibility = View.VISIBLE
+        } else {
+            rootBinding.saveButtonWrapper.visibility = View.VISIBLE
+            rootBinding.localSettingButtonWrapper.visibility = View.GONE
+            rootBinding.deleteButtonWrapper.visibility = View.GONE
+        }
+    }
+
+    /**
      * only for profile of stored book
      */
     private fun refreshCoverPage () {
@@ -269,7 +284,7 @@ class BookProfileActivity: AppCompatActivity() {
         }
     }
 
-    private fun deleteBook (author: String, bookId: String): Boolean {
+    private fun deleteBook (bookId: String, author: String?): Boolean {
         val ret = BookDatabase.getInstance(baseContext).removeBook(bookId, author)
         if (ret) {
             val bookFolder = File(getExternalFilesDir(null), bookId)
