@@ -97,17 +97,10 @@ abstract class BasePictureFetcher {
         val pictureFile = File(bookFolder, page.toString())
         println("[${this::class.simpleName}.${this::getPictureUrl.name}]\n${pictureFile.path}")
 
-        // when the picture is on downloading
-        if (downloadingPages.contains(page)) {
-            withContext(Dispatchers.IO) {
-                while (downloadingPages.contains(page)) {
-                    Thread.sleep(100)
-                }
-            }
-        }
+        // prevent return the url of an incomplete picture
+        waitPictureDownload(page)
 
         if (!pictureFile.exists()) {
-            downloadingPages.add(page) // fetching picture url may take time
             savePicture(page, progressListener).let {
                 if (it == null) {
                     return null
@@ -141,10 +134,16 @@ abstract class BasePictureFetcher {
             return null
         }
 
-        downloadingPages.add(page)
-
         val file = File(bookFolder, page.toString())
 
+        // prevent multiple download
+        waitPictureDownload(page)
+        if (file.exists()) {
+            return file
+        }
+        downloadingPages.add(page)
+
+        // build the download request
         val downloadClient = progressListener?.let {
             okHttpClient.newBuilder()
                 .addInterceptor { chain ->
@@ -155,7 +154,6 @@ abstract class BasePictureFetcher {
                     }
                 }.build()
         } ?: okHttpClient
-
         val request = Request.Builder().url(url).apply {
             for (header in headers) {
                 addHeader(header.key, header.value)
@@ -185,6 +183,19 @@ abstract class BasePictureFetcher {
     protected fun assertPageInRange (page: Int) {
         if (page < 0 || page >= pageNum) {
             throw Exception("page out of range")
+        }
+    }
+
+    /**
+     * wait if the picture of "page" is downloading
+     */
+    private suspend fun waitPictureDownload (page: Int) {
+        if (downloadingPages.contains(page)) {
+            withContext(Dispatchers.IO) {
+                while (downloadingPages.contains(page)) {
+                    Thread.sleep(100)
+                }
+            }
         }
     }
 }
