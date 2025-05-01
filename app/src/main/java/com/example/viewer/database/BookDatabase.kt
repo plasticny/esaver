@@ -182,7 +182,7 @@ class BookDatabase (context: Context): BaseDatabase() {
     fun removeBook (id: String, bookAuthor: String?): Boolean {
         try {
             removeAuthorBookId(
-                bookAuthor ?: findBookAuthor(id)!!,
+                bookAuthor ?: findBookAuthor(id),
                 id
             )
 
@@ -314,20 +314,20 @@ class BookDatabase (context: Context): BaseDatabase() {
     fun getBookLastViewTime (bookId: String) = read(storeKeys.bookLastViewTime(bookId)) ?: 0L
     fun updateBookLastViewTime (bookId: String) = store(storeKeys.bookLastViewTime(bookId), System.currentTimeMillis())
 
-    // authors
-    fun getAllAuthors (): List<String> = mutableListOf(NO_AUTHOR).also { it.addAll(
-        getUserAuthors()
-    ) }
-    fun getUserAuthors () = read(storeKeys.allAuthors()) ?: listOf() // get authors that user added (without No Author)
-    private fun findBookAuthor (bookId: String): String? {
+    fun findBookAuthor (bookId: String): String {
         for (author in getAllAuthors()) {
             if (getAuthorBookIds(author).contains(bookId)) {
                 return author
             }
         }
-        println("[${this::class.simpleName}.${this::findBookAuthor.name}] book author not found for $bookId")
-        return null
+        throw Exception("book author not found for $bookId")
     }
+
+    // authors
+    fun getAllAuthors (): List<String> = mutableListOf(NO_AUTHOR).also { it.addAll(
+        getUserAuthors()
+    ) }
+    fun getUserAuthors () = read(storeKeys.allAuthors()) ?: listOf() // get authors that user added (without No Author)
     private fun removeAuthor (name: String) {
         println("[BookDataset] removeAuthor $name")
 

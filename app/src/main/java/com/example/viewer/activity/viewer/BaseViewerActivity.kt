@@ -8,6 +8,7 @@ import android.graphics.Rect
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Bundle
+import android.text.InputType
 import android.view.GestureDetector
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -66,22 +67,25 @@ abstract class BaseViewerActivity: AppCompatActivity() {
         viewerActivityBinding.jumpToButton.apply {
             if (enableJumpToButton) {
                 setOnClickListener {
-                    SimpleEditTextDialog(this@BaseViewerActivity, layoutInflater).show(
-                        title = "跳至頁面",
+                    SimpleEditTextDialog(this@BaseViewerActivity, layoutInflater).apply {
+                        title = "跳至頁面"
+                        hint = "${firstPage + 1} - ${lastPage + 1}"
+                        inputType = InputType.TYPE_CLASS_NUMBER
                         validator = {
                             try {
                                 val valid = (it.toInt() - 1) in firstPage..lastPage
                                 if (!valid) {
-                                    Toast.makeText(baseContext, "頁數超出範圍", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(baseContext, "頁數超出範圍", Toast.LENGTH_SHORT)
+                                        .show()
                                 }
                                 valid
                             } catch (e: Exception) {
                                 Toast.makeText(baseContext, "輸入錯誤", Toast.LENGTH_SHORT).show()
                                 false
                             }
-                        },
+                        }
                         positiveCb = { toPage(it.toInt() - 1) }
-                    )
+                    }.show()
                 }
             }
         }

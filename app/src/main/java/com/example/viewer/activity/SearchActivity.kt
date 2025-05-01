@@ -125,25 +125,26 @@ class SearchActivity: AppCompatActivity() {
                 showSearchButton = true
                 saveCb = { retSearchMark ->
                     if (isTemporarySearch) {
-                        SimpleEditTextDialog(this@SearchActivity, layoutInflater).show (
-                            title = "標記這個搜尋",
-                            hint = "起個名字",
+                        SimpleEditTextDialog(this@SearchActivity, layoutInflater).apply {
+                            title = "標記這個搜尋"
+                            hint = "起個名字"
                             validator = { it.trim().isNotEmpty() }
-                        ) { name ->
-                            val saveSearchMark = SearchMark(
-                                name = name,
-                                categories = retSearchMark.categories,
-                                keyword = retSearchMark.keyword,
-                                tags = retSearchMark.tags
-                            )
-                            searchMarkId = searchDataSet.addSearchMark(saveSearchMark)
-                            allSearchMarkIds = searchDataSet.getAllSearchMarkIds()
-                            position = allSearchMarkIds.indexOf(searchMarkId)
-                            isTemporarySearch = false
-                            Toast.makeText(baseContext, "已儲存", Toast.LENGTH_SHORT).show()
-                            searchMark = saveSearchMark
-                            lifecycleScope.launch { reset() }
-                        }
+                            positiveCb = { name ->
+                                val saveSearchMark = SearchMark(
+                                    name = name,
+                                    categories = retSearchMark.categories,
+                                    keyword = retSearchMark.keyword,
+                                    tags = retSearchMark.tags
+                                )
+                                searchMarkId = searchDataSet.addSearchMark(saveSearchMark)
+                                allSearchMarkIds = searchDataSet.getAllSearchMarkIds()
+                                position = allSearchMarkIds.indexOf(searchMarkId)
+                                isTemporarySearch = false
+                                Toast.makeText(baseContext, "已儲存", Toast.LENGTH_SHORT).show()
+                                searchMark = saveSearchMark
+                                lifecycleScope.launch { reset() }
+                            }
+                        }.show()
                     } else {
                         searchDataSet.modifySearchMark(searchMarkId, retSearchMark)
                         searchMark = retSearchMark

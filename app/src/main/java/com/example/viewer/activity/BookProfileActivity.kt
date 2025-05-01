@@ -122,7 +122,8 @@ class BookProfileActivity: AppCompatActivity() {
             setOnClickListener {
                 if (isBookStored) {
                     LocalReadSettingDialog(this@BookProfileActivity, layoutInflater).show(
-                        bookRecord.id, bookRecord.author!!,
+                        bookRecord.id,
+                        bookRecord.author ?: bookDatabase.findBookAuthor(bookRecord.id),
                         onApplied = { coverPageUpdated ->
                             if (coverPageUpdated) {
                                 refreshCoverPage()
