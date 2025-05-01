@@ -128,8 +128,6 @@ abstract class BasePictureFetcher {
         headers: Map<String, String> = mapOf(),
         progressListener: ((contentLength: Long, downloadLength: Long) -> Unit)? = null
     ): File? {
-        println("[BasePictureFetcher.downloadPicture] $url")
-
         if(!Util.isInternetAvailable(context)) {
             return null
         }
@@ -162,6 +160,7 @@ abstract class BasePictureFetcher {
 
         return withContext(Dispatchers.IO) {
             try {
+                println("[BasePictureFetcher.downloadPicture] start download $page\n$url")
                 downloadClient.newCall(request).execute().use { response ->
                     if (response.isSuccessful) {
                         file.outputStream().use { response.body!!.byteStream().copyTo(it) }
