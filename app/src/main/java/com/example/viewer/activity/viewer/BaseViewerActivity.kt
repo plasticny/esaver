@@ -136,11 +136,11 @@ abstract class BaseViewerActivity: AppCompatActivity() {
     protected fun toggleLoadingUi (toggle: Boolean) {
         viewerActivityBinding.let {
             if (toggle) {
-                it.progressWrapper.visibility = ProgressBar.VISIBLE
+                it.progress.wrapper.visibility = ProgressBar.VISIBLE
                 it.photoView.visibility = View.INVISIBLE
                 it.photoView.imageAlpha = 0
             } else {
-                it.progressWrapper.visibility = ProgressBar.GONE
+                it.progress.wrapper.visibility = ProgressBar.GONE
                 it.photoView.visibility = View.VISIBLE
                 it.photoView.imageAlpha = 255
             }

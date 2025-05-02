@@ -268,12 +268,11 @@
 
     </ScrollView>
 
-    <ProgressBar
-        android:id="@+id/progress_bar"
-        style="?android:attr/progressBarStyleLarge"
-        android:layout_width="wrap_content"
+    <include
+        layout="@layout/component_progress"
+        android:id="@+id/progress"
         android:layout_height="wrap_content"
-        android:layout_gravity="center"
+        android:layout_width="wrap_content"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

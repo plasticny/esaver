@@ -71,13 +71,13 @@ class OnlineViewerActivity: BaseViewerActivity() {
 
         if (pictureUrls[page] == null) {
             if (this.page == page) {
-                viewerActivityBinding.progressTextView.text = getString(R.string.n_percent, 0)
+                viewerActivityBinding.progress.textView.text = getString(R.string.n_percent, 0)
             }
             withContext(Dispatchers.IO) {
                 fetcher.savePicture(page) { total, downloaded ->
                     if (this@OnlineViewerActivity.page == page) {
                         CoroutineScope(Dispatchers.Main).launch {
-                            viewerActivityBinding.progressTextView.text = getString(
+                            viewerActivityBinding.progress.textView.text = getString(
                                 R.string.n_percent, floor(downloaded.toDouble() / total * 100).toInt()
                             )
                         }

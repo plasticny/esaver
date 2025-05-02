@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.view.View
 import android.widget.Button
 import android.widget.ProgressBar
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -34,6 +35,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import kotlin.math.floor
 
 /**
  * ParcelableExtra: book_record
@@ -94,13 +96,26 @@ class BookProfileActivity: AppCompatActivity() {
                 if (isBookStored) {
                     return@setOnClickListener
                 }
+
+                rootBinding.progress.textView.text = getString(R.string.n_percent, 0)
+                toggleProgressBar(true)
+
                 lifecycleScope.launch {
-                    toggleProgressBar(true)
-                    BookAdder.getBookAdder(baseContext, BookSource.E).addBook(bookRecord.url) { doAdded ->
+                    BookAdder.getBookAdder(baseContext, BookSource.E).addBook(
+                        bookRecord.url,
+                        onSavingProgress = { total, downloaded ->
+                            CoroutineScope(Dispatchers.Main).launch {
+                                rootBinding.progress.textView.text = getString(
+                                    R.string.n_percent, floor(downloaded.toDouble() / total * 100).toInt()
+                                )
+                            }
+                        }
+                    ) { doAdded ->
                         toggleProgressBar(false)
                         if (!doAdded) {
                             return@addBook
                         }
+
                         isBookStored = true
                         refreshActionBar()
                         ConfirmDialog(this@BookProfileActivity, layoutInflater).show(
@@ -197,7 +212,7 @@ class BookProfileActivity: AppCompatActivity() {
         }
 
     private fun toggleProgressBar (toggle: Boolean) {
-        rootBinding.progressBar.visibility = if (toggle) ProgressBar.VISIBLE else ProgressBar.GONE
+        rootBinding.progress.wrapper.visibility = if (toggle) ProgressBar.VISIBLE else ProgressBar.GONE
     }
 
     private fun showTagDialog (category: String, value: String) {

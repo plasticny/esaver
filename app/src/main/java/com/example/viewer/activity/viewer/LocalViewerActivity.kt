@@ -114,12 +114,12 @@ class LocalViewerActivity: BaseViewerActivity() {
 
     override suspend fun getPictureUrl(page: Int): String? {
         if (this.page == page) {
-            viewerActivityBinding.progressTextView.text = getString(R.string.n_percent, 0)
+            viewerActivityBinding.progress.textView.text = getString(R.string.n_percent, 0)
         }
         return fetcher.getPictureUrl(page) { total, downloaded ->
             if (this.page == page) {
                 CoroutineScope(Dispatchers.Main).launch {
-                    viewerActivityBinding.progressTextView.text = getString(
+                    viewerActivityBinding.progress.textView.text = getString(
                         R.string.n_percent, floor(downloaded.toDouble() / total * 100).toInt()
                     )
                 }
