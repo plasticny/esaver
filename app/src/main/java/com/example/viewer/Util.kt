@@ -37,7 +37,9 @@ class Util {
             val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
             val network = connectivityManager.activeNetwork ?: return false
             val cap = connectivityManager.getNetworkCapabilities(network) ?: return false
-            return cap.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+            return cap.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+                    cap.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) ||
+                    cap.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
         }
 
         /**
