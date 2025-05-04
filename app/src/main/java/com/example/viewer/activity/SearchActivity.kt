@@ -3,7 +3,6 @@ package com.example.viewer.activity
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
@@ -18,10 +17,10 @@ import com.example.viewer.struct.BookRecord
 import com.example.viewer.R
 import com.example.viewer.Util
 import com.example.viewer.databinding.SearchActivityBinding
-import com.example.viewer.databinding.SearchBookBinding
 import com.example.viewer.database.SearchDatabase
 import com.example.viewer.database.SearchDatabase.Companion.SearchMark
 import com.example.viewer.database.SearchDatabase.Companion.Category
+import com.example.viewer.databinding.ActivitySearchBookBinding
 import com.example.viewer.dialog.SearchMarkDialog
 import com.example.viewer.dialog.SimpleEditTextDialog
 import kotlinx.coroutines.Dispatchers
@@ -73,11 +72,18 @@ class SearchActivity: AppCompatActivity() {
     private var reseting = true
     private var doNoMoreAlerted = false
 
+    // recycler view item metrics
+    private var coverImageWidth: Int = -1
+    private var coverImageHeight: Int = -1
+
     private val recyclerViewAdapter: BookRecyclerViewAdapter
         get() = binding.recyclerView.adapter as BookRecyclerViewAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        coverImageWidth = (resources.displayMetrics.widthPixels - Util.dp2px(this, 80F)) / 2
+        coverImageHeight = (coverImageWidth * 1.5).toInt()
 
         searchDataSet = SearchDatabase.getInstance(baseContext)
         allSearchMarkIds = searchDataSet.getAllSearchMarkIds()
@@ -95,7 +101,7 @@ class SearchActivity: AppCompatActivity() {
         binding.recyclerView.apply {
             visibility
             layoutManager = GridLayoutManager(context, 2)
-            adapter = BookRecyclerViewAdapter(layoutInflater, this@SearchActivity)
+            adapter = BookRecyclerViewAdapter()
             addOnScrollListener(object: RecyclerView.OnScrollListener() {
                 override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                     super.onScrolled(recyclerView, dx, dy)
@@ -348,69 +354,74 @@ class SearchActivity: AppCompatActivity() {
         val excludeTagEntries = searchDataSet.getAllExcludeTag()
         return excludeTagEntries.any { it.second.excluded(searchMark) }
     }
-}
 
-private class BookRecyclerViewAdapter(
-    private val layoutInflater: LayoutInflater,
-    private val activity: SearchActivity
-): RecyclerView.Adapter<BookRecyclerViewAdapter.Companion.ViewHolder>() {
-    companion object {
-        class ViewHolder (val binding: SearchBookBinding): RecyclerView.ViewHolder(binding.root)
-    }
+    //
+    // define recycler view adapter
+    //
 
-    private val bookRecords = mutableListOf<BookRecord>()
+    inner class BookRecyclerViewAdapter: RecyclerView.Adapter<BookRecyclerViewAdapter.ViewHolder>() {
+        inner class ViewHolder (val binding: ActivitySearchBookBinding): RecyclerView.ViewHolder(binding.root)
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder =
-        ViewHolder(SearchBookBinding.inflate(layoutInflater, parent, false))
+        private val bookRecords = mutableListOf<BookRecord>()
 
-    override fun getItemCount(): Int = bookRecords.size
-
-    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val binding = holder.binding
-        val bookRecord = bookRecords[position]
-
-        binding.searchBookImageView.let {
-            Glide.with(it.context).load(bookRecord.coverUrl).into(it)
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+            val binding = ActivitySearchBookBinding.inflate(layoutInflater, parent, false)
+            binding.searchBookImageView.layoutParams = binding.searchBookImageView.layoutParams.apply {
+                height = coverImageHeight
+                width = coverImageWidth
+            }
+            return ViewHolder(binding)
         }
 
-        binding.searchBookTitleTextView.text = bookRecord.title
+        override fun getItemCount(): Int = bookRecords.size
 
-        binding.pageNumTextView.apply {
-            text = context.getString(R.string.n_page, bookRecord.pageNum)
-        }
+        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+            val binding = holder.binding
+            val bookRecord = bookRecords[position]
 
-        binding.searchBookCatTextView.apply {
-            text = bookRecord.cat
-            setTextColor(context.getColor(Util.categoryFromName(bookRecord.cat).color))
-        }
+            binding.searchBookImageView.let {
+                Glide.with(it.context).load(bookRecord.coverUrl).into(it)
+            }
 
-        binding.root.apply {
-            setOnClickListener {
-                val intent = Intent(activity, BookProfileActivity::class.java)
-                intent.putExtra("book_record", bookRecord)
-                activity.startActivity(intent)
+            binding.searchBookTitleTextView.text = bookRecord.title
+
+            binding.pageNumTextView.apply {
+                text = context.getString(R.string.n_page, bookRecord.pageNum)
+            }
+
+            binding.searchBookCatTextView.apply {
+                text = bookRecord.cat
+                setTextColor(context.getColor(Util.categoryFromName(bookRecord.cat).color))
+            }
+
+            binding.root.apply {
+                setOnClickListener {
+                    val intent = Intent(context, BookProfileActivity::class.java)
+                    intent.putExtra("book_record", bookRecord)
+                    startActivity(intent)
+                }
             }
         }
-    }
 
-    fun getBooks (): List<BookRecord> = bookRecords
+        fun getBooks (): List<BookRecord> = bookRecords
 
-    fun addBooks (books: List<BookRecord>) {
-        val positionStart = bookRecords.size
-        bookRecords.addAll(books)
-        notifyItemRangeInserted(positionStart, books.size)
-    }
+        fun addBooks (books: List<BookRecord>) {
+            val positionStart = bookRecords.size
+            bookRecords.addAll(books)
+            notifyItemRangeInserted(positionStart, books.size)
+        }
 
-    fun refreshBooks (books: List<BookRecord>) {
-        bookRecords.clear()
-        bookRecords.addAll(books)
-        notifyDataSetChanged()
-    }
+        fun refreshBooks (books: List<BookRecord>) {
+            bookRecords.clear()
+            bookRecords.addAll(books)
+            notifyDataSetChanged()
+        }
 
-    fun clear () {
-        val size = bookRecords.size
-        bookRecords.clear()
-        notifyItemRangeRemoved(0, size)
+        fun clear () {
+            val size = bookRecords.size
+            bookRecords.clear()
+            notifyItemRangeRemoved(0, size)
+        }
     }
 }
 
