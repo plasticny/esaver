@@ -79,7 +79,7 @@ class BookProfileActivity: AppCompatActivity() {
             setTextColor(context.getColor(Util.categoryFromName(bookRecord.cat).color))
         }
 
-        rootBinding.readButtonWrapper.setOnClickListener {
+        rootBinding.readButton.setOnClickListener {
             if (isBookStored) {
                 startActivity(Intent(baseContext, LocalViewerActivity::class.java).apply {
                     putExtra("bookId", bookRecord.id)
@@ -91,7 +91,7 @@ class BookProfileActivity: AppCompatActivity() {
             }
         }
 
-        rootBinding.saveButtonWrapper.apply {
+        rootBinding.saveButton.apply {
             setOnClickListener {
                 if (isBookStored) {
                     return@setOnClickListener
@@ -133,7 +133,7 @@ class BookProfileActivity: AppCompatActivity() {
             }
         }
 
-        rootBinding.localSettingButtonWrapper.apply {
+        rootBinding.localSettingButton.apply {
             setOnClickListener {
                 if (isBookStored) {
                     LocalReadSettingDialog(this@BookProfileActivity, layoutInflater).show(
@@ -149,11 +149,11 @@ class BookProfileActivity: AppCompatActivity() {
             }
         }
 
-        rootBinding.infoButtonWrapper.setOnClickListener {
+        rootBinding.infoButton.setOnClickListener {
             showInfoDialog()
         }
 
-        rootBinding.deleteButtonWrapper.apply {
+        rootBinding.deleteButton.apply {
             setOnClickListener {
                 if (!isBookStored) {
                     return@setOnClickListener
@@ -205,6 +205,7 @@ class BookProfileActivity: AppCompatActivity() {
                 Button(baseContext).apply {
                     text = value
                     backgroundTintList = ColorStateList.valueOf(baseContext.getColor(R.color.darkgrey))
+                    isAllCaps = false
                     setTextColor(baseContext.getColor(R.color.grey))
                     setOnClickListener { showTagDialog(tagCat, value) }
                 }.also { tagValueWrapper.addView(it) }
@@ -274,13 +275,13 @@ class BookProfileActivity: AppCompatActivity() {
      */
     private fun refreshActionBar () {
         if (isBookStored) {
-            rootBinding.saveButtonWrapper.visibility = View.GONE
-            rootBinding.localSettingButtonWrapper.visibility = View.VISIBLE
-            rootBinding.deleteButtonWrapper.visibility = View.VISIBLE
+            rootBinding.saveButton.visibility = View.GONE
+            rootBinding.localSettingButton.visibility = View.VISIBLE
+            rootBinding.deleteButton.visibility = View.VISIBLE
         } else {
-            rootBinding.saveButtonWrapper.visibility = View.VISIBLE
-            rootBinding.localSettingButtonWrapper.visibility = View.GONE
-            rootBinding.deleteButtonWrapper.visibility = View.GONE
+            rootBinding.saveButton.visibility = View.VISIBLE
+            rootBinding.localSettingButton.visibility = View.GONE
+            rootBinding.deleteButton.visibility = View.GONE
         }
     }
 

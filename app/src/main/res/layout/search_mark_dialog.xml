@@ -163,20 +163,9 @@
         android:gravity="end">
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/cancel_button"
-            android:layout_width="90dp"
-            android:layout_height="wrap_content"
-            android:fontFamily="@font/icon_button_font"
-            android:text="@string/icon_button_cancel"
-            android:textColor="@color/black"
-            android:theme="@style/Theme.MaterialComponents.Light"
-            android:backgroundTint="@color/grey"/>
-
-        <com.google.android.material.button.MaterialButton
             android:id="@+id/save_button"
             android:layout_width="90dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
             android:fontFamily="@font/icon_button_font"
             android:text="@string/icon_button_save"
             android:textColor="@color/black"

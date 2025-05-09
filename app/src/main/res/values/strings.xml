@@ -25,6 +25,9 @@
     <string name="icon_button_save"><i>\uf0c7</i> 保存</string>
     <string name="icon_button_search"><i>\uf002</i> 搜尋</string>
     <string name="icon_button_confirm"><i>\uf00c</i> 確定</string>
+    <string name="icon_button_read"><i>\uf518</i> 閱讀</string>
+    <string name="icon_button_delete"><i>\uf1f8</i> 刪除</string>
+    <string name="icon_button_save_to_gallery"><i>\uf019</i> 存至書庫</string>
 <!--  strings  -->
     <string name="app_name">eSaver</string>
     <string name="enter_url">輸入URL</string>
