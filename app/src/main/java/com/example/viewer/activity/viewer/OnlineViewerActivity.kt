@@ -52,7 +52,10 @@ class OnlineViewerActivity: BaseViewerActivity() {
         }
     }
 
-    override fun reloadPage() = loadPage()
+    override fun reloadPage() {
+        fetcher.deletePicture(page)
+        loadPage()
+    }
 
     override fun loadPage() {
         super.loadPage()

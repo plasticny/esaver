@@ -110,6 +110,13 @@ abstract class BasePictureFetcher {
         return pictureFile.path
     }
 
+    fun deletePicture (page: Int) {
+        val file = File(bookFolder, page.toString())
+        if (file.exists()) {
+            file.delete()
+        }
+    }
+
     fun close () {
         if (!isLocal) {
             for (file in bookFolder.listFiles()!!) {

@@ -4,6 +4,9 @@ import android.animation.Animator
 import android.animation.Animator.AnimatorListener
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
+import android.graphics.BitmapFactory
+import android.graphics.ImageDecoder
+import android.graphics.ImageDecoder.DecodeException
 import android.graphics.Rect
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
@@ -22,6 +25,8 @@ import com.example.viewer.databinding.ViewerActivityBinding
 import com.example.viewer.dialog.SimpleEditTextDialog
 import kotlinx.coroutines.launch
 import java.io.File
+import java.io.IOError
+import java.io.IOException
 import kotlin.math.abs
 
 abstract class BaseViewerActivity: AppCompatActivity() {
@@ -184,7 +189,10 @@ abstract class BaseViewerActivity: AppCompatActivity() {
                 showPicture(
                     pictureUrl,
                     onPictureReady = { toggleLoadFailedScreen(false) },
-                    onFailed = { toggleLoadFailedScreen(true) },
+                    onFailed = {
+                        viewerActivityBinding.photoView.setImageDrawable(null)
+                        toggleLoadFailedScreen(true)
+                    },
                     onFinished = { toggleLoadingUi(false) }
                 )
             } else {
@@ -201,10 +209,11 @@ abstract class BaseViewerActivity: AppCompatActivity() {
         onFinished: (() -> Unit)? = null
     ) {
         val file = File(url)
-        if (file.exists()) {
-            viewerActivityBinding.photoView.setImageURI(Uri.fromFile(file))
+        try {
+            val drawable = ImageDecoder.decodeDrawable(ImageDecoder.createSource(file))
+            viewerActivityBinding.photoView.setImageDrawable(drawable)
             onPictureReady?.invoke()
-        } else {
+        } catch (e: DecodeException) {
             onFailed?.invoke()
         }
         onFinished?.invoke()

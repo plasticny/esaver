@@ -102,6 +102,7 @@ class LocalViewerActivity: BaseViewerActivity() {
 
         // download the picture again
         CoroutineScope(Dispatchers.IO).launch {
+            fetcher.deletePicture(page)
             fetcher.savePicture(page)
             if (myPage != page) {
                 return@launch
