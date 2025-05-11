@@ -1,12 +1,12 @@
 package com.example.viewer.activity
 
+import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
 import android.widget.ProgressBar
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -36,11 +36,25 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import kotlin.math.floor
+import kotlin.math.min
 
 /**
  * ParcelableExtra: book_record
  */
 class BookProfileActivity: AppCompatActivity() {
+    companion object {
+        // (width, height)
+        private var coverMetrics: Pair<Int, Int>? = null
+        private fun getCoverMetrics (context: Context): Pair<Int, Int> {
+            return coverMetrics ?: context.resources.displayMetrics.let { displayMetrics ->
+                val width = min(Util.dp2px(context, 160F), displayMetrics.widthPixels)
+                val height = (width * 1.5).toInt()
+                println("[${this::class.simpleName}] cover metrics: ($width, $height)")
+                Pair(width, height).also { coverMetrics = it }
+            }
+        }
+    }
+
     private lateinit var bookRecord: BookRecord
     private lateinit var rootBinding: BookProfileActivityBinding
 
@@ -49,13 +63,25 @@ class BookProfileActivity: AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val bookDatabase = BookDatabase.getInstance(baseContext)
-
         bookRecord = intent.getParcelableExtra("book_record", BookRecord::class.java)!!
 
+        val bookDatabase = BookDatabase.getInstance(baseContext)
         isBookStored = bookDatabase.isBookStored(bookRecord.id)
 
+        //
+        // init ui
+        //
+
         rootBinding = BookProfileActivityBinding.inflate(layoutInflater)
+
+        rootBinding.coverWrapper.let {
+            // adjust cover image size
+            val (width, height) = getCoverMetrics(this)
+            it.layoutParams = it.layoutParams.apply {
+                this.width = width
+                this.height = height
+            }
+        }
 
         rootBinding.coverImageView.let {
             Glide.with(baseContext).load(bookRecord.coverUrl).into(it)

@@ -19,16 +19,18 @@
             android:orientation="horizontal">
 
             <!--  cover page  -->
+            <!--  the width and height will be change in OnCreate  -->
 
             <androidx.cardview.widget.CardView
+                android:id="@+id/cover_wrapper"
                 android:layout_width="160dp"
                 android:layout_height="240dp"
                 app:cardCornerRadius="8dp">
 
                 <ImageView
                     android:id="@+id/cover_imageView"
-                    android:layout_width="160dp"
-                    android:layout_height="240dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
                     android:layout_gravity="center"
                     android:scaleType="centerCrop" />
 
@@ -48,8 +50,36 @@
                     android:layout_width="match_parent"
                     android:layout_height="0dp"
                     android:layout_weight="1"
+                    android:layout_marginBottom="8dp"
                     android:textIsSelectable="true"
                     android:textColor="@color/white"/>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <TextView
+                        android:id="@+id/info_button"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/font_awesome"
+                        android:textColor="@color/grey"
+                        android:text="@string/fa_circle_info"
+                        android:padding="4dp"
+                        android:textSize="18sp"/>
+
+                    <TextView
+                        android:id="@+id/local_setting_button"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:fontFamily="@font/font_awesome"
+                        android:textColor="@color/grey"
+                        android:text="@string/fa_wrench"
+                        android:padding="4dp"
+                        android:textSize="18sp"/>
+
+                </LinearLayout>
 
                 <LinearLayout
                     android:id="@+id/warning_container"
@@ -92,35 +122,6 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"/>
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:gravity="end">
-
-                        <TextView
-                            android:id="@+id/local_setting_button"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:fontFamily="@font/font_awesome"
-                            android:textColor="@color/grey"
-                            android:text="@string/fa_wrench"
-                            android:padding="4dp"
-                            android:textSize="18sp"/>
-
-                        <TextView
-                            android:id="@+id/info_button"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
-                            android:fontFamily="@font/font_awesome"
-                            android:textColor="@color/grey"
-                            android:text="@string/fa_circle_info"
-                            android:padding="4dp"
-                            android:textSize="18sp"/>
-
-                    </LinearLayout>
 
                 </LinearLayout>
 
