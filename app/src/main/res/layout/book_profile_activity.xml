@@ -152,40 +152,39 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal">
 
-            <TextView
+            <com.example.viewer.widget.IconTextView
                 android:id="@+id/save_button"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
                 android:paddingHorizontal="16dp"
                 android:gravity="center"
-                android:fontFamily="@font/icon_button_font"
-                android:text="@string/icon_button_save_to_gallery"
-                android:textAlignment="center"
                 android:textColor="@color/grey"
-                android:textSize="16sp" />
+                android:textSize="16sp"
+                app:viewIcon="@string/fa_download"
+                app:viewText="@string/save_to_gallery"/>
 
-            <TextView
+            <com.example.viewer.widget.IconTextView
                 android:id="@+id/delete_button"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
                 android:paddingHorizontal="16dp"
                 android:gravity="center"
-                android:fontFamily="@font/icon_button_font"
-                android:text="@string/icon_button_delete"
-                android:textAlignment="center"
                 android:textColor="@color/grey"
-                android:textSize="16sp" />
+                android:textSize="16sp"
+                app:viewIcon="@string/fa_trash"
+                app:viewText="@string/delete"/>
 
-            <Button
+            <com.example.viewer.widget.IconButton
+                style="@style/IconButtonCommonStyle"
                 android:id="@+id/read_button"
                 android:layout_width="0dp"
                 android:layout_height="60dp"
                 android:layout_weight="1"
                 android:backgroundTint="@color/darkgrey"
-                android:fontFamily="@font/icon_button_font"
-                android:text="@string/icon_button_read"
                 android:textColor="@color/white"
-                android:textSize="16sp" />
+                android:textSize="16dp"
+                app:viewIcon="@string/fa_book_open"
+                app:viewText="@string/read"/>
 
         </LinearLayout>
 

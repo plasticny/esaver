@@ -14,20 +14,12 @@
     <string name="fa_bookmark">\uf02e</string>
     <string name="fa_magnifying_glass">\uf002</string>
     <string name="fa_filter">\uf0b0</string>
-    <string name="fa_download">\uf019</string>
     <string name="fa_book_open">\uf518</string>
     <string name="fa_wrench">\uf0ad</string>
     <string name="fa_arrows_rotate">\uf021</string>
     <string name="fa_triangle_exclamation">\uf071</string>
     <string name="fa_circle_info">\uf05a</string>
-<!--  string for icon button  -->
-    <string name="icon_button_cancel"><i>\uf00d</i> 取消</string>
-    <string name="icon_button_save"><i>\uf0c7</i> 保存</string>
-    <string name="icon_button_search"><i>\uf002</i> 搜尋</string>
-    <string name="icon_button_confirm"><i>\uf00c</i> 確定</string>
-    <string name="icon_button_read"><i>\uf518</i> 閱讀</string>
-    <string name="icon_button_delete"><i>\uf1f8</i> 刪除</string>
-    <string name="icon_button_save_to_gallery"><i>\uf019</i> 存至書庫</string>
+    <string name="fa_download">\uf019</string>
 <!--  strings  -->
     <string name="app_name">eSaver</string>
     <string name="enter_url">輸入URL</string>
@@ -77,4 +69,6 @@
     <string name="source_url">來源URL</string>
     <string name="detail_info">詳細資訊</string>
     <string name="n_percent">%1$d%%</string>
+    <string name="cancel">取消</string>
+    <string name="save">保存</string>
 </resources>

@@ -25,4 +25,10 @@
         <item name="android:fontFamily">@font/font_awesome</item>
         <item name="android:textSize">20sp</item>
     </style>
+<!--  icon button  -->
+    <style name="IconButtonCommonStyle" parent="Widget.MaterialComponents.Button">
+        <item name="android:theme">@style/Theme.MaterialComponents.Light</item>
+        <item name="android:gravity">center</item>
+        <item name="rippleColor">@color/transparent</item>
+    </style>
 </resources>
