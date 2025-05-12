@@ -11,6 +11,9 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.viewer.struct.BookRecord
 import com.example.viewer.Util
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.jsoup.Jsoup
 import java.io.File
 
 enum class BookSource (val keyString: String) {
@@ -49,6 +52,10 @@ class BookDatabase (context: Context): BaseDatabase() {
         fun bookTitle (bookId: String): Preferences.Key<String> {
             assertBookIdExist(bookId)
             return stringPreferencesKey("${bookId}_title")
+        }
+        fun bookSubTitle (bookId: String): Preferences.Key<String> {
+            assertBookIdExist(bookId)
+            return stringPreferencesKey("${bookId}_subTitle")
         }
         fun bookPageUrls (bookId: String): CustomPreferencesKey<List<String>> {
             assertBookIdExist(bookId)
@@ -117,6 +124,7 @@ class BookDatabase (context: Context): BaseDatabase() {
         url: String,
         category: SearchDatabase.Companion.Category,
         title: String,
+        subtitle: String = "",
         pageNum: Int,
         tags: Map<String, List<String>>,
         source: BookSource
@@ -135,6 +143,10 @@ class BookDatabase (context: Context): BaseDatabase() {
         store(storeKeys.bookCatOrdinal(id), category.ordinal)
         // title
         store(storeKeys.bookTitle(id), title)
+        // subtitle
+        if (subtitle.isNotEmpty()) {
+            store(storeKeys.bookSubTitle(id), subtitle)
+        }
         // total page
         store(storeKeys.bookPageNum(id), pageNum)
         // tags
@@ -168,6 +180,7 @@ class BookDatabase (context: Context): BaseDatabase() {
             },
             cat = Util.categoryFromOrdinal(read(storeKeys.bookCatOrdinal(id))!!).name,
             title = read(storeKeys.bookTitle(id))!!,
+            subtitle = read(storeKeys.bookSubTitle(id)) ?: "",
             pageNum = getBookPageNum(id),
             tags = read(storeKeys.bookTags(id)) ?: mapOf(),
             author = author
@@ -188,6 +201,7 @@ class BookDatabase (context: Context): BaseDatabase() {
 
             remove(storeKeys.bookUrl(id))
             remove(storeKeys.bookTitle(id))
+            remove(storeKeys.bookSubTitle(id))
             remove(storeKeys.bookPageNum(id))
             remove(storeKeys.bookCatOrdinal(id))
             remove(storeKeys.bookTags(id))

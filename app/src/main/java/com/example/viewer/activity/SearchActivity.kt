@@ -23,6 +23,7 @@ import com.example.viewer.database.SearchDatabase.Companion.Category
 import com.example.viewer.databinding.ActivitySearchBookBinding
 import com.example.viewer.dialog.SearchMarkDialog
 import com.example.viewer.dialog.SimpleEditTextDialog
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -259,9 +260,9 @@ class SearchActivity: AppCompatActivity() {
 
         loadingMore = true
 
-        binding.searchProgressBar.visibility = ProgressBar.VISIBLE
+        binding.searchProgressBar.wrapper.visibility = ProgressBar.VISIBLE
         val books = excludeTagFilter(fetchBooks())
-        binding.searchProgressBar.visibility = ProgressBar.GONE
+        binding.searchProgressBar.wrapper.visibility = ProgressBar.GONE
 
         if (mySearchId == searchMarkId) {
             recyclerViewAdapter.addBooks(books)
@@ -355,6 +356,34 @@ class SearchActivity: AppCompatActivity() {
         return excludeTagEntries.any { it.second.excluded(searchMark) }
     }
 
+    private suspend fun fetchDetailBookRecord (briefBookRecord: BookRecord): BookRecord {
+        withContext(Dispatchers.Main) { binding.screenProgressBarWrapper.visibility = View.VISIBLE }
+        val doc = withContext(Dispatchers.IO) {
+            Jsoup.connect(briefBookRecord.url).get()
+        }
+        withContext(Dispatchers.Main) { binding.screenProgressBarWrapper.visibility = View.GONE }
+
+        return BookRecord(
+            id = briefBookRecord.id,
+            url = briefBookRecord.url,
+            coverUrl = briefBookRecord.coverUrl,
+            cat = briefBookRecord.cat,
+            title = doc.selectFirst("#gj")!!.text().trim().let {
+                if (it.isNotEmpty()) it else briefBookRecord.title
+            },
+            subtitle = briefBookRecord.title,
+            pageNum = briefBookRecord.pageNum,
+            tags = doc.select("#taglist tr").run {
+                val tags = mutableMapOf<String, List<String>>()
+                forEach { tr ->
+                    val category = tr.selectFirst(".tc")!!.text().trim().dropLast(1)
+                    tags[category] = tr.select(".gt,.gtl").map { it.text().trim() }
+                }
+                tags
+            }
+        )
+    }
+
     //
     // define recycler view adapter
     //
@@ -396,9 +425,11 @@ class SearchActivity: AppCompatActivity() {
 
             binding.root.apply {
                 setOnClickListener {
-                    val intent = Intent(context, BookProfileActivity::class.java)
-                    intent.putExtra("book_record", bookRecord)
-                    startActivity(intent)
+                    CoroutineScope(Dispatchers.IO).launch {
+                        val intent = Intent(context, BookProfileActivity::class.java)
+                        intent.putExtra("book_record", fetchDetailBookRecord(bookRecord))
+                        startActivity(intent)
+                    }
                 }
             }
         }

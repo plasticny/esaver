@@ -8,14 +8,12 @@ import android.view.ViewGroup
 import android.view.ViewGroup.MarginLayoutParams
 import android.widget.ImageView
 import android.widget.TextView
-import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.viewer.activity.BookProfileActivity
-import com.example.viewer.activity.viewer.LocalViewerActivity
 import com.example.viewer.database.BookDatabase
 import com.example.viewer.databinding.FragmentMainGalleryBookBinding
 import com.example.viewer.dialog.SelectAuthorDialog
@@ -28,20 +26,6 @@ class BookGallery (
     private val recyclerView: RecyclerView
 ) {
     private val bookDataset = BookDatabase.getInstance(context)
-    private val adapterEventHandler = object: AdapterEventHandler {
-        override fun onBookClicked(bookId: String) = openBook(bookId)
-        override fun onBookLongClicked(author: String, bookId: String) {
-            context.startActivity(Intent(context, BookProfileActivity::class.java).apply {
-                putExtra(
-                    "book_record",
-                    bookDataset.getBook(context, bookId, author)
-                )
-            })
-        }
-        override fun onAuthorClicked() = SelectAuthorDialog(context, layoutInflater).show {
-                author -> scrollToAuthor(author)
-        }
-    }
     private val filter = Filter()
 
     // recycler view item metrics
@@ -77,20 +61,20 @@ class BookGallery (
 
     fun openRandomBook () = openBook(RandomBook.next(context, !Util.isInternetAvailable(context)))
 
-    private fun openBook (bookId: String) {
-        if (!Util.isInternetAvailable(context) && File(context.getExternalFilesDir(null), bookId).listFiles()!!.isEmpty()) {
-            Toast.makeText(context, "沒有網絡+未下載任何一頁", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        bookDataset.updateBookLastViewTime(bookId)
-
-        val intent = Intent(context, LocalViewerActivity::class.java)
-        intent.putExtra("bookId", bookId)
-        context.startActivity(intent)
+    private fun openBook (bookId: String, author: String? = null) {
+        context.startActivity(Intent(context, BookProfileActivity::class.java).apply {
+            putExtra(
+                "book_record",
+                bookDataset.getBook(context, bookId, author)
+            )
+        })
     }
 
-    private fun scrollToAuthor (author: String) = recyclerView.scrollToPosition(authorRecyclerViewAdapter.getAuthorPosition(author)!!)
+    private fun scrollToAuthor (author: String) = recyclerView.scrollToPosition(authorRecyclerViewAdapter.getAuthorPosition(author))
+
+    private fun showSelectAuthorDialog () = SelectAuthorDialog(context, layoutInflater).show {
+            author -> scrollToAuthor(author)
+    }
 
     inner class Filter {
         var doDownloadComplete: Boolean? = null
@@ -107,12 +91,6 @@ class BookGallery (
     //
     // define recycler view adapters
     //
-    interface AdapterEventHandler {
-        fun onBookClicked (bookId: String)
-        fun onBookLongClicked (author: String, bookId: String)
-        fun onAuthorClicked ()
-    }
-
     inner class AuthorRecyclerViewAdapter: RecyclerView.Adapter<AuthorRecyclerViewAdapter.AuthorRecyclerViewHolder>() {
         inner class AuthorRecyclerViewHolder (itemView: View): RecyclerView.ViewHolder(itemView) {
             val wrapper: ConstraintLayout = itemView.findViewById(R.id.gallery_author_wrapper)
@@ -136,7 +114,7 @@ class BookGallery (
 
             holder.authorTextView.apply {
                 text = if (author == BookDatabase.NO_AUTHOR) ContextCompat.getString(context, R.string.noName) else author
-                setOnClickListener { adapterEventHandler.onAuthorClicked() }
+                setOnClickListener { showSelectAuthorDialog() }
             }
 
             holder.bookRecyclerView.apply {
@@ -230,11 +208,10 @@ class BookGallery (
             ).into(holder.imageView)
 
             holder.imageView.setOnClickListener {
-                adapterEventHandler.onBookClicked(id)
+                openBook(id, author)
             }
 
             holder.imageView.setOnLongClickListener {
-                adapterEventHandler.onBookLongClicked(author, id)
                 true
             }
         }

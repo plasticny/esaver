@@ -3,6 +3,11 @@ package com.example.viewer.struct
 import android.os.Bundle
 import android.os.Parcel
 import android.os.Parcelable
+import com.example.viewer.Util
+import com.example.viewer.database.BookSource
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.jsoup.Jsoup
 
 data class BookRecord (
     val id: String,
@@ -10,6 +15,7 @@ data class BookRecord (
     val coverUrl: String,
     val cat: String,
     val title: String,
+    val subtitle: String = "",
     val pageNum: Int,
     val tags: Map<String, List<String>>,
     val author: String? = null
@@ -22,9 +28,10 @@ data class BookRecord (
         override fun newArray(size: Int): Array<BookRecord?> {
             return arrayOfNulls(size)
         }
-    }
+     }
 
     private constructor(parcel: Parcel) : this(
+        parcel.readString()!!,
         parcel.readString()!!,
         parcel.readString()!!,
         parcel.readString()!!,
@@ -45,6 +52,7 @@ data class BookRecord (
         parcel.writeString(coverUrl)
         parcel.writeString(cat)
         parcel.writeString(title)
+        parcel.writeString(subtitle)
         parcel.writeInt(pageNum)
         parcel.writeBundle(
             Bundle().apply {

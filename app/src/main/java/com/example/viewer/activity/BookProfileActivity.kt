@@ -107,6 +107,7 @@ class BookProfileActivity: AppCompatActivity() {
 
         rootBinding.readButton.setOnClickListener {
             if (isBookStored) {
+                BookDatabase.getInstance(baseContext).updateBookLastViewTime(bookRecord.id)
                 startActivity(Intent(baseContext, LocalViewerActivity::class.java).apply {
                     putExtra("bookId", bookRecord.id)
                 })
@@ -270,6 +271,11 @@ class BookProfileActivity: AppCompatActivity() {
         val dialog = AlertDialog.Builder(this).setView(dialogViewBinding.root).create()
 
         dialogViewBinding.urlTextView.text = bookRecord.url
+        if (bookRecord.subtitle.isEmpty()) {
+            dialogViewBinding.subtitle.visibility = View.GONE
+        } else {
+            dialogViewBinding.subtitle.text = bookRecord.subtitle
+        }
 
         dialog.show()
     }

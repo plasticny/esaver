@@ -22,6 +22,7 @@ abstract class BaseDatabase protected constructor () {
     protected fun<T> isKeyExist (key: Preferences.Key<T>) = runBlocking {
         dataStore.data.map { it.contains(key) }.first()
     }
+    protected fun<T> isKeyExist (key: CustomPreferencesKey<T>) = isKeyExist(key.key)
 
     protected fun<T> store (key: Preferences.Key<T>, v: T) {
         runBlocking { dataStore.edit { it[key] = v } }
