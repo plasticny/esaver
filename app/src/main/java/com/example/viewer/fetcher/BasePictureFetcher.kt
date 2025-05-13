@@ -100,11 +100,7 @@ abstract class BasePictureFetcher {
         waitPictureDownload(page)
 
         if (!pictureFile.exists()) {
-            savePicture(page, progressListener).let {
-                if (it == null) {
-                    return null
-                }
-            }
+            savePicture(page, progressListener) ?: return null
         }
 
         return pictureFile.path

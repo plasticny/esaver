@@ -197,6 +197,7 @@ abstract class BaseViewerActivity: AppCompatActivity() {
                 )
             } else {
                 toggleLoadingUi(false)
+                viewerActivityBinding.photoView.setImageDrawable(null)
                 toggleLoadFailedScreen(true)
             }
         }
