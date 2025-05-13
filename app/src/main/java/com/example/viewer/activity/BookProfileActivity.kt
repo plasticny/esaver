@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.view.View
 import android.widget.Button
 import android.widget.ProgressBar
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -120,43 +121,7 @@ class BookProfileActivity: AppCompatActivity() {
 
         rootBinding.saveButton.apply {
             setOnClickListener {
-                if (isBookStored) {
-                    return@setOnClickListener
-                }
-
-                rootBinding.progress.textView.text = getString(R.string.n_percent, 0)
-                toggleProgressBar(true)
-
-                lifecycleScope.launch {
-                    BookAdder.getBookAdder(baseContext, BookSource.E).addBook(
-                        bookRecord.url,
-                        onSavingProgress = { total, downloaded ->
-                            CoroutineScope(Dispatchers.Main).launch {
-                                rootBinding.progress.textView.text = getString(
-                                    R.string.n_percent, floor(downloaded.toDouble() / total * 100).toInt()
-                                )
-                            }
-                        }
-                    ) { doAdded ->
-                        toggleProgressBar(false)
-                        if (!doAdded) {
-                            return@addBook
-                        }
-
-                        isBookStored = true
-                        refreshActionBar()
-                        ConfirmDialog(this@BookProfileActivity, layoutInflater).show(
-                            "已加入到書庫，返回書庫？",
-                            positiveCallback = {
-                                startActivity(
-                                    Intent(baseContext, MainActivity::class.java).apply {
-                                        addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                                    }
-                                )
-                            }
-                        )
-                    }
-                }
+                lifecycleScope.launch { saveBook() }
             }
         }
 
@@ -343,5 +308,66 @@ class BookProfileActivity: AppCompatActivity() {
             bookFolder.delete()
         }
         return ret
+    }
+
+    private suspend fun saveBook () {
+        if (isBookStored) {
+            return
+        }
+
+        rootBinding.progress.textView.text = getString(R.string.n_percent, 0)
+        toggleProgressBar(true)
+
+        // download cover image file to tmp
+        val coverFile = withContext(Dispatchers.IO) {
+            EPictureFetcher(baseContext, 1, bookRecord.url).savePicture(0) { total, downloaded ->
+                CoroutineScope(Dispatchers.Main).launch {
+                    rootBinding.progress.textView.text = getString(
+                        R.string.n_percent, floor(downloaded.toDouble() / total * 100).toInt()
+                    )
+                }
+            }
+        }
+        if (coverFile == null) {
+            Toast.makeText(baseContext, "儲存失敗，再試一次", Toast.LENGTH_SHORT).show()
+            toggleProgressBar(false)
+            return
+        }
+
+        // create book folder
+        File(getExternalFilesDir(null), bookRecord.id).also {
+            if (!it.exists()) {
+                it.mkdirs()
+            }
+            // move cover picture
+            val file = File(it, coverFile.name)
+            coverFile.copyTo(file)
+            coverFile.delete()
+        }
+
+        BookDatabase.getInstance(baseContext).addBook(
+            id = bookRecord.id,
+            url = bookRecord.url,
+            category = Util.categoryFromName(bookRecord.cat),
+            title = bookRecord.title,
+            subtitle = bookRecord.subtitle,
+            pageNum = bookRecord.pageNum,
+            tags = bookRecord.tags,
+            source = BookSource.E
+        )
+
+        // update ui
+        isBookStored = true
+        refreshActionBar()
+        ConfirmDialog(this, layoutInflater).show(
+            "已加入到書庫，返回書庫？",
+            positiveCallback = {
+                startActivity(
+                    Intent(baseContext, MainActivity::class.java).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                    }
+                )
+            }
+        )
     }
 }
