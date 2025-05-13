@@ -6,6 +6,7 @@ import com.example.viewer.database.BookSource
 import com.example.viewer.database.BookDatabase
 import com.example.viewer.Util
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType
 import okhttp3.OkHttpClient
@@ -194,7 +195,7 @@ abstract class BasePictureFetcher {
         if (downloadingPages.contains(page)) {
             withContext(Dispatchers.IO) {
                 while (downloadingPages.contains(page)) {
-                    Thread.sleep(100)
+                    delay(100)
                 }
             }
         }
