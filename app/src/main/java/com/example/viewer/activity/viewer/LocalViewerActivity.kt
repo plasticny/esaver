@@ -3,11 +3,13 @@ package com.example.viewer.activity.viewer
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
+import android.net.Uri
 import android.os.Bundle
 import android.view.KeyEvent
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.lifecycleScope
+import com.example.viewer.R
 import com.example.viewer.fetcher.BasePictureFetcher
 import com.example.viewer.database.BookDatabase
 import com.example.viewer.RandomBook
@@ -22,6 +24,7 @@ import kotlinx.coroutines.plus
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
+import kotlin.math.floor
 
 /**
  * string extra: bookId
@@ -45,6 +48,9 @@ class LocalViewerActivity: BaseViewerActivity() {
     @Volatile
     private var askingNextBook = false
 
+    override val enableBookmarkButton = true
+    override val enableJumpToButton = true
+
     override fun onCreate(savedInstanceState: Bundle?) {
         bookDataset = BookDatabase.getInstance(baseContext)
         bookId = intent.getStringExtra("bookId")!!
@@ -52,8 +58,10 @@ class LocalViewerActivity: BaseViewerActivity() {
 
         super.onCreate(savedInstanceState)
 
-        if (page + 1 <= lastPage) {
-            preloadPage(page + 1)
+        viewerActivityBinding.bookmarkButton.setOnClickListener {
+            BookmarkDialog(this, layoutInflater, bookId, page) { bookMarkPage ->
+                toPage(bookMarkPage)
+            }.show()
         }
     }
 
@@ -62,18 +70,6 @@ class LocalViewerActivity: BaseViewerActivity() {
         return true
     }
 
-    override fun onPageTextClicked() =
-        BookmarkDialog(this, layoutInflater, bookId, page) { bookMarkPage ->
-            page = bookMarkPage
-            loadPage()
-            if (page + 1 <= lastPage) {
-                preloadPage(page + 1)
-            }
-            if (page - 1 >= firstPage) {
-                preloadPage(page - 1)
-            }
-        }.show()
-
     override fun nextPage () {
         if (page == lastPage && !askingNextBook) {
             askingNextBook = true
@@ -81,37 +77,22 @@ class LocalViewerActivity: BaseViewerActivity() {
                 "已到尾頁，到下一本書嗎？",
                 positiveCallback = {
                     nextBook()
-                    askingNextBook = false
                 },
-                negativeCallback = {
+                finishCb = {
                     askingNextBook = false
                 }
             )
         }
         else if (page < lastPage) {
-            page++
-            while (skipPageSet.contains(page)) {
-                page++
-            }
+            page = nextPageOf(page)!!
             loadPage()
-
-            if (page + 1 <= lastPage) {
-                preloadPage(page + 1)
-            }
         }
     }
 
     override fun prevPage () {
         if (page > firstPage) {
-            page--
-            while (skipPageSet.contains(page)) {
-                page--
-            }
+            page = prevPageOf(page)!!
             loadPage()
-
-            if (page - 1 >= firstPage) {
-                preloadPage(page - 1)
-            }
         }
     }
 
@@ -135,18 +116,44 @@ class LocalViewerActivity: BaseViewerActivity() {
         }
     }
 
-    override suspend fun getPictureUrl(page: Int): String? = fetcher.getPictureUrl(page)
+    override suspend fun getPictureUrl(page: Int): String? {
+        if (this.page == page) {
+            viewerActivityBinding.progressTextView.text = getString(R.string.n_percent, 0)
+        }
+        return fetcher.getPictureUrl(page) { total, downloaded ->
+            if (this.page == page) {
+                CoroutineScope(Dispatchers.Main).launch {
+                    viewerActivityBinding.progressTextView.text = getString(
+                        R.string.n_percent, floor(downloaded.toDouble() / total * 100).toInt()
+                    )
+                }
+            }
+        }
+    }
+
+    override fun loadPage() {
+        super.loadPage()
+
+        val np = nextPageOf(page)
+        val pp = prevPageOf(page)
+
+        np?.let { nextPageOf(np)?.let { preloadPage(it) } }
+        pp?.let { prevPageOf(pp)?.let { preloadPage(it) } }
+
+        np?.let { preloadPage(it) }
+        pp?.let { preloadPage(it) }
+    }
 
     private fun preloadPage (page: Int) {
         if (page < firstPage || page > lastPage) {
-            throw Exception("page out of range")
+            return
         }
 
         lifecycleScope.launch {
             if (!File(bookFolder, page.toString()).exists() && !Util.isInternetAvailable(baseContext)) {
                 return@launch
             }
-            fetcher.getPictureUrl(page)?.let {
+            getPictureUrl(page)?.let {
                 showPicture(
                     it, getPageSignature(page),
                     imageView = viewerActivityBinding.viewerTmpImageVew
@@ -188,6 +195,11 @@ class LocalViewerActivity: BaseViewerActivity() {
             setOnClickListener {
                 bookDataset.setBookSkipPages(bookId, skipPageSet.toMutableList().also { it.add(page) })
                 skipPageSet = bookDataset.getBookSkipPages(bookId).toSet()
+
+                if (bookDataset.getBookCoverPage(bookId) != page) {
+                    // image file of skipped page is no longer needed
+                    File(bookFolder, page.toString()).delete()
+                }
 
                 if (page == firstPage) {
                     firstPage++
@@ -277,5 +289,29 @@ class LocalViewerActivity: BaseViewerActivity() {
                 toggleLoadingUi(false)
             }
         }
+    }
+
+    private fun nextPageOf (page: Int): Int? {
+        if (page == lastPage) {
+            return null
+        }
+
+        var ret = page + 1
+        while (skipPageSet.contains(ret)) {
+            ret++
+        }
+        return ret
+    }
+
+    private fun prevPageOf (page: Int): Int? {
+        if (page == firstPage) {
+            return null
+        }
+
+        var ret = page - 1
+        while (skipPageSet.contains(ret)) {
+            ret--
+        }
+        return ret
     }
 }

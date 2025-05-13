@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/darkgrey"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/filter_out"
+        android:textColor="@color/grey"
+        android:textSize="20sp"/>
+
+    <ScrollView
+        android:id="@+id/tag_scrollView"
+        android:layout_width="match_parent"
+        android:layout_height="300dp"
+        android:layout_marginTop="16dp"
+        android:background="@color/darkgrey">
+
+        <LinearLayout
+            android:id="@+id/tag_wrapper"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!--    some tag item will be added here    -->
+
+        </LinearLayout>
+
+    </ScrollView>
+
+</LinearLayout>

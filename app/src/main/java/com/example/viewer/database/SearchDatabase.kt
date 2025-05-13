@@ -2,15 +2,16 @@ package com.example.viewer.database
 
 import android.content.Context
 import android.os.Environment
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.byteArrayPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.viewer.R
 import com.example.viewer.Util
+import com.example.viewer.struct.ExcludeTagRecord
 import java.io.File
 
 typealias Tags = Map<String, List<String>>
@@ -63,35 +64,44 @@ class SearchDatabase (context: Context): BaseDatabase() {
     override val dataStore = context.searchDataStore
 
     private val keys = object {
-        fun nextId () = intPreferencesKey("${TAG}_nextSearchMarkId")
+        fun nextSearchMarkId () = intPreferencesKey("${TAG}_nextSearchMarkId")
         /**
          * search mark with id -1 is temporary search mark
          */
-        fun allSearchMarkIds () = byteArrayPreferencesKey("${TAG}_searchMarkIds")
+        fun allSearchMarkIds () = CustomPreferencesKey<List<Int>>("${TAG}_searchMarkIds")
+
         fun searchMarkName (id: Int) = stringPreferencesKey("${TAG}_searchMarkName_$id")
         /**
-         * list of integer, the category object is saved as its ordinal
+         * the category object is saved as its ordinal
          */
-        fun searchMarkCats (id: Int) = byteArrayPreferencesKey("${TAG}_searchMarkCats_$id")
+        fun searchMarkCats (id: Int) = CustomPreferencesKey<List<Int>>("${TAG}_searchMarkCats_$id")
         fun searchMarkKeyword (id: Int) = stringPreferencesKey("${TAG}_searchMarkKeyword_$id")
-        fun searchMarkTags (id: Int) = byteArrayPreferencesKey("${TAG}_searchMarkTags_$id")
+        fun searchMarkTags (id: Int) = CustomPreferencesKey<Tags>("${TAG}_searchMarkTags_$id")
         fun searchMarkListLastUpdate () = longPreferencesKey("${TAG}_searchMarkListLastUpdate")
-        fun excludeTags () = byteArrayPreferencesKey("${TAG}_excludeTags")
+
+        fun nextExcludeTagId () = intPreferencesKey("${TAG}_nextExcludeTagId")
+        fun allExcludeTagIds () = CustomPreferencesKey<List<Int>>("${TAG}_excludeTagIds")
+        fun excludeTagTags (id: Int) = CustomPreferencesKey<Tags>("${TAG}_excludeTagTags_$id")
+        fun excludeTagCats (id: Int) = CustomPreferencesKey<Set<Int>>("${TAG}_excludeTagCats_$id")
         fun excludeTagLastUpdate () = longPreferencesKey("${TAG}_excludeTagLastUpdate")
     }
 
-    private fun getNextId (): Int {
-        val id = read(keys.nextId()) ?: 1
-        store(keys.nextId(), id + 1)
-        return id
+    fun dev () {
+        store(
+            keys.allExcludeTagIds(),
+            getAllExcludeIds().toMutableList().apply { add(28) }
+        )
     }
 
+    //
+    // search mark
+    //
     /**
      * get all search mark id in the dataset
      *
      * @return a list of search mark id which also reflects the sorting arrangement of user
      */
-    fun getAllSearchMarkIds () = readFromByteArray<List<Int>>(keys.allSearchMarkIds()) ?: listOf()
+    fun getAllSearchMarkIds () = read(keys.allSearchMarkIds()) ?: listOf()
     fun moveSearchMarkPosition (id: Int, toId: Int) {
         val ids = getAllSearchMarkIds().toMutableList()
         val from = ids.indexOf(id)
@@ -101,17 +111,7 @@ class SearchDatabase (context: Context): BaseDatabase() {
         }
         ids.removeAt(from)
         ids.add(to, id)
-        storeAsByteArray(keys.allSearchMarkIds(), ids)
-    }
-
-    //
-    // search mark
-    //
-    private fun storeSearchMark (id: Int, searchMark: SearchMark) {
-        store(keys.searchMarkName(id), searchMark.name)
-        storeAsByteArray(keys.searchMarkCats(id), searchMark.categories.map { it.ordinal })
-        store(keys.searchMarkKeyword(id), searchMark.keyword)
-        storeAsByteArray(keys.searchMarkTags(id), searchMark.tags)
+        store(keys.allSearchMarkIds(), ids)
     }
     fun removeSearchMark (id: Int) {
         if (!isKeyExist(keys.searchMarkName(id))) {
@@ -121,7 +121,7 @@ class SearchDatabase (context: Context): BaseDatabase() {
         remove(keys.searchMarkCats(id))
         remove(keys.searchMarkKeyword(id))
         remove(keys.searchMarkTags(id))
-        storeAsByteArray(
+        store(
             keys.allSearchMarkIds(),
             getAllSearchMarkIds().toMutableList().also { it.remove(id) }
         )
@@ -132,39 +132,81 @@ class SearchDatabase (context: Context): BaseDatabase() {
      * @return id of added search mark
      */
     fun addSearchMark (searchMark: SearchMark): Int {
-        val id = getNextId()
+        val id = getNextSearchMarkId()
         storeSearchMark(id, searchMark)
-        storeAsByteArray(keys.allSearchMarkIds(), getAllSearchMarkIds().toMutableList().apply { add(id) })
+        store(keys.allSearchMarkIds(), getAllSearchMarkIds().toMutableList().apply { add(id) })
         store(keys.searchMarkListLastUpdate(), System.currentTimeMillis())
         return id
     }
     fun getSearchMark (id: Int): SearchMark = SearchMark(
         name = read(keys.searchMarkName(id))!!,
-        categories = readFromByteArray<List<Int>>(keys.searchMarkCats(id))!!.map { Util.categoryFromOrdinal(it) },
+        categories = read(keys.searchMarkCats(id))!!.map { Util.categoryFromOrdinal(it) },
         keyword = read(keys.searchMarkKeyword(id)) ?: "",
-        tags = readFromByteArray<Tags>(keys.searchMarkTags(id))!!
+        tags = read(keys.searchMarkTags(id))!!
     )
     fun modifySearchMark (id: Int, searchMark: SearchMark) {
         if (!isKeyExist(keys.searchMarkName(id))) {
             throw Exception("no search mark with id $id")
         }
         storeSearchMark(id, searchMark)
+        store(keys.searchMarkListLastUpdate(), System.currentTimeMillis())
     }
     fun setTmpSearchMark (searchMark: SearchMark) = storeSearchMark(TEMP_SEARCH_MARK_ID, searchMark)
     /**
-     * update: insert or remove
+     * update: insert, remove, or modify
      */
     fun getSearchMarkListUpdateTime () = read(keys.searchMarkListLastUpdate()) ?: 0
+    private fun storeSearchMark (id: Int, searchMark: SearchMark) {
+        store(keys.searchMarkName(id), searchMark.name)
+        store(keys.searchMarkCats(id), searchMark.categories.map { it.ordinal })
+        store(keys.searchMarkKeyword(id), searchMark.keyword)
+        store(keys.searchMarkTags(id), searchMark.tags)
+    }
+    private fun getNextSearchMarkId (): Int {
+        val id = read(keys.nextSearchMarkId()) ?: 1
+        store(keys.nextSearchMarkId(), id + 1)
+        return id
+    }
 
     //
     // exclude tag
     //
-    fun getExcludeTag () = readFromByteArray<Tags>(keys.excludeTags()) ?: mapOf()
-    fun storeExcludeTag (v: Tags) {
-        storeAsByteArray(keys.excludeTags(), v)
+    fun getAllExcludeTag (): List<Pair<Int, ExcludeTagRecord>> {
+        val ids = read(keys.allExcludeTagIds()) ?: listOf()
+        return ids.map { id ->
+            id to ExcludeTagRecord(
+                read(keys.excludeTagTags(id))!!,
+                read(keys.excludeTagCats(id))!!.map {
+                        ordinal -> Category.entries[ordinal]
+                }.toSet()
+            )
+        }
+    }
+    fun getExcludeTag (id: Int) =
+        ExcludeTagRecord(
+            read(keys.excludeTagTags(id))!!,
+            read(keys.excludeTagCats(id))!!.map {
+                    ordinal -> Category.entries[ordinal]
+            }.toSet()
+        )
+    fun addExcludeTag (excludeTagRecord: ExcludeTagRecord) {
+        val id = read(keys.nextExcludeTagId()) ?: 1
+        store(keys.nextExcludeTagId(), id + 1)
+        store(
+            keys.allExcludeTagIds(),
+            getAllExcludeIds().toMutableList().apply { add(id) }
+        )
+        storeExcludeTag(id, excludeTagRecord)
+    }
+    fun modifyExcludeTag (id: Int, excludeTagRecord: ExcludeTagRecord) =
+        storeExcludeTag(id, excludeTagRecord)
+    fun lastExcludeTagUpdateTime () = read(keys.excludeTagLastUpdate()) ?: 0
+    private fun getAllExcludeIds () = read(keys.allExcludeTagIds()) ?: listOf()
+    private fun storeExcludeTag (id: Int, excludeTagRecord: ExcludeTagRecord) {
+        store(keys.excludeTagTags(id), excludeTagRecord.tags)
+        store(keys.excludeTagCats(id), excludeTagRecord.categories.map { it.ordinal }.toSet())
         store(keys.excludeTagLastUpdate(), System.currentTimeMillis())
     }
-    fun lastExcludeTagUpdateTime () = read(keys.excludeTagLastUpdate()) ?: 0
 
     //
     // backup

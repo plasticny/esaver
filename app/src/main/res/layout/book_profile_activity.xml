@@ -18,6 +18,8 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
+        <!--  cover page  -->
+
         <androidx.cardview.widget.CardView
             android:layout_width="160dp"
             android:layout_height="240dp"
@@ -32,7 +34,9 @@
 
         </androidx.cardview.widget.CardView>
 
-        <androidx.constraintlayout.widget.ConstraintLayout
+        <!--  book info besides cover page  -->
+
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_marginStart="16dp"
@@ -40,26 +44,38 @@
             android:orientation="vertical">
 
             <TextView
-                android:id="@+id/id_TextView"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@color/grey"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
-
-            <TextView
                 android:id="@+id/title_textView"
                 android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:textColor="@color/white"/>
+
+            <LinearLayout
+                android:id="@+id/warning_container"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="@color/white"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/id_TextView" />
+                android:orientation="horizontal"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/font_awesome"
+                    android:text="@string/fa_triangle_exclamation"
+                    android:textColor="@color/warning_yellow"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="@string/contain_offensive_context"
+                    android:textColor="@color/warning_yellow"/>
+
+            </LinearLayout>
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
                 android:orientation="horizontal">
 
                 <TextView
@@ -77,7 +93,7 @@
 
             </LinearLayout>
 
-        </androidx.constraintlayout.widget.ConstraintLayout>
+        </LinearLayout>
 
     </LinearLayout>
 
@@ -124,8 +140,6 @@
 
             </LinearLayout>
 
-            <!--  buttons when book is not saved  -->
-
             <LinearLayout
                 android:id="@+id/save_button_wrapper"
                 android:layout_width="wrap_content"
@@ -150,8 +164,6 @@
                     android:text="@string/save_to_gallery"/>
 
             </LinearLayout>
-
-            <!--  buttons when book is saved  -->
 
             <LinearLayout
                 android:id="@+id/local_setting_button_wrapper"
@@ -179,6 +191,31 @@
             </LinearLayout>
 
             <LinearLayout
+                android:id="@+id/info_button_wrapper"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="50dp"
+                android:orientation="vertical"
+                android:gravity="center_horizontal">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/font_awesome"
+                    android:textColor="@color/white"
+                    android:textSize="24sp"
+                    android:text="@string/fa_circle_info"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/white"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/detail_info"/>
+
+            </LinearLayout>
+
+            <LinearLayout
                 android:id="@+id/delete_button_wrapper"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -202,7 +239,6 @@
                     android:text="@string/delete"/>
 
             </LinearLayout>
-
 
         </LinearLayout>
 

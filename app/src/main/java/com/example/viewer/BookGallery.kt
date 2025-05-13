@@ -63,7 +63,9 @@ class BookGallery (
         recyclerView.scrollToPosition(0)
     }
 
-    fun refresh () = authorRecyclerViewAdapter.refreshAuthorBooks()
+    fun refreshAuthor () = authorRecyclerViewAdapter.refreshAuthor()
+
+    fun refreshBooks () = authorRecyclerViewAdapter.refreshAuthorBooks()
 
     fun openRandomBook () = openBook(RandomBook.next(context, !Util.isInternetAvailable(context)))
 
@@ -150,7 +152,6 @@ private class AuthorRecyclerViewAdapter (
 
         val notExistAuthors = authorHolderMap.keys.minus(authors.toSet())
         for (author in notExistAuthors) {
-            println("remove $author")
             authorHolderMap.remove(author)
         }
     }

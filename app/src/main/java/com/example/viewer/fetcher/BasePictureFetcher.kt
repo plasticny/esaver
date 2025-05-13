@@ -1,28 +1,28 @@
 package com.example.viewer.fetcher
 
 import android.content.Context
-import android.graphics.drawable.Drawable
-import android.widget.Toast
-import com.bumptech.glide.Glide
-import com.bumptech.glide.RequestBuilder
-import com.bumptech.glide.RequestManager
-import com.bumptech.glide.load.engine.DiskCacheStrategy
-import com.bumptech.glide.request.RequestListener
-import com.bumptech.glide.request.RequestOptions
-import com.bumptech.glide.signature.ObjectKey
+import android.os.Environment
 import com.example.viewer.database.BookSource
 import com.example.viewer.database.BookDatabase
 import com.example.viewer.Util
-import com.example.viewer.fetcher.HiPictureFetcher.Companion.okHttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.MediaType
+import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.Response
+import okhttp3.ResponseBody
+import okio.Buffer
+import okio.BufferedSource
+import okio.ForwardingSource
+import okio.Okio
+import okio.buffer
 import java.io.File
 import java.net.SocketTimeoutException
 
 abstract class BasePictureFetcher {
     companion object {
+        private val okHttpClient = OkHttpClient()
+
         fun getFetcher (context: Context, bookId: String): BasePictureFetcher {
             val source = BookDatabase.getInstance(context).getBookSource(bookId)
             println("[BasePictureFetcher.getFetcher] $source")
@@ -33,7 +33,9 @@ abstract class BasePictureFetcher {
         }
     }
 
-    abstract suspend fun savePicture (page: Int): Boolean
+    abstract suspend fun savePicture (
+        page: Int, progressListener: ((contentLength: Long, downloadLength: Long) -> Unit)? = null
+    ): File?
     protected abstract suspend fun fetchPictureUrl (page: Int): String?
 
     private val downloadingPages = mutableSetOf<Int>()
@@ -43,7 +45,12 @@ abstract class BasePictureFetcher {
     protected val pageNum: Int
     protected val isLocal: Boolean
 
-    val bookFolder: File?
+    /**
+     * for local book, this will be a folder named by the book id in data folder
+     *
+     * for online book, this will be a folder named "tmp" in data folder
+     */
+    val bookFolder: File
 
     /**
      * for local book
@@ -64,18 +71,25 @@ abstract class BasePictureFetcher {
         this.context = context
         this.pageNum = pageNum
         this.bookId = null
-        this.bookFolder = null
+
+        this.bookFolder = File(context.getExternalFilesDir(null), "tmp").also {
+            if (!it.exists()) {
+                it.mkdirs()
+            } else {
+                for (file in it.listFiles()!!) {
+                    file.delete()
+                }
+            }
+        }
 
         isLocal = false
     }
 
-    suspend fun getPictureUrl (page: Int): String? {
+    suspend fun getPictureUrl (
+        page: Int,
+        progressListener: ((contentLength: Long, downloadLength: Long) -> Unit)? = null
+    ): String? {
         assertPageInRange(page)
-
-        if (!isLocal) {
-            // local fetcher, no need to check storage
-            return fetchPictureUrl(page)
-        }
 
         //
         // check whether picture is stored
@@ -94,8 +108,8 @@ abstract class BasePictureFetcher {
 
         if (!pictureFile.exists()) {
             downloadingPages.add(page) // fetching picture url may take time
-            savePicture(page).let { retFlag ->
-                if (!retFlag) {
+            savePicture(page, progressListener).let {
+                if (it == null) {
                     return null
                 }
             }
@@ -104,42 +118,66 @@ abstract class BasePictureFetcher {
         return pictureFile.path
     }
 
+    fun close () {
+        if (!isLocal) {
+            for (file in bookFolder.listFiles()!!) {
+                file.delete()
+            }
+        }
+    }
+
+    /**
+     * @return downloaded picture file
+     */
     protected suspend fun downloadPicture (
         page: Int,
         url: String,
-        headers: Map<String, String> = mapOf()
-    ): Boolean {
+        headers: Map<String, String> = mapOf(),
+        progressListener: ((contentLength: Long, downloadLength: Long) -> Unit)? = null
+    ): File? {
         println("[BasePictureFetcher.downloadPicture] $url")
 
-        assertCallByLocalBookFetcher()
-
         if(!Util.isInternetAvailable(context)) {
-            return false
+            return null
         }
 
         downloadingPages.add(page)
 
         val file = File(bookFolder, page.toString())
-        val requestBuilder = Request.Builder().url(url)
-        for (header in headers) {
-            requestBuilder.addHeader(header.key, header.value)
-        }
 
-        val request = requestBuilder.build()
+        val downloadClient = progressListener?.let {
+            okHttpClient.newBuilder()
+                .addInterceptor { chain ->
+                    chain.proceed(chain.request()).run {
+                        newBuilder().body(
+                            ProgressResponseBody(body!!, progressListener)
+                        ).build()
+                    }
+                }.build()
+        } ?: okHttpClient
+
+        val request = Request.Builder().url(url).apply {
+            for (header in headers) {
+                addHeader(header.key, header.value)
+            }
+        }.build()
+
         return withContext(Dispatchers.IO) {
             try {
-                okHttpClient.newCall(request).execute().use { response ->
+                downloadClient.newCall(request).execute().use { response ->
                     if (response.isSuccessful) {
                         file.outputStream().use { response.body!!.byteStream().copyTo(it) }
                         // this line should be after the write-to-file statement
                         // else a corrupted image might be read
                         downloadingPages.remove(page)
+                        return@withContext file
+                    } else {
+                        return@withContext null
                     }
-                    return@withContext response.isSuccessful
                 }
             } catch (e: SocketTimeoutException) {
                 println("[${this@BasePictureFetcher::class.simpleName}.${this@BasePictureFetcher::downloadingPages.name}] socket time out")
-                return@withContext false
+                return@withContext null
             }
         }
     }
@@ -149,10 +187,25 @@ abstract class BasePictureFetcher {
             throw Exception("page out of range")
         }
     }
+}
 
-    private fun assertCallByLocalBookFetcher () {
-        if (bookFolder == null) {
-            throw Exception("only fetcher construct with local book config call this function")
-        }
-    }
+private class ProgressResponseBody (
+    private val responseBody: ResponseBody,
+    private val progressListener: (contentLength: Long, downloadLength: Long) -> Unit
+): ResponseBody() {
+    private var bufferedSource =
+        object: ForwardingSource(responseBody.source()) {
+            private var totalBytesRead = 0L
+            override fun read(sink: Buffer, byteCount: Long): Long =
+                super.read(sink, byteCount).also {
+                    totalBytesRead += if (it == -1L) 0 else it
+                    progressListener(contentLength(), totalBytesRead)
+                }
+        }.buffer()
+
+    override fun contentLength(): Long = responseBody.contentLength()
+
+    override fun contentType(): MediaType? = responseBody.contentType()
+
+    override fun source(): BufferedSource = bufferedSource
 }

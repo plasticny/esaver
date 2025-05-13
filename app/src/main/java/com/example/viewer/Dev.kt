@@ -1,7 +1,7 @@
 package com.example.viewer
 
 import android.content.Context
-import com.example.viewer.database.BookDatabase
+import com.example.viewer.database.SearchDatabase
 
 /**
  * for development usage and backup code
@@ -9,7 +9,7 @@ import com.example.viewer.database.BookDatabase
 class Dev {
     companion object {
         fun run (context: Context) {
-//            BookDatabase.getInstance(context).dev()
+//            SearchDatabase.getInstance(context).dev()
         }
     }
 

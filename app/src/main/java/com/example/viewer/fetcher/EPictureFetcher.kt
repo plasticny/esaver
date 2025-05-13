@@ -1,15 +1,25 @@
 package com.example.viewer.fetcher
 
 import android.content.Context
+import android.view.View
 import android.widget.Toast
 import com.example.viewer.Util
 import com.example.viewer.database.BookDatabase
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.jsoup.HttpStatusException
 import org.jsoup.Jsoup
+import java.io.File
 
 class EPictureFetcher: BasePictureFetcher {
+    companion object {
+        suspend fun isBookWarning (url: String) =
+            withContext(Dispatchers.IO) {
+                Jsoup.connect(url).get()
+            }.html().contains("<h1>Content Warning</h1>")
+    }
+
     private val bookDataset = BookDatabase.getInstance(context)
     private val bookUrl: String
 
@@ -18,30 +28,39 @@ class EPictureFetcher: BasePictureFetcher {
     private var pageUrls: MutableList<String>
     private var p: Int
 
+    /**
+     * for local book
+     */
     constructor (context: Context, bookId: String): super(context, bookId) {
         p = bookDataset.getBookP(bookId)
         bookUrl = bookDataset.getBookUrl(bookId)
         pageUrls = bookDataset.getBookPageUrls(bookId).toMutableList()
     }
 
+    /**
+     * for online book
+     */
     constructor (context: Context, pageNum: Int, bookUrl: String): super(context, pageNum) {
         p = 0
         this.bookUrl = bookUrl
         pageUrls = mutableListOf()
     }
 
-    override suspend fun savePicture(page: Int): Boolean {
+    override suspend fun savePicture(
+        page: Int,
+        progressListener: ((contentLength: Long, downloadLength: Long) -> Unit)?
+    ): File? {
         println("[EPictureFetcher.savePicture] $page")
         assertPageInRange(page)
 
         if (!Util.isInternetAvailable(context)) {
             Toast.makeText(context, "沒有網絡，無法下載", Toast.LENGTH_SHORT).show()
-            return false
+            return null
         }
 
         return fetchPictureUrl(page)?.let {
-            downloadPicture(page, it)
-        } ?: false
+            downloadPicture(page, it, progressListener =  progressListener)
+        }
     }
 
     override suspend fun fetchPictureUrl (page: Int): String? {
@@ -67,17 +86,22 @@ class EPictureFetcher: BasePictureFetcher {
             }
         }
 
-        if (page > pageUrls.lastIndex) {
+        while (page > pageUrls.lastIndex) {
             gettingPageUrl = true
 
             println("[${this::class.simpleName}.${this::getPageUrl.name}] load next p $p")
 
-            withContext(Dispatchers.IO) {
-                val url = "${bookUrl}/?p=$p"
+            val doc = withContext(Dispatchers.IO) {
+                val url = if (isBookWarning(bookUrl)) "${bookUrl}/?p=$p&nw=always" else "${bookUrl}/?p=$p"
                 println("[${this@EPictureFetcher::class.simpleName}.${this@EPictureFetcher::getPageUrl.name}]\nfetching page url from $url")
                 Jsoup.connect(url).get()
-            }.select("#gdt a").map { it.attr("href") }.let {
-                pageUrlSegment -> pageUrls.addAll(pageUrlSegment)
+            }
+            doc.select("#gdt a").map { it.attr("href") }.let { pageUrlSegment ->
+                if (pageUrlSegment.isEmpty()) {
+                    println(doc.html())
+                    throw Exception("[${this@EPictureFetcher::class.simpleName}.${this@EPictureFetcher::getPageUrl.name}] no page url fetched")
+                }
+                pageUrls.addAll(pageUrlSegment)
             }
 
             if (isLocal) {
@@ -89,9 +113,9 @@ class EPictureFetcher: BasePictureFetcher {
             } else {
                 p++
             }
-
-            gettingPageUrl = false
         }
+        gettingPageUrl = false
+
         return pageUrls[page]
     }
 }

@@ -65,7 +65,7 @@ abstract class BookAdder (protected val context: Context) {
         storeToDataSet()
 
         // save cover picture
-        val retFlag = getFetcher().savePicture(0)
+        val retFlag = getFetcher().savePicture(0) != null
         onEnded(retFlag)
     }
 }

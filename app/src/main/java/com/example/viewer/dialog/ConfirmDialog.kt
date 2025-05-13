@@ -12,7 +12,8 @@ class ConfirmDialog (
     fun show (
         message: String,
         positiveCallback: (() -> Unit)? = null,
-        negativeCallback: (() -> Unit)? = null
+        negativeCallback: (() -> Unit)? = null,
+        finishCb: (() -> Unit)? = null
     ) {
         val binding = ConfirmDialogBinding.inflate(inflater)
 
@@ -21,10 +22,12 @@ class ConfirmDialog (
         binding.positiveButton.setOnClickListener {
             dialog.dismiss()
             positiveCallback?.invoke()
+            finishCb?.invoke()
         }
         binding.negativeButton.setOnClickListener {
             dialog.dismiss()
             negativeCallback?.invoke()
+            finishCb?.invoke()
         }
         dialog.show()
     }

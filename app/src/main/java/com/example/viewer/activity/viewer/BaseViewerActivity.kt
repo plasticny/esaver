@@ -1,6 +1,12 @@
 package com.example.viewer.activity.viewer
 
+import android.animation.Animator
+import android.animation.Animator.AnimatorListener
+import android.animation.ObjectAnimator
+import android.animation.ValueAnimator
 import android.annotation.SuppressLint
+import android.graphics.Rect
+import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.view.GestureDetector
@@ -9,17 +15,24 @@ import android.view.MotionEvent
 import android.view.View
 import android.widget.ImageView
 import android.widget.ProgressBar
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DataSource
+import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
+import com.bumptech.glide.request.RequestOptions
 import com.bumptech.glide.request.target.Target
 import com.bumptech.glide.signature.ObjectKey
+import com.example.viewer.R
+import com.example.viewer.Util
 import com.example.viewer.databinding.ViewerActivityBinding
+import com.example.viewer.dialog.SimpleEditTextDialog
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import kotlin.math.sign
 
 abstract class BaseViewerActivity: AppCompatActivity() {
     companion object {
@@ -27,8 +40,10 @@ abstract class BaseViewerActivity: AppCompatActivity() {
         const val SCROLL_THRESHOLD = 50
     }
 
+    protected abstract val enableBookmarkButton: Boolean
+    protected abstract val enableJumpToButton: Boolean
+
     protected abstract fun onImageLongClicked(): Boolean
-    protected abstract fun onPageTextClicked()
     protected abstract fun prevPage()
     protected abstract fun nextPage()
     protected abstract fun reloadPage()
@@ -43,6 +58,8 @@ abstract class BaseViewerActivity: AppCompatActivity() {
 
     private val pageSignatures = mutableMapOf<Int, ObjectKey>()
 
+    private var showingToolBar = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -53,8 +70,33 @@ abstract class BaseViewerActivity: AppCompatActivity() {
         }
         setupChangePageOnImage()
 
-        viewerActivityBinding.pageTextWrapper.setOnClickListener {
-            onPageTextClicked()
+        viewerActivityBinding.pageTextWrapper.apply {
+            setOnClickListener {
+                toggleToolBar()
+            }
+        }
+
+        viewerActivityBinding.jumpToButton.apply {
+            if (enableJumpToButton) {
+                setOnClickListener {
+                    SimpleEditTextDialog(this@BaseViewerActivity, layoutInflater).show(
+                        title = "跳至頁面",
+                        validator = {
+                            try {
+                                val valid = (it.toInt() - 1) in firstPage..lastPage
+                                if (!valid) {
+                                    Toast.makeText(baseContext, "頁數超出範圍", Toast.LENGTH_SHORT).show()
+                                }
+                                valid
+                            } catch (e: Exception) {
+                                Toast.makeText(baseContext, "輸入錯誤", Toast.LENGTH_SHORT).show()
+                                false
+                            }
+                        },
+                        positiveCb = { toPage(it.toInt() - 1) }
+                    )
+                }
+            }
         }
 
         viewerActivityBinding.reloadIcon.setOnClickListener {
@@ -86,14 +128,28 @@ abstract class BaseViewerActivity: AppCompatActivity() {
         return super.onKeyDown(keyCode, event)
     }
 
+    override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
+        ev?.let {
+            if (showingToolBar && ev.action == MotionEvent.ACTION_DOWN) {
+                val viewRect = Rect().also {
+                    viewerActivityBinding.toolbarContainer.getGlobalVisibleRect(it)
+                }
+                if (!viewRect.contains(ev.x.toInt(), ev.y.toInt())) {
+                    toggleToolBar(false)
+                }
+            }
+        }
+        return super.dispatchTouchEvent(ev)
+    }
+
     protected fun toggleLoadingUi (toggle: Boolean) {
         viewerActivityBinding.let {
             if (toggle) {
-                it.viewerProgressBar.visibility = ProgressBar.VISIBLE
+                it.progressWrapper.visibility = ProgressBar.VISIBLE
                 it.photoView.visibility = View.INVISIBLE
                 it.photoView.imageAlpha = 0
             } else {
-                it.viewerProgressBar.visibility = ProgressBar.GONE
+                it.progressWrapper.visibility = ProgressBar.GONE
                 it.photoView.visibility = View.VISIBLE
                 it.photoView.imageAlpha = 255
             }
@@ -112,7 +168,15 @@ abstract class BaseViewerActivity: AppCompatActivity() {
         }
     }
 
-    protected fun loadPage () {
+    protected fun toPage (page: Int) {
+        if (page < firstPage || page > lastPage) {
+            throw Exception("page out of range")
+        }
+        this.page = page
+        loadPage()
+    }
+
+    protected open fun loadPage () {
         val myPage = page
 
         viewerActivityBinding.viewerPageTextView.text = (page + 1).toString()
@@ -146,8 +210,7 @@ abstract class BaseViewerActivity: AppCompatActivity() {
         onPictureReady: (() -> Unit)? = null,
         onFailed: (() -> Unit)? = null,
         onFinished: (() -> Unit)? = null
-    ) {
-        Glide.with(baseContext)
+    ) = Glide.with(baseContext)
             .asDrawable()
             .signature(signature)
             .load(url)
@@ -168,7 +231,6 @@ abstract class BaseViewerActivity: AppCompatActivity() {
                 }
             })
             .into(imageView)
-    }
 
     protected fun getPageSignature (page: Int): ObjectKey {
         if (!pageSignatures.containsKey(page)) {
@@ -227,6 +289,72 @@ abstract class BaseViewerActivity: AppCompatActivity() {
             true
         }
     }
+
+    private fun toggleToolBar (toggle: Boolean = !showingToolBar) {
+        if (toggle == showingToolBar) {
+            return
+        }
+
+        viewerActivityBinding.toolbarContainer.apply {
+            ValueAnimator.ofArgb(
+                (background as ColorDrawable).color,
+                if (toggle) getColor(R.color.half_transparent_darkgery) else getColor(R.color.transparent_darkgery)
+            ).apply {
+                duration = 250
+                addUpdateListener { setBackgroundColor(animatedValue as Int) }
+            }.start()
+        }
+
+        viewerActivityBinding.jumpToButton.apply {
+            if (!enableJumpToButton) {
+                return@apply
+            }
+
+            if (toggle) {
+                visibility = View.VISIBLE
+            }
+            ValueAnimator.ofFloat(alpha, 1 - alpha).apply {
+                duration = 250
+                addUpdateListener { alpha = animatedValue as Float }
+                if (!toggle) {
+                    addListener(object: AnimatorListener {
+                        override fun onAnimationStart(animation: Animator) = Unit
+                        override fun onAnimationEnd(animation: Animator) {
+                            visibility = View.GONE
+                        }
+                        override fun onAnimationCancel(animation: Animator) = Unit
+                        override fun onAnimationRepeat(animation: Animator) = Unit
+                    })
+                }
+            }.start()
+        }
+
+        viewerActivityBinding.bookmarkButton.apply {
+            if (!enableBookmarkButton) {
+                return@apply
+            }
+
+            if (toggle) {
+                visibility = View.VISIBLE
+            }
+            ValueAnimator.ofFloat(alpha, 1 - alpha).apply {
+                duration = 250
+                addUpdateListener { alpha = animatedValue as Float }
+                if (!toggle) {
+                    addListener(object: AnimatorListener {
+                        override fun onAnimationStart(animation: Animator) = Unit
+                        override fun onAnimationEnd(animation: Animator) {
+                            visibility = View.GONE
+                        }
+                        override fun onAnimationCancel(animation: Animator) = Unit
+                        override fun onAnimationRepeat(animation: Animator) = Unit
+                    })
+                }
+            }.start()
+        }
+
+        showingToolBar = toggle
+    }
 }
 
 private class ChangePageGestureListener (
@@ -281,9 +409,9 @@ private class ChangePageGestureListener (
 
     private fun changePage (e1: MotionEvent, e2: MotionEvent) {
         if (e2.x - e1.x > 0) {
-            prevPageCallback()
-        } else {
             nextPageCallback()
+        } else {
+            prevPageCallback()
         }
     }
 }
