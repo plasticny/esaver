@@ -425,9 +425,12 @@ class SearchActivity: AppCompatActivity() {
 
             binding.root.apply {
                 setOnClickListener {
-                    CoroutineScope(Dispatchers.IO).launch {
+                    lifecycleScope.launch {
                         val intent = Intent(context, BookProfileActivity::class.java)
-                        intent.putExtra("book_record", fetchDetailBookRecord(bookRecord))
+                        intent.putExtra(
+                            "book_record",
+                            withContext(Dispatchers.IO) { fetchDetailBookRecord(bookRecord) }
+                        )
                         startActivity(intent)
                     }
                 }
