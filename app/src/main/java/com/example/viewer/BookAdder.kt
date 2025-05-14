@@ -4,6 +4,7 @@ import android.content.Context
 import android.widget.Toast
 import com.example.viewer.database.BookDatabase
 import com.example.viewer.database.BookSource
+import com.example.viewer.database.GroupDatabase
 import com.example.viewer.database.SearchDatabase
 import com.example.viewer.fetcher.BasePictureFetcher
 import com.example.viewer.fetcher.EPictureFetcher
@@ -105,8 +106,10 @@ private class EBookAdder (context: Context): BookAdder(context) {
             title = findTitle(doc),
             pageNum = findPageNum(doc),
             tags = findTags(doc),
-            source = BookSource.E
+            source = BookSource.E,
+            groupId = GroupDatabase.DEFAULT_GROUP_ID
         )
+        GroupDatabase.getInstance(context).addBookIdToGroup(GroupDatabase.DEFAULT_GROUP_ID, id)
     }
 
     fun findTitle (doc: Document): String {
@@ -162,15 +165,20 @@ private class HiBookAdder (context: Context): BookAdder(context) {
 
     override fun getFetcher(id: String, url: String): BasePictureFetcher = HiPictureFetcher(context, id, 1)
 
-    override suspend fun storeToDataSet(id: String, url: String) = bookDataset.addBook(
-        id = id,
-        url = url,
-        category = SearchDatabase.Companion.Category.Doujinshi,
-        title = "",
-        pageNum = fetchPageNum(id),
-        tags = mapOf(),
-        source = BookSource.Hi
-    )
+    override suspend fun storeToDataSet(id: String, url: String) {
+        throw Exception("time to implement this")
+        bookDataset.addBook(
+            id = id,
+            url = url,
+            category = SearchDatabase.Companion.Category.Doujinshi,
+            title = "",
+            pageNum = fetchPageNum(id),
+            tags = mapOf(),
+            source = BookSource.Hi,
+            groupId = GroupDatabase.DEFAULT_GROUP_ID
+        )
+        GroupDatabase.getInstance(context).addBookIdToGroup(GroupDatabase.DEFAULT_GROUP_ID, id)
+    }
 
     fun fetchPageNum(id: String): Int {
         var bookIdJs: String

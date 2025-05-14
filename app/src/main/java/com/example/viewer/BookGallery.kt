@@ -7,16 +7,16 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.ViewGroup.MarginLayoutParams
 import android.widget.ImageView
-import android.widget.TextView
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.viewer.activity.BookProfileActivity
 import com.example.viewer.database.BookDatabase
+import com.example.viewer.database.GroupDatabase
 import com.example.viewer.databinding.FragmentMainGalleryBookBinding
-import com.example.viewer.dialog.SelectAuthorDialog
+import com.example.viewer.databinding.MainGalleryFragmentAuthorBinding
+import com.example.viewer.dialog.SelectGroupDialog
 import java.io.File
 import kotlin.math.ceil
 
@@ -25,56 +25,52 @@ class BookGallery (
     private val layoutInflater: LayoutInflater,
     private val recyclerView: RecyclerView
 ) {
-    private val bookDataset = BookDatabase.getInstance(context)
+    private val bookDatabase = BookDatabase.getInstance(context)
+    private val groupDatabase = GroupDatabase.getInstance(context)
     private val filter = Filter()
 
     // recycler view item metrics
-    private val authorTextViewHeight = Util.sp2px(context, 18F)
+    private val groupNameTextViewHeight = Util.sp2px(context, 18F)
     private val coverImageViewWidth =
         (context.resources.displayMetrics.widthPixels - Util.dp2px(context, 48F)) / 2
     private val coverImageViewHeight = (coverImageViewWidth * 1.5).toInt()
     private val bookMarginWidth = Util.dp2px(context, 8F)
 
-    private val authorRecyclerViewAdapter: AuthorRecyclerViewAdapter
-        get() = recyclerView.adapter as AuthorRecyclerViewAdapter
+    private val groupRecyclerViewAdapter: GroupRecyclerViewAdapter
+        get() = recyclerView.adapter as GroupRecyclerViewAdapter
 
     init {
         recyclerView.layoutManager = GridLayoutManager(context, 1)
-        recyclerView.adapter = AuthorRecyclerViewAdapter()
-        println(authorTextViewHeight)
+        recyclerView.adapter = GroupRecyclerViewAdapter()
     }
 
     fun notifyBookAdded () {
-        authorRecyclerViewAdapter.refreshAuthorBooks(BookDatabase.NO_AUTHOR)
-        scrollToAuthor(BookDatabase.NO_AUTHOR)
+        groupRecyclerViewAdapter.refreshGroupBooks(GroupDatabase.DEFAULT_GROUP_ID)
+        scrollToGroup(GroupDatabase.DEFAULT_GROUP_ID)
     }
 
     fun applyFilter (doDownloadComplete: Boolean? = null) {
         filter.doDownloadComplete = doDownloadComplete
-        authorRecyclerViewAdapter.refreshAuthorBooks()
+        groupRecyclerViewAdapter.refreshGroupBooks()
         recyclerView.scrollToPosition(0)
     }
 
-    fun refreshAuthor () = authorRecyclerViewAdapter.refreshAuthor()
+    fun refreshGroup () = groupRecyclerViewAdapter.refreshGroups()
 
-    fun refreshBooks () = authorRecyclerViewAdapter.refreshAuthorBooks()
+    fun refreshBooks () = groupRecyclerViewAdapter.refreshGroupBooks()
 
     fun openRandomBook () = openBook(RandomBook.next(context, !Util.isInternetAvailable(context)))
 
-    private fun openBook (bookId: String, author: String? = null) {
+    private fun openBook (bookId: String) {
         context.startActivity(Intent(context, BookProfileActivity::class.java).apply {
             putExtra(
                 "book_record",
-                bookDataset.getBook(context, bookId, author)
+                bookDatabase.getBook(context, bookId)
             )
         })
     }
 
-    private fun scrollToAuthor (author: String) = recyclerView.scrollToPosition(authorRecyclerViewAdapter.getAuthorPosition(author))
-
-    private fun showSelectAuthorDialog () = SelectAuthorDialog(context, layoutInflater).show {
-            author -> scrollToAuthor(author)
-    }
+    private fun scrollToGroup (id: Int) = recyclerView.scrollToPosition(groupRecyclerViewAdapter.getGroupPosition(id))
 
     inner class Filter {
         var doDownloadComplete: Boolean? = null
@@ -91,93 +87,87 @@ class BookGallery (
     //
     // define recycler view adapters
     //
-    inner class AuthorRecyclerViewAdapter: RecyclerView.Adapter<AuthorRecyclerViewAdapter.AuthorRecyclerViewHolder>() {
-        inner class AuthorRecyclerViewHolder (itemView: View): RecyclerView.ViewHolder(itemView) {
-            val wrapper: ConstraintLayout = itemView.findViewById(R.id.gallery_author_wrapper)
-            val authorTextView: TextView = itemView.findViewById(R.id.gallery_author_text)
-            val bookRecyclerView: RecyclerView = itemView.findViewById(R.id.gallery_author_bookRecyclerView)
-        }
 
-        private var authors: List<String> = bookDataset.getAllAuthors()
-        private val authorHolderMap: MutableMap<String, AuthorRecyclerViewHolder> = mutableMapOf()
+    inner class GroupRecyclerViewAdapter: RecyclerView.Adapter<GroupRecyclerViewAdapter.ViewHolder>() {
+        inner class ViewHolder (val binding: MainGalleryFragmentAuthorBinding): RecyclerView.ViewHolder(binding.root)
 
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): AuthorRecyclerViewHolder {
-            val view = LayoutInflater.from(context).inflate(R.layout.gallery_author, parent, false)
-            return AuthorRecyclerViewHolder(view)
-        }
+        private var groupIds: List<Int> = groupDatabase.getAllGroupIds()
+        private val groupHolderMap: MutableMap<Int, ViewHolder> = mutableMapOf()
 
-        override fun getItemCount(): Int = authors.size
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder =
+            ViewHolder(MainGalleryFragmentAuthorBinding.inflate(layoutInflater, parent, false))
 
-        override fun onBindViewHolder(holder: AuthorRecyclerViewHolder, position: Int) {
-            val author = authors[position]
-            println("[AuthorRecyclerViewAdapter.onBindViewHolder] $author")
+        override fun getItemCount(): Int = groupIds.size
 
-            holder.authorTextView.apply {
-                text = if (author == BookDatabase.NO_AUTHOR) ContextCompat.getString(context, R.string.noName) else author
-                setOnClickListener { showSelectAuthorDialog() }
+        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+            val id = groupIds[position]
+
+            holder.binding.galleryAuthorText.apply {
+                text = if (id == GroupDatabase.DEFAULT_GROUP_ID) {
+                    ContextCompat.getString(context, R.string.noGroup)
+                } else groupDatabase.getGroupName(id)
+                setOnClickListener {
+                    SelectGroupDialog(context, layoutInflater).show {
+                        id, _ -> scrollToGroup(id)
+                    }
+                }
             }
 
-            holder.bookRecyclerView.apply {
+            holder.binding.galleryAuthorBookRecyclerView.apply {
                 layoutManager = GridLayoutManager(context, 2)
-                adapter = BookRecyclerViewAdapter(author)
+                adapter = BookRecyclerViewAdapter(id)
             }
 
-            authorHolderMap[author] = holder
+            groupHolderMap[id] = holder
         }
 
-        override fun onViewAttachedToWindow(holder: AuthorRecyclerViewHolder) {
+        override fun onViewAttachedToWindow(holder: ViewHolder) {
             super.onViewAttachedToWindow(holder)
             wrappingContent(holder)
         }
 
-        fun refreshAuthor () {
-            authors = bookDataset.getAllAuthors()
+        fun refreshGroups () {
+            groupIds = groupDatabase.getAllGroupIds()
             notifyDataSetChanged()
 
-            val notExistAuthors = authorHolderMap.keys.minus(authors.toSet())
+            val notExistAuthors = groupHolderMap.keys.minus(groupIds.toSet())
             for (author in notExistAuthors) {
-                authorHolderMap.remove(author)
+                groupHolderMap.remove(author)
             }
         }
 
-        fun refreshAuthorBooks () {
-            for (author in authors) {
-                refreshAuthorBooks(author)
+        fun refreshGroupBooks () {
+            for (id in groupIds) {
+                refreshGroupBooks(id)
             }
         }
 
-        fun refreshAuthorBooks (author: String) {
-            val bookAdapter = getBookAdapter(author) ?: return
-            bookAdapter.refresh()
-            wrappingContent(author)
-        }
+        fun refreshGroupBooks (id: Int) =
+            groupHolderMap[id]?.let {
+                (it.binding.galleryAuthorBookRecyclerView.adapter as BookRecyclerViewAdapter).refresh()
+                wrappingContent(it)
+            }
 
-        fun getBookAdapter (author: String): BookRecyclerViewAdapter? {
-            val holder = authorHolderMap[author] ?: return null
-            return holder.bookRecyclerView.adapter as BookRecyclerViewAdapter
-        }
+        fun getGroupPosition (id: Int): Int = groupIds.indexOf(id)
 
-        fun getAuthorPosition (author: String): Int = authors.indexOf(author)
-
-        private fun wrappingContent (holder: AuthorRecyclerViewHolder) {
-            val bookAdapter = holder.bookRecyclerView.adapter as BookRecyclerViewAdapter
-
-            holder.wrapper.layoutParams = (holder.wrapper.layoutParams as MarginLayoutParams).apply {
-                if (bookAdapter.bookNum == 0) {
-                    height = 0
-                    bottomMargin = 0
-                } else {
-                    height = authorTextViewHeight + (coverImageViewHeight + bookMarginWidth * 2) * ceil(bookAdapter.bookNum / 2.0).toInt()
-                    bottomMargin = bookMarginWidth
+        private fun wrappingContent (holder: ViewHolder) {
+            val bookAdapter = holder.binding.galleryAuthorBookRecyclerView.adapter as BookRecyclerViewAdapter
+            holder.binding.galleryAuthorWrapper.apply {
+                layoutParams = (layoutParams as MarginLayoutParams).apply {
+                    if (bookAdapter.bookNum == 0) {
+                        height = 0
+                        bottomMargin = 0
+                    } else {
+                        height = groupNameTextViewHeight + (coverImageViewHeight + bookMarginWidth * 2) * ceil(bookAdapter.bookNum / 2.0).toInt()
+                        bottomMargin = bookMarginWidth
+                    }
                 }
+                visibility = if (bookAdapter.bookNum == 0) View.INVISIBLE else View.VISIBLE
             }
-            holder.wrapper.visibility = if (bookAdapter.bookNum == 0) View.INVISIBLE else View.VISIBLE
         }
-
-        private fun wrappingContent (author: String) = wrappingContent(authorHolderMap[author]!!)
     }
 
-    inner class BookRecyclerViewAdapter (val author: String): RecyclerView.Adapter<BookRecyclerViewAdapter.BookRecyclerViewHolder> () {
+    inner class BookRecyclerViewAdapter (val groupId: Int): RecyclerView.Adapter<BookRecyclerViewAdapter.BookRecyclerViewHolder> () {
         inner class BookRecyclerViewHolder (itemView: View): RecyclerView.ViewHolder(itemView) {
             val imageView: ImageView = itemView.findViewById(R.id.gallery_item)
         }
@@ -200,7 +190,7 @@ class BookGallery (
         override fun onBindViewHolder(holder: BookRecyclerViewHolder, position: Int) {
             val id = bookIds[position]
             val bookFolder = File(context.getExternalFilesDir(null), id)
-            val coverPage = bookDataset.getBookCoverPage(id)
+            val coverPage = bookDatabase.getBookCoverPage(id)
             val coverPageFile = File(bookFolder, coverPage.toString())
 
             Glide.with(context).load(
@@ -208,12 +198,12 @@ class BookGallery (
             ).into(holder.imageView)
 
             holder.imageView.setOnClickListener {
-                openBook(id, author)
+                openBook(id)
             }
 
-            holder.imageView.setOnLongClickListener {
-                true
-            }
+//            holder.imageView.setOnLongClickListener {
+//                true
+//            }
         }
 
         fun refresh () {
@@ -221,8 +211,11 @@ class BookGallery (
             notifyDataSetChanged()
         }
 
-        private fun getBookIds (): List<String> = bookDataset.getAuthorBookIds(author).filter {
-            filter.isFiltered(context, it, bookDataset)
+        private fun getBookIds (): List<String> {
+            return groupDatabase.getGroupBookIds(groupId)
+//            return groupDatabase.getGroupBookIds(groupId).filter {
+//                filter.isFiltered(context, it, bookDatabase)
+//            }
         }
     }
 }

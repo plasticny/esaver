@@ -23,6 +23,7 @@ import com.example.viewer.databinding.BookProfileActivityBinding
 import com.example.viewer.databinding.BookProfileTagBinding
 import com.example.viewer.database.BookDatabase
 import com.example.viewer.database.BookSource
+import com.example.viewer.database.GroupDatabase
 import com.example.viewer.database.SearchDatabase
 import com.example.viewer.databinding.DialogBookInfoBinding
 import com.example.viewer.databinding.DialogTagBinding
@@ -129,9 +130,9 @@ class BookProfileActivity: AppCompatActivity() {
             setOnClickListener {
                 if (isBookStored) {
                     LocalReadSettingDialog(this@BookProfileActivity, layoutInflater).show(
-                        bookRecord.id,
-                        bookRecord.author ?: bookDatabase.findBookAuthor(bookRecord.id),
+                        bookRecord,
                         onApplied = { coverPageUpdated ->
+                            bookRecord = BookDatabase.getInstance(baseContext).getBook(baseContext, bookRecord.id)
                             if (coverPageUpdated) {
                                 refreshCoverPage()
                             }
@@ -155,7 +156,7 @@ class BookProfileActivity: AppCompatActivity() {
                     positiveCallback = {
                         toggleProgressBar(true)
                         CoroutineScope(Dispatchers.IO).launch {
-                            deleteBook(bookRecord.id, bookRecord.author).let { retFlag ->
+                            deleteBook(bookRecord).let { retFlag ->
                                 withContext(Dispatchers.Main) {
                                     toggleProgressBar(false)
                                     if (retFlag) {
@@ -298,16 +299,16 @@ class BookProfileActivity: AppCompatActivity() {
         }
     }
 
-    private fun deleteBook (bookId: String, author: String?): Boolean {
-        val ret = BookDatabase.getInstance(baseContext).removeBook(bookId, author)
-        if (ret) {
-            val bookFolder = File(getExternalFilesDir(null), bookId)
-            for (file in bookFolder.listFiles()!!) {
-                file.delete()
-            }
-            bookFolder.delete()
+    private fun deleteBook (bookRecord: BookRecord): Boolean {
+        BookDatabase.getInstance(baseContext).removeBook(bookRecord.id)
+        GroupDatabase.getInstance(baseContext).removeBookIdFromGroup(bookRecord.groupId, bookRecord.id)
+
+        val bookFolder = File(getExternalFilesDir(null), bookRecord.id)
+        for (file in bookFolder.listFiles()!!) {
+            file.delete()
         }
-        return ret
+        bookFolder.delete()
+        return true
     }
 
     private suspend fun saveBook () {
@@ -353,11 +354,15 @@ class BookProfileActivity: AppCompatActivity() {
             subtitle = bookRecord.subtitle,
             pageNum = bookRecord.pageNum,
             tags = bookRecord.tags,
-            source = BookSource.E
+            source = BookSource.E,
+            groupId = GroupDatabase.DEFAULT_GROUP_ID
         )
+        GroupDatabase.getInstance(baseContext).addBookIdToGroup(GroupDatabase.DEFAULT_GROUP_ID, bookRecord.id)
 
         // update ui
+        toggleProgressBar(false)
         isBookStored = true
+        bookRecord = BookDatabase.getInstance(baseContext).getBook(baseContext, bookRecord.id)
         refreshActionBar()
         ConfirmDialog(this, layoutInflater).show(
             "已加入到書庫，返回書庫？",

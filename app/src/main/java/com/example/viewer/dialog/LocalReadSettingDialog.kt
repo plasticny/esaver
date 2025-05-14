@@ -5,7 +5,9 @@ import android.view.LayoutInflater
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import com.example.viewer.database.BookDatabase
+import com.example.viewer.database.GroupDatabase
 import com.example.viewer.databinding.DialogLocalReadSettingBinding
+import com.example.viewer.struct.BookRecord
 import java.io.File
 
 class LocalReadSettingDialog (
@@ -16,42 +18,49 @@ class LocalReadSettingDialog (
     private val dialog = AlertDialog.Builder(context).setView(dialogBinding.root).create()
 
     private val bookDatabase = BookDatabase.getInstance(context)
+    private val groupDatabase = GroupDatabase.getInstance(context)
 
     fun show (
-        bookId: String, author: String,
+        bookRecord: BookRecord,
         onApplied: (coverPageUpdated: Boolean) -> Unit
     ) {
-        val skipPages = bookDatabase.getBookSkipPages(bookId)
+        val skipPages = bookDatabase.getBookSkipPages(bookRecord.id)
 
-        dialogBinding.profileDialogAuthorEditText.setText(author)
+        dialogBinding.groupNameEditText.setText(
+            groupDatabase.getGroupName(bookRecord.groupId)
+        )
 
         dialogBinding.profileDialogCoverPageEditText.setText(
-            (bookDatabase.getBookCoverPage(bookId) + 1).toString()
+            (bookDatabase.getBookCoverPage(bookRecord.id) + 1).toString()
         )
 
         dialogBinding.profileDialogSkipPagesEditText.setText(skipPagesListToString(skipPages))
 
-        dialogBinding.searchAuthorButton.setOnClickListener {
-            if (bookDatabase.getUserAuthors().isEmpty()) {
-                Toast.makeText(context, "沒有作者可以選擇", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            SelectAuthorDialog(context, layoutInflater).show {
-                dialogBinding.profileDialogAuthorEditText.setText(it)
+        dialogBinding.searchButton.setOnClickListener {
+            SelectGroupDialog(context, layoutInflater).show {
+                _, name -> dialogBinding.groupNameEditText.setText(name)
             }
         }
 
         dialogBinding.profileDialogApplyButton.setOnClickListener {
             var coverPageUpdated = false
 
-            val authorString = dialogBinding.profileDialogAuthorEditText.text.toString().trim().also {
+            val groupName = dialogBinding.groupNameEditText.text.toString().trim()
+            val selectedGroupId = groupName.let {
                 if (it.isEmpty()) {
-                    Toast.makeText(context, "作者不能為空", Toast.LENGTH_SHORT).show()
-                    return@setOnClickListener
+                    return@let 0
                 }
+
+                val id = groupDatabase.getGroupIdFromName(it)
+                if (id != null) {
+                    return@let id
+                }
+
+                return@let groupDatabase.createGroup(groupName)
             }
-            if (authorString != author) {
-                bookDatabase.changeAuthor(bookId, author, authorString)
+            if (selectedGroupId != bookRecord.groupId) {
+                groupDatabase.changeGroup(bookRecord.id, bookRecord.groupId, selectedGroupId)
+                BookDatabase.getInstance(context).changeBookGroup(bookRecord.id, selectedGroupId)
             }
 
             val coverPage = dialogBinding.profileDialogCoverPageEditText.text.toString().trim().let {
@@ -66,13 +75,13 @@ class LocalReadSettingDialog (
                     return@setOnClickListener
                 }
             }
-            if (coverPage != bookDatabase.getBookCoverPage(bookId) + 1) {
-                bookDatabase.setBookCoverPage(bookId, coverPage - 1)
+            if (coverPage != bookDatabase.getBookCoverPage(bookRecord.id) + 1) {
+                bookDatabase.setBookCoverPage(bookRecord.id, coverPage - 1)
                 coverPageUpdated = true
             }
 
             updateSkipPages(
-                bookId,
+                bookRecord.id,
                 dialogBinding.profileDialogSkipPagesEditText.text.toString().trim(),
                 skipPages
             )

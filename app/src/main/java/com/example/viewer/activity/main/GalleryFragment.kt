@@ -7,8 +7,8 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import com.example.viewer.BookGallery
-import com.example.viewer.database.BookSource
 import com.example.viewer.database.BookDatabase
+import com.example.viewer.database.GroupDatabase
 import com.example.viewer.databinding.MainGalleryFragmentBinding
 
 class GalleryFragment: Fragment() {
@@ -16,7 +16,7 @@ class GalleryFragment: Fragment() {
     private lateinit var binding: MainGalleryFragmentBinding
     private lateinit var bookGallery: BookGallery
 
-    private var authorListLastUpdate = 0L
+    private var groupListLastUpdate = 0L
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -27,7 +27,7 @@ class GalleryFragment: Fragment() {
         binding = MainGalleryFragmentBinding.inflate(layoutInflater, container, false)
         bookGallery = BookGallery(ctx, layoutInflater, binding.recyclerView)
 
-        authorListLastUpdate = BookDatabase.getInstance(ctx).authorListUpdateTime()
+        groupListLastUpdate = GroupDatabase.getInstance(ctx).getLastUpdateTime()
 
 //        binding.addImageView.setOnClickListener {
 //            if (Util.isInternetAvailable(ctx)) {
@@ -65,19 +65,13 @@ class GalleryFragment: Fragment() {
 
     override fun onResume() {
         super.onResume()
-        BookDatabase.getInstance(ctx).authorListUpdateTime().let {
-            if (it != authorListLastUpdate) {
+        GroupDatabase.getInstance(ctx).getLastUpdateTime().let {
+            if (it != groupListLastUpdate) {
                 println("[${this::class.simpleName}.${this::onResume.name}] author list updated, refresh")
-                bookGallery.refreshAuthor()
-                authorListLastUpdate = it
+                bookGallery.refreshGroup()
+                groupListLastUpdate = it
             }
         }
         bookGallery.refreshBooks()
-    }
-
-    private fun getBookSource (url: String): BookSource? = when {
-        Regex("(http(s?)://)?e-hentai.org/g/(\\d+)/([a-zA-Z0-9]+)(/?)$").matches(url) -> BookSource.E
-        Regex("(http(s?)://)?hitomi.la/reader/(\\d+).html(#(\\d+))?$").matches(url) -> BookSource.Hi
-        else -> null
     }
 }

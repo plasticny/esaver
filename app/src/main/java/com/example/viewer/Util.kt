@@ -5,6 +5,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.util.TypedValue
 import com.example.viewer.database.BookDatabase
+import com.example.viewer.database.BookSource
 import com.example.viewer.database.SearchDatabase
 import com.example.viewer.database.SearchDatabase.Companion.Category.ArtistCG
 import com.example.viewer.database.SearchDatabase.Companion.Category.Doujinshi
@@ -24,7 +25,8 @@ class Util {
             "male" to "男性",
             "mixed" to "混合",
             "other" to "其他",
-            "parody" to "原作"
+            "parody" to "原作",
+            "temp" to "臨時"
         )
         private val CATEGORY_ENTRIES = SearchDatabase.Companion.Category.entries
 
@@ -76,6 +78,12 @@ class Util {
             NonH.name -> NonH
             "Non-H" -> NonH
             else -> throw Exception("unexpected string $name")
+        }
+
+        fun getUrlSource (url: String): BookSource? = when {
+            Regex("(http(s?)://)?e-hentai.org/g/(\\d+)/([a-zA-Z0-9]+)(/?)$").matches(url) -> BookSource.E
+            Regex("(http(s?)://)?hitomi.la/reader/(\\d+).html(#(\\d+))?$").matches(url) -> BookSource.Hi
+            else -> null
         }
     }
 }
