@@ -2,7 +2,6 @@ package com.example.viewer.database
 
 import android.content.Context
 import android.os.Environment
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.intPreferencesKey
@@ -12,6 +11,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.example.viewer.R
 import com.example.viewer.Util
 import com.example.viewer.struct.ExcludeTagRecord
+import com.example.viewer.struct.SearchMark
 import java.io.File
 
 typealias Tags = Map<String, List<String>>
@@ -29,13 +29,6 @@ class SearchDatabase (context: Context): BaseDatabase() {
         fun getInstance (context: Context) = instance ?: synchronized(this) {
             instance ?: SearchDatabase(context).also { instance = it }
         }
-
-        data class SearchMark (
-            val name: String,
-            val categories: List<Category>,
-            val keyword: String,
-            val tags: Tags
-        )
 
         // NOTE: be very careful on arrange the order of entries
         enum class Category {
@@ -77,6 +70,7 @@ class SearchDatabase (context: Context): BaseDatabase() {
         fun searchMarkCats (id: Int) = CustomPreferencesKey<List<Int>>("${TAG}_searchMarkCats_$id")
         fun searchMarkKeyword (id: Int) = stringPreferencesKey("${TAG}_searchMarkKeyword_$id")
         fun searchMarkTags (id: Int) = CustomPreferencesKey<Tags>("${TAG}_searchMarkTags_$id")
+        fun searchMarkUploader (id: Int) = stringPreferencesKey("${TAG}_searchMarkUploader_$id")
         fun searchMarkListLastUpdate () = longPreferencesKey("${TAG}_searchMarkListLastUpdate")
 
         fun nextExcludeTagId () = intPreferencesKey("${TAG}_nextExcludeTagId")
@@ -121,6 +115,7 @@ class SearchDatabase (context: Context): BaseDatabase() {
         remove(keys.searchMarkCats(id))
         remove(keys.searchMarkKeyword(id))
         remove(keys.searchMarkTags(id))
+        remove(keys.searchMarkUploader(id))
         store(
             keys.allSearchMarkIds(),
             getAllSearchMarkIds().toMutableList().also { it.remove(id) }
@@ -142,7 +137,8 @@ class SearchDatabase (context: Context): BaseDatabase() {
         name = read(keys.searchMarkName(id))!!,
         categories = read(keys.searchMarkCats(id))!!.map { Util.categoryFromOrdinal(it) },
         keyword = read(keys.searchMarkKeyword(id)) ?: "",
-        tags = read(keys.searchMarkTags(id))!!
+        tags = read(keys.searchMarkTags(id))!!,
+        uploader = read(keys.searchMarkUploader(id)) ?: ""
     )
     fun modifySearchMark (id: Int, searchMark: SearchMark) {
         if (!isKeyExist(keys.searchMarkName(id))) {
@@ -161,6 +157,7 @@ class SearchDatabase (context: Context): BaseDatabase() {
         store(keys.searchMarkCats(id), searchMark.categories.map { it.ordinal })
         store(keys.searchMarkKeyword(id), searchMark.keyword)
         store(keys.searchMarkTags(id), searchMark.tags)
+        store(keys.searchMarkUploader(id), searchMark.uploader)
     }
     private fun getNextSearchMarkId (): Int {
         val id = read(keys.nextSearchMarkId()) ?: 1

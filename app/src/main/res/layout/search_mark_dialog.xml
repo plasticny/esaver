@@ -108,6 +108,32 @@
 
     </LinearLayout>
 
+<!--  uploader  -->
+
+    <LinearLayout
+        android:id="@+id/uploader_field_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/uploader"
+            android:textSize="16sp"
+            android:textColor="@color/grey"/>
+
+        <EditText
+            android:id="@+id/uploader_editText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="18sp"
+            android:backgroundTint="@color/grey"
+            android:textColor="@color/white"/>
+
+    </LinearLayout>
+
 <!--  tags  -->
 
     <LinearLayout

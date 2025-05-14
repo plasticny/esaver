@@ -8,9 +8,9 @@ import androidx.appcompat.app.AlertDialog
 import com.example.viewer.R
 import com.example.viewer.Util
 import com.example.viewer.database.SearchDatabase.Companion.Category
-import com.example.viewer.database.SearchDatabase.Companion.SearchMark
 import com.example.viewer.databinding.SearchMarkDialogBinding
 import com.example.viewer.databinding.SearchMarkDialogTagBinding
+import com.example.viewer.struct.SearchMark
 
 open class SearchMarkDialog (
     protected val context: Context,
@@ -48,6 +48,11 @@ open class SearchMarkDialog (
         set (value) {
             field = value
             dialogBinding.keywordFieldContainer.visibility = if (value) View.VISIBLE else View.GONE
+        }
+    var showUploaderField: Boolean = true
+        set (value) {
+            field = value
+            dialogBinding.uploaderFieldContainer.visibility = if (value) View.VISIBLE else View.GONE
         }
     var showSaveButton: Boolean = false
         set (value) {
@@ -149,6 +154,9 @@ open class SearchMarkDialog (
         // keyword
         dialogBinding.keywordEditText.setText(searchMark?.keyword ?: "")
 
+        // uploader
+        dialogBinding.uploaderEditText.setText(searchMark?.uploader ?: "")
+
         // tags
         searchMark?.tags?.forEach { entry ->
             val cat = entry.key
@@ -209,7 +217,8 @@ open class SearchMarkDialog (
                     return@mapNotNull null
                 }
                 TAGS[it.spinner.selectedIndex] to it.editText.text.toString()
-            }.groupBy({it.first}, {it.second})
+            }.groupBy({it.first}, {it.second}),
+            uploader = dialogBinding.uploaderEditText.text.toString()
         )
 
     /**

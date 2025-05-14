@@ -21,10 +21,10 @@ import com.example.viewer.databinding.MainSearchFragmentBinding
 import com.example.viewer.databinding.SearchMarkBinding
 import com.example.viewer.databinding.SearchMarkDialogTagBinding
 import com.example.viewer.database.SearchDatabase
-import com.example.viewer.database.SearchDatabase.Companion.SearchMark
 import com.example.viewer.dialog.ConfirmDialog
 import com.example.viewer.dialog.FilterOutDialog
 import com.example.viewer.dialog.SearchMarkDialog
+import com.example.viewer.struct.SearchMark
 
 data class SearchMarkEntry (
     val id: Int,
@@ -75,7 +75,8 @@ class SearchMarkFragment: Fragment() {
                     name = "",
                     categories = listOf(),
                     keyword = binding.searchEditText.text.toString().trim(),
-                    tags = mapOf()
+                    tags = mapOf(),
+                    uploader = ""
                 )
                 SearchMarkDialog(context, layoutInflater).apply {
                     title = "進階搜尋"
@@ -86,7 +87,8 @@ class SearchMarkFragment: Fragment() {
                             context,
                             retSearchMark.categories,
                             retSearchMark.keyword,
-                            retSearchMark.tags
+                            retSearchMark.tags,
+                            retSearchMark.uploader
                         )
                     }
                 }.show(searchMark)

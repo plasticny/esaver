@@ -19,12 +19,11 @@ import com.example.viewer.Util
 import com.example.viewer.database.BookDatabase
 import com.example.viewer.databinding.SearchActivityBinding
 import com.example.viewer.database.SearchDatabase
-import com.example.viewer.database.SearchDatabase.Companion.SearchMark
 import com.example.viewer.database.SearchDatabase.Companion.Category
 import com.example.viewer.databinding.ActivitySearchBookBinding
 import com.example.viewer.dialog.SearchMarkDialog
 import com.example.viewer.dialog.SimpleEditTextDialog
-import kotlinx.coroutines.CoroutineScope
+import com.example.viewer.struct.SearchMark
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -42,12 +41,13 @@ class SearchActivity: AppCompatActivity() {
             context: Context,
             categories: List<Category> = Category.entries.toList(),
             keyword: String = "",
-            tags: Map<String, List<String>> = mapOf()
+            tags: Map<String, List<String>> = mapOf(),
+            uploader: String = ""
         ) {
             SearchDatabase.getInstance(context).setTmpSearchMark(
                 SearchMark(
                     name = context.getString(R.string.search),
-                    categories, keyword, tags
+                    categories, keyword, tags, uploader
                 )
             )
             context.startActivity(
@@ -93,6 +93,7 @@ class SearchActivity: AppCompatActivity() {
 
         searchMarkId = intent.getIntExtra("searchMarkId", -1)
         searchMark = searchDataSet.getSearchMark(searchMarkId)
+        println(searchMark.uploader)
         isTemporarySearch = searchMarkId == -1
 
         // search mark position
@@ -132,6 +133,7 @@ class SearchActivity: AppCompatActivity() {
                 showSaveButton = true
                 showSearchButton = true
                 saveCb = { retSearchMark ->
+                    // save tmp search
                     if (isTemporarySearch) {
                         SimpleEditTextDialog(this@SearchActivity, layoutInflater).apply {
                             title = "標記這個搜尋"
@@ -142,7 +144,8 @@ class SearchActivity: AppCompatActivity() {
                                     name = name,
                                     categories = retSearchMark.categories,
                                     keyword = retSearchMark.keyword,
-                                    tags = retSearchMark.tags
+                                    tags = retSearchMark.tags,
+                                    uploader = retSearchMark.uploader
                                 )
                                 searchMarkId = searchDataSet.addSearchMark(saveSearchMark)
                                 allSearchMarkIds = searchDataSet.getAllSearchMarkIds()
@@ -153,7 +156,9 @@ class SearchActivity: AppCompatActivity() {
                                 lifecycleScope.launch { reset() }
                             }
                         }.show()
-                    } else {
+                    }
+                    // save modification
+                    else {
                         searchDataSet.modifySearchMark(searchMarkId, retSearchMark)
                         searchMark = retSearchMark
                         lifecycleScope.launch { reset() }
@@ -166,7 +171,8 @@ class SearchActivity: AppCompatActivity() {
                                 name = getString(R.string.search),
                                 categories = retSearchMark.categories,
                                 keyword = retSearchMark.keyword,
-                                tags = retSearchMark.tags
+                                tags = retSearchMark.tags,
+                                uploader = retSearchMark.uploader
                             )
                         else retSearchMark
                     lifecycleScope.launch { reset() }
@@ -279,7 +285,7 @@ class SearchActivity: AppCompatActivity() {
 
         val doc = withContext(Dispatchers.IO) {
             Jsoup.connect(
-                searchMark.url(next).also { println("[SearchActivity.fetchBooks] fetch book from\n$it") }
+                searchMark.getSearchUrl(next).also { println("[SearchActivity.fetchBooks] fetch book from\n$it") }
             ).get()
         }
 
@@ -462,43 +468,4 @@ class SearchActivity: AppCompatActivity() {
             notifyItemRangeRemoved(0, size)
         }
     }
-}
-
-private fun SearchMark.url (next: String?): String {
-    val fCatsValue = if (categories.isNotEmpty()) {
-        1023 - categories.sumOf { it.value }
-    } else null
-
-    // f search
-    var fSearch = ""
-    if (keyword.isNotEmpty()) {
-        fSearch += "$keyword+"
-    }
-    if (tags.isNotEmpty()) {
-        val tokens = mutableListOf<String>()
-        tags.forEach { entry ->
-            val cat = entry.key
-            for (value in entry.value) {
-                if (value.contains(' ')) {
-                    tokens.add("${cat}%3A\"${value}%24\"")
-                } else {
-                    tokens.add("${cat}%3A${value}%24")
-                }
-            }
-        }
-        fSearch += tokens.joinToString(" ")
-    }
-
-    var ret = "https://e-hentai.org/"
-    if (fCatsValue != null || fSearch.isNotEmpty()) {
-        ret += "?"
-    }
-    fCatsValue?.let { ret += "f_cats=$it&" }
-    if (fSearch.isNotEmpty()) {
-        ret += "f_search=$fSearch&"
-    }
-    ret += "inline_set=dm_e&"
-    next?.let { ret += "next=$next" }
-
-    return ret
 }
