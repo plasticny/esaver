@@ -99,6 +99,10 @@ class BookDatabase (context: Context): BaseDatabase() {
             assertBookIdExist(bookId)
             return intPreferencesKey("${bookId}_groupId")
         }
+        fun bookUploader (bookId: String): Preferences.Key<String> {
+            assertBookIdExist(bookId)
+            return stringPreferencesKey("${bookId}_uploader")
+        }
         /**
          * store page of the book mark, start from 0
          */
@@ -121,7 +125,8 @@ class BookDatabase (context: Context): BaseDatabase() {
         pageNum: Int,
         tags: Map<String, List<String>>,
         source: BookSource,
-        groupId: Int
+        groupId: Int,
+        uploader: String?
     ) {
         if (pageNum < 1) {
             throw Exception("Invalid pageNum $pageNum")
@@ -147,6 +152,10 @@ class BookDatabase (context: Context): BaseDatabase() {
         store(storeKeys.bookTags(id), tags)
         // group id
         store(storeKeys.bookGroupId(id), groupId)
+        // uploader
+        uploader?.let {
+            store(storeKeys.bookUploader(id), uploader)
+        }
 
         store(storeKeys.bookSource(id), source.keyString)
         if (source == BookSource.E) {
@@ -174,7 +183,8 @@ class BookDatabase (context: Context): BaseDatabase() {
             subtitle = read(storeKeys.bookSubTitle(id)) ?: "",
             pageNum = getBookPageNum(id),
             tags = read(storeKeys.bookTags(id)) ?: mapOf(),
-            groupId = read(storeKeys.bookGroupId(id))!!
+            groupId = read(storeKeys.bookGroupId(id))!!,
+            uploader = read(storeKeys.bookUploader(id))
         )
     }
 
@@ -190,6 +200,7 @@ class BookDatabase (context: Context): BaseDatabase() {
         remove(storeKeys.bookLastViewTime(id))
         remove(storeKeys.bookBookMarks(id))
         remove(storeKeys.bookGroupId(id))
+        remove(storeKeys.bookUploader(id))
 
         if (getBookSource(id) == BookSource.E) {
             remove(storeKeys.bookPageUrls(id))

@@ -9,6 +9,21 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:text="@string/uploader"
+        android:textColor="@color/grey"/>
+
+    <TextView
+        android:id="@+id/uploader_textView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textColor="@color/white"
+        android:textIsSelectable="true"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
         android:text="@string/source_url"
         android:textColor="@color/grey"/>
 

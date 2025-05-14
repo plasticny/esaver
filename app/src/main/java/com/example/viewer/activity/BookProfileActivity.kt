@@ -236,7 +236,10 @@ class BookProfileActivity: AppCompatActivity() {
         val dialogViewBinding = DialogBookInfoBinding.inflate(layoutInflater)
         val dialog = AlertDialog.Builder(this).setView(dialogViewBinding.root).create()
 
+        dialogViewBinding.uploaderTextView.text = bookRecord.uploader ?: getString(R.string.noName)
+
         dialogViewBinding.urlTextView.text = bookRecord.url
+
         if (bookRecord.subtitle.isEmpty()) {
             dialogViewBinding.subtitle.visibility = View.GONE
         } else {
@@ -355,7 +358,8 @@ class BookProfileActivity: AppCompatActivity() {
             pageNum = bookRecord.pageNum,
             tags = bookRecord.tags,
             source = BookSource.E,
-            groupId = GroupDatabase.DEFAULT_GROUP_ID
+            groupId = GroupDatabase.DEFAULT_GROUP_ID,
+            uploader = bookRecord.uploader
         )
         GroupDatabase.getInstance(baseContext).addBookIdToGroup(GroupDatabase.DEFAULT_GROUP_ID, bookRecord.id)
 

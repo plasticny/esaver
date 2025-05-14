@@ -94,22 +94,23 @@ private class EBookAdder (context: Context): BookAdder(context) {
     override fun getFetcher(id: String, url: String): BasePictureFetcher = EPictureFetcher(context, 1, url)
 
     override suspend fun storeToDataSet(id: String, url: String) {
-        val doc = withContext(Dispatchers.IO) {
-            Jsoup.connect(url).get()
-        }
-        bookDataset.addBook(
-            id = id,
-            url = url,
-            category = Util.categoryFromName(
-                doc.selectFirst("#gdc")!!.text().trim()
-            ),
-            title = findTitle(doc),
-            pageNum = findPageNum(doc),
-            tags = findTags(doc),
-            source = BookSource.E,
-            groupId = GroupDatabase.DEFAULT_GROUP_ID
-        )
-        GroupDatabase.getInstance(context).addBookIdToGroup(GroupDatabase.DEFAULT_GROUP_ID, id)
+        throw Exception("time to implement")
+//        val doc = withContext(Dispatchers.IO) {
+//            Jsoup.connect(url).get()
+//        }
+//        bookDataset.addBook(
+//            id = id,
+//            url = url,
+//            category = Util.categoryFromName(
+//                doc.selectFirst("#gdc")!!.text().trim()
+//            ),
+//            title = findTitle(doc),
+//            pageNum = findPageNum(doc),
+//            tags = findTags(doc),
+//            source = BookSource.E,
+//            groupId = GroupDatabase.DEFAULT_GROUP_ID
+//        )
+//        GroupDatabase.getInstance(context).addBookIdToGroup(GroupDatabase.DEFAULT_GROUP_ID, id)
     }
 
     fun findTitle (doc: Document): String {
@@ -167,17 +168,17 @@ private class HiBookAdder (context: Context): BookAdder(context) {
 
     override suspend fun storeToDataSet(id: String, url: String) {
         throw Exception("time to implement this")
-        bookDataset.addBook(
-            id = id,
-            url = url,
-            category = SearchDatabase.Companion.Category.Doujinshi,
-            title = "",
-            pageNum = fetchPageNum(id),
-            tags = mapOf(),
-            source = BookSource.Hi,
-            groupId = GroupDatabase.DEFAULT_GROUP_ID
-        )
-        GroupDatabase.getInstance(context).addBookIdToGroup(GroupDatabase.DEFAULT_GROUP_ID, id)
+//        bookDataset.addBook(
+//            id = id,
+//            url = url,
+//            category = SearchDatabase.Companion.Category.Doujinshi,
+//            title = "",
+//            pageNum = fetchPageNum(id),
+//            tags = mapOf(),
+//            source = BookSource.Hi,
+//            groupId = GroupDatabase.DEFAULT_GROUP_ID
+//        )
+//        GroupDatabase.getInstance(context).addBookIdToGroup(GroupDatabase.DEFAULT_GROUP_ID, id)
     }
 
     fun fetchPageNum(id: String): Int {

@@ -381,7 +381,8 @@ class SearchActivity: AppCompatActivity() {
                     tags[category] = tr.select(".gt,.gtl,.gtw").map { it.text().trim() }
                 }
                 tags
-            }
+            },
+            uploader = doc.selectFirst("#gdn a")?.text()
         )
     }
 
