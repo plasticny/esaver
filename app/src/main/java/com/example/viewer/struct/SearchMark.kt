@@ -10,9 +10,11 @@ data class SearchMark (
     val uploader: String
 ) {
     fun getSearchUrl (next: String? = null): String {
-        val fCatsValue = if (categories.isNotEmpty()) {
-            1023 - categories.sumOf { it.value }
-        } else null
+        val fCatsValue = 1023 - if (categories.isNotEmpty()) {
+            categories.sumOf { it.value }
+        } else {
+            Category.entries.sumOf { it.value }
+        }
 
         // f search
         var fSearch = ""
