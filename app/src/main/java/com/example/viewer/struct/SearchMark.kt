@@ -35,11 +35,7 @@ data class SearchMark (
             fSearch += tokens.joinToString(" ")
         }
 
-        var ret = "https://e-hentai.org/"
-        if (fCatsValue != null || fSearch.isNotEmpty()) {
-            ret += "?"
-        }
-        fCatsValue?.let { ret += "f_cats=$it&" }
+        var ret = "https://e-hentai.org/?f_cats=$fCatsValue&"
         if (fSearch.isNotEmpty()) {
             ret += "f_search=$fSearch&"
         }

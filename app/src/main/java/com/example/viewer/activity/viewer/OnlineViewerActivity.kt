@@ -1,8 +1,10 @@
 package com.example.viewer.activity.viewer
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
 import com.example.viewer.R
+import com.example.viewer.dialog.ConfirmDialog
 import com.example.viewer.struct.BookRecord
 import com.example.viewer.fetcher.EPictureFetcher
 import kotlinx.coroutines.CoroutineScope
@@ -15,6 +17,8 @@ class OnlineViewerActivity: BaseViewerActivity() {
     private lateinit var bookRecord: BookRecord
     private lateinit var fetcher: EPictureFetcher
     private lateinit var pictureUrls: MutableList<String?>
+
+    private var endOfBookNotified = false
 
     override val enableBookmarkButton = false
     override val enableJumpToButton = true
@@ -39,6 +43,7 @@ class OnlineViewerActivity: BaseViewerActivity() {
     override fun onImageLongClicked(): Boolean = true
 
     override fun prevPage() {
+        endOfBookNotified = false
         if (page > firstPage) {
             page--
             loadPage()
@@ -46,7 +51,11 @@ class OnlineViewerActivity: BaseViewerActivity() {
     }
 
     override fun nextPage() {
-        if (page < lastPage) {
+        if (page == lastPage && !endOfBookNotified) {
+            endOfBookNotified = true
+            Toast.makeText(baseContext, "已到尾頁", Toast.LENGTH_SHORT).show()
+        }
+        else if (page < lastPage) {
             page++
             loadPage()
         }
