@@ -8,8 +8,8 @@ import androidx.appcompat.app.AlertDialog
 import com.example.viewer.R
 import com.example.viewer.Util
 import com.example.viewer.database.SearchDatabase.Companion.Category
-import com.example.viewer.databinding.SearchMarkDialogBinding
-import com.example.viewer.databinding.SearchMarkDialogTagBinding
+import com.example.viewer.databinding.DialogSearchMarkBinding
+import com.example.viewer.databinding.DialogSearchMarkTagBinding
 import com.example.viewer.struct.SearchMark
 
 open class SearchMarkDialog (
@@ -17,15 +17,17 @@ open class SearchMarkDialog (
     private val layoutInflater: LayoutInflater,
 ) {
     companion object {
+        private const val DIALOG_HEIGHT_PERCENT = 0.6
+
         private val TAGS = mutableListOf("-").also { it.addAll(Util.TAG_TRANSLATION_MAP.keys) }.toList()
         private val TAGS_DISPLAY = mutableListOf("-").also { it.addAll(Util.TAG_TRANSLATION_MAP.values) }.toList()
     }
 
-    private val dialogBinding = SearchMarkDialogBinding.inflate(layoutInflater)
+    private val dialogBinding = DialogSearchMarkBinding.inflate(layoutInflater)
     private val dialog = AlertDialog.Builder(context).setView(dialogBinding.root).create()
 
     private var selectedCats: MutableSet<Category> = mutableSetOf()
-    private var tagBindings: MutableList<SearchMarkDialogTagBinding> = mutableListOf()
+    private var tagBindings: MutableList<DialogSearchMarkTagBinding> = mutableListOf()
 
     var title: String = ""
         set (value) {
@@ -74,6 +76,13 @@ open class SearchMarkDialog (
     var confirmCb: ((SearchMark) -> Unit)? = null
 
     init {
+        // set dialog height
+        dialogBinding.mainWrapper.apply {
+            layoutParams = layoutParams.apply {
+                height = (resources.displayMetrics.heightPixels * DIALOG_HEIGHT_PERCENT).toInt()
+            }
+        }
+
         dialogBinding.titleTextView.visibility = View.GONE
         dialogBinding.nameFieldContainer.visibility = View.VISIBLE
 
@@ -185,7 +194,7 @@ open class SearchMarkDialog (
     }
 
     private fun createSearchMarkDialogTag (cat: String? = null, value: String? = null) =
-        SearchMarkDialogTagBinding.inflate(layoutInflater).apply {
+        DialogSearchMarkTagBinding.inflate(layoutInflater).apply {
             spinner.apply {
                 setItems(TAGS_DISPLAY)
                 cat?.let { selectedIndex = TAGS.indexOf(it) }

@@ -19,8 +19,8 @@ import com.example.viewer.Util
 import com.example.viewer.activity.SearchActivity
 import com.example.viewer.databinding.MainSearchFragmentBinding
 import com.example.viewer.databinding.SearchMarkBinding
-import com.example.viewer.databinding.SearchMarkDialogTagBinding
 import com.example.viewer.database.SearchDatabase
+import com.example.viewer.databinding.DialogSearchMarkTagBinding
 import com.example.viewer.dialog.ConfirmDialog
 import com.example.viewer.dialog.FilterOutDialog
 import com.example.viewer.dialog.SearchMarkDialog
@@ -251,15 +251,6 @@ class SearchMarkFragment: Fragment() {
         searchMarkBinding.root.backgroundTintList = ColorStateList.valueOf(parent.context.getColor(R.color.grey))
         focusedSearchMark = SearchMarkEntry(id, searchMark, searchMarkBinding)
     }
-
-    private fun createSearchMarkDialogTag (parent: ViewGroup, cat: String? = null, value: String? = null) =
-        SearchMarkDialogTagBinding.inflate(layoutInflater, parent, false).apply {
-            spinner.apply {
-                setItems(TAGS_DISPLAY)
-                cat?.let { selectedIndex = TAGS.indexOf(it) }
-            }
-            value?.let { editText.setText(it) }
-        }
 
     /**
      * @return list of pair, first of pair is id, second is search mark instance

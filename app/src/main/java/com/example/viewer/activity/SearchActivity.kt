@@ -102,7 +102,6 @@ class SearchActivity: AppCompatActivity() {
         binding = SearchActivityBinding.inflate(layoutInflater)
 
         binding.recyclerView.apply {
-            visibility
             layoutManager = GridLayoutManager(context, 2)
             adapter = BookRecyclerViewAdapter()
             addOnScrollListener(object: RecyclerView.OnScrollListener() {
