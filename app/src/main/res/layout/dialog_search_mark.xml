@@ -4,7 +4,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@color/darkgrey"
+    android:background="@color/dark_grey"
     android:padding="16dp">
 
     <!--  the height of linear layout will set to a percent of the screen  -->
@@ -12,7 +12,7 @@
     <LinearLayout
         android:id="@+id/main_wrapper"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
+        android:layout_height="wrap_content"
         android:orientation="vertical">
 
         <!--  title  -->
@@ -191,6 +191,32 @@
 
                 </LinearLayout>
 
+                <!--  do apply exclude tag  -->
+
+                <LinearLayout
+                    android:id="@+id/do_exclude_wrapper"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/do_apply_exclude_tag"
+                        android:textSize="16sp"
+                        android:textColor="@color/grey"/>
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/do_exclude_switch"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:switchMinWidth="60dp"/>
+
+                </LinearLayout>
+
             </LinearLayout>
 
         </ScrollView>
@@ -200,6 +226,7 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
             android:orientation="horizontal"
             android:gravity="end">
 

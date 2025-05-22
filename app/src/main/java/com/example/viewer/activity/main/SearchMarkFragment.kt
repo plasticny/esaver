@@ -20,7 +20,6 @@ import com.example.viewer.activity.SearchActivity
 import com.example.viewer.databinding.MainSearchFragmentBinding
 import com.example.viewer.databinding.SearchMarkBinding
 import com.example.viewer.database.SearchDatabase
-import com.example.viewer.databinding.DialogSearchMarkTagBinding
 import com.example.viewer.dialog.ConfirmDialog
 import com.example.viewer.dialog.FilterOutDialog
 import com.example.viewer.dialog.SearchMarkDialog
@@ -33,11 +32,6 @@ data class SearchMarkEntry (
 )
 
 class SearchMarkFragment: Fragment() {
-    companion object {
-        private val TAGS = mutableListOf("-").also { it.addAll(Util.TAG_TRANSLATION_MAP.keys) }.toList()
-        private val TAGS_DISPLAY = mutableListOf("-").also { it.addAll(Util.TAG_TRANSLATION_MAP.values) }.toList()
-    }
-
     private lateinit var parent: ViewGroup
     private lateinit var binding: MainSearchFragmentBinding
     private lateinit var searchDataset: SearchDatabase
@@ -71,13 +65,6 @@ class SearchMarkFragment: Fragment() {
 
         binding.advanceSearchButton.apply {
             setOnClickListener {
-                val searchMark = SearchMark (
-                    name = "",
-                    categories = listOf(),
-                    keyword = binding.searchEditText.text.toString().trim(),
-                    tags = mapOf(),
-                    uploader = ""
-                )
                 SearchMarkDialog(context, layoutInflater).apply {
                     title = "進階搜尋"
                     showNameField = false
@@ -88,10 +75,20 @@ class SearchMarkFragment: Fragment() {
                             retSearchMark.categories,
                             retSearchMark.keyword,
                             retSearchMark.tags,
-                            retSearchMark.uploader
+                            retSearchMark.uploader,
+                            retSearchMark.doExclude
                         )
                     }
-                }.show(searchMark)
+                }.show(
+                    SearchMark (
+                        name = "",
+                        categories = listOf(),
+                        keyword = binding.searchEditText.text.toString().trim(),
+                        tags = mapOf(),
+                        uploader = "",
+                        doExclude = true
+                    )
+                )
             }
         }
 
@@ -236,7 +233,7 @@ class SearchMarkFragment: Fragment() {
         if (doModifyBindingStyle) {
             focusedSearchMark!!.binding.let {
                 it.name.setTextColor(parent.context.getColor(R.color.white))
-                it.root.backgroundTintList = ColorStateList.valueOf(parent.context.getColor(R.color.darkgrey))
+                it.root.backgroundTintList = ColorStateList.valueOf(parent.context.getColor(R.color.dark_grey))
             }
         }
         focusedSearchMark = null
@@ -245,7 +242,7 @@ class SearchMarkFragment: Fragment() {
     private fun changeFocusSearchMark (id: Int, searchMark: SearchMark, searchMarkBinding: SearchMarkBinding) {
         focusedSearchMark!!.binding.let {
             it.name.setTextColor(parent.context.getColor(R.color.white))
-            it.root.backgroundTintList = ColorStateList.valueOf(parent.context.getColor(R.color.darkgrey))
+            it.root.backgroundTintList = ColorStateList.valueOf(parent.context.getColor(R.color.dark_grey))
         }
         searchMarkBinding.name.setTextColor(parent.context.getColor(R.color.black))
         searchMarkBinding.root.backgroundTintList = ColorStateList.valueOf(parent.context.getColor(R.color.grey))

@@ -42,12 +42,13 @@ class SearchActivity: AppCompatActivity() {
             categories: List<Category> = Category.entries.toList(),
             keyword: String = "",
             tags: Map<String, List<String>> = mapOf(),
-            uploader: String = ""
+            uploader: String = "",
+            doExclude: Boolean = true
         ) {
             SearchDatabase.getInstance(context).setTmpSearchMark(
                 SearchMark(
                     name = context.getString(R.string.search),
-                    categories, keyword, tags, uploader
+                    categories, keyword, tags, uploader, doExclude
                 )
             )
             context.startActivity(
@@ -144,7 +145,8 @@ class SearchActivity: AppCompatActivity() {
                                     categories = retSearchMark.categories,
                                     keyword = retSearchMark.keyword,
                                     tags = retSearchMark.tags,
-                                    uploader = retSearchMark.uploader
+                                    uploader = retSearchMark.uploader,
+                                    doExclude = retSearchMark.doExclude
                                 )
                                 searchMarkId = searchDataSet.addSearchMark(saveSearchMark)
                                 allSearchMarkIds = searchDataSet.getAllSearchMarkIds()
@@ -171,7 +173,8 @@ class SearchActivity: AppCompatActivity() {
                                 categories = retSearchMark.categories,
                                 keyword = retSearchMark.keyword,
                                 tags = retSearchMark.tags,
-                                uploader = retSearchMark.uploader
+                                uploader = retSearchMark.uploader,
+                                doExclude = retSearchMark.doExclude
                             )
                         else retSearchMark
                     lifecycleScope.launch { reset() }
@@ -220,7 +223,11 @@ class SearchActivity: AppCompatActivity() {
             if (newTime != lastExcludeTagUpdateTime) {
                 println("[${this::class.simpleName}.${this::onResume.name}] re-filter books")
                 recyclerViewAdapter.getBooks().let {
-                    recyclerViewAdapter.refreshBooks(excludeTagFilter(it))
+                    recyclerViewAdapter.refreshBooks(
+                        if (searchMark.doExclude) {
+                            excludeTagFilter(it)
+                        } else it
+                    )
                 }
                 lastExcludeTagUpdateTime = newTime
             }
@@ -267,7 +274,9 @@ class SearchActivity: AppCompatActivity() {
         loadingMore = true
 
         binding.searchProgressBar.wrapper.visibility = ProgressBar.VISIBLE
-        val books = excludeTagFilter(fetchBooks())
+        val books = if (searchMark.doExclude) {
+            excludeTagFilter(fetchBooks())
+        } else fetchBooks()
         binding.searchProgressBar.wrapper.visibility = ProgressBar.GONE
 
         if (mySearchId == searchMarkId) {

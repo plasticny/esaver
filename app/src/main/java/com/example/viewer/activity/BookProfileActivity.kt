@@ -12,7 +12,6 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
-import com.example.viewer.BookAdder
 import com.example.viewer.struct.BookRecord
 import com.example.viewer.R
 import com.example.viewer.Util
@@ -197,7 +196,7 @@ class BookProfileActivity: AppCompatActivity() {
             for (value in tagValues) {
                 Button(baseContext).apply {
                     text = value
-                    backgroundTintList = ColorStateList.valueOf(baseContext.getColor(R.color.darkgrey))
+                    backgroundTintList = ColorStateList.valueOf(baseContext.getColor(R.color.dark_grey))
                     isAllCaps = false
                     setTextColor(baseContext.getColor(R.color.grey))
                     setOnClickListener { showTagDialog(tagCat, value) }

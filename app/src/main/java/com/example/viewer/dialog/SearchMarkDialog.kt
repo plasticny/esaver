@@ -56,6 +56,11 @@ open class SearchMarkDialog (
             field = value
             dialogBinding.uploaderFieldContainer.visibility = if (value) View.VISIBLE else View.GONE
         }
+    var showDoExcludeField: Boolean = true
+        set (value) {
+            field = value
+            dialogBinding.doExcludeWrapper.visibility = if (value) View.VISIBLE else View.GONE
+        }
     var showSaveButton: Boolean = false
         set (value) {
             field = value
@@ -190,6 +195,9 @@ open class SearchMarkDialog (
             }
         }
 
+        // do apply exclude tag
+        dialogBinding.doExcludeSwitch.isChecked = searchMark?.doExclude == true
+
         dialog.show()
     }
 
@@ -227,7 +235,8 @@ open class SearchMarkDialog (
                 }
                 TAGS[it.spinner.selectedIndex] to it.editText.text.toString()
             }.groupBy({it.first}, {it.second}),
-            uploader = dialogBinding.uploaderEditText.text.toString()
+            uploader = dialogBinding.uploaderEditText.text.toString(),
+            doExclude = dialogBinding.doExcludeSwitch.isChecked
         )
 
     /**

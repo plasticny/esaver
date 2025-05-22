@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Environment
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -71,6 +72,8 @@ class SearchDatabase (context: Context): BaseDatabase() {
         fun searchMarkKeyword (id: Int) = stringPreferencesKey("${TAG}_searchMarkKeyword_$id")
         fun searchMarkTags (id: Int) = CustomPreferencesKey<Tags>("${TAG}_searchMarkTags_$id")
         fun searchMarkUploader (id: Int) = stringPreferencesKey("${TAG}_searchMarkUploader_$id")
+        // do apply exclude tag
+        fun searchMarkDoExclude (id: Int) = booleanPreferencesKey("${TAG}_searchMarkDoExclude_$id")
         fun searchMarkListLastUpdate () = longPreferencesKey("${TAG}_searchMarkListLastUpdate")
 
         fun nextExcludeTagId () = intPreferencesKey("${TAG}_nextExcludeTagId")
@@ -80,16 +83,10 @@ class SearchDatabase (context: Context): BaseDatabase() {
         fun excludeTagLastUpdate () = longPreferencesKey("${TAG}_excludeTagLastUpdate")
     }
 
-    fun dev () {
-        store(
-            keys.allExcludeTagIds(),
-            getAllExcludeIds().toMutableList().apply { add(28) }
-        )
-    }
-
     //
     // search mark
     //
+
     /**
      * get all search mark id in the dataset
      *
@@ -116,6 +113,7 @@ class SearchDatabase (context: Context): BaseDatabase() {
         remove(keys.searchMarkKeyword(id))
         remove(keys.searchMarkTags(id))
         remove(keys.searchMarkUploader(id))
+        remove(keys.searchMarkDoExclude(id))
         store(
             keys.allSearchMarkIds(),
             getAllSearchMarkIds().toMutableList().also { it.remove(id) }
@@ -138,7 +136,8 @@ class SearchDatabase (context: Context): BaseDatabase() {
         categories = read(keys.searchMarkCats(id))!!.map { Util.categoryFromOrdinal(it) },
         keyword = read(keys.searchMarkKeyword(id)) ?: "",
         tags = read(keys.searchMarkTags(id))!!,
-        uploader = read(keys.searchMarkUploader(id)) ?: ""
+        uploader = read(keys.searchMarkUploader(id)) ?: "",
+        doExclude = read(keys.searchMarkDoExclude(id)) == true
     )
     fun modifySearchMark (id: Int, searchMark: SearchMark) {
         if (!isKeyExist(keys.searchMarkName(id))) {
@@ -158,6 +157,7 @@ class SearchDatabase (context: Context): BaseDatabase() {
         store(keys.searchMarkKeyword(id), searchMark.keyword)
         store(keys.searchMarkTags(id), searchMark.tags)
         store(keys.searchMarkUploader(id), searchMark.uploader)
+        store(keys.searchMarkDoExclude(id), searchMark.doExclude)
     }
     private fun getNextSearchMarkId (): Int {
         val id = read(keys.nextSearchMarkId()) ?: 1

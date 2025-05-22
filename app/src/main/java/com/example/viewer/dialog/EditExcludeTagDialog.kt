@@ -14,6 +14,7 @@ class EditExcludeTagDialog (
         title = "編輯濾除規則"
         showKeywordField = false
         showUploaderField = false
+        showDoExcludeField = false
         showNameField = false
         showSaveButton = true
     }
@@ -40,7 +41,8 @@ class EditExcludeTagDialog (
                 categories = record.categories.toList(),
                 keyword = "",
                 tags = record.tags,
-                uploader = ""
+                uploader = "",
+                doExclude = false
             )
         )
     }

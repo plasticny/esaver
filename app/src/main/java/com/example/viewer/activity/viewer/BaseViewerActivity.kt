@@ -4,12 +4,10 @@ import android.animation.Animator
 import android.animation.Animator.AnimatorListener
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
-import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
 import android.graphics.ImageDecoder.DecodeException
 import android.graphics.Rect
 import android.graphics.drawable.ColorDrawable
-import android.net.Uri
 import android.os.Bundle
 import android.text.InputType
 import android.view.GestureDetector
@@ -25,8 +23,6 @@ import com.example.viewer.databinding.ViewerActivityBinding
 import com.example.viewer.dialog.SimpleEditTextDialog
 import kotlinx.coroutines.launch
 import java.io.File
-import java.io.IOError
-import java.io.IOException
 import kotlin.math.abs
 
 abstract class BaseViewerActivity: AppCompatActivity() {
@@ -275,7 +271,7 @@ abstract class BaseViewerActivity: AppCompatActivity() {
         viewerActivityBinding.toolbarContainer.apply {
             ValueAnimator.ofArgb(
                 (background as ColorDrawable).color,
-                if (toggle) getColor(R.color.half_transparent_darkgery) else getColor(R.color.transparent_darkgery)
+                if (toggle) getColor(R.color.half_transparent_dark_gery) else getColor(R.color.transparent_dark_gery)
             ).apply {
                 duration = 250
                 addUpdateListener { setBackgroundColor(animatedValue as Int) }
