@@ -383,9 +383,7 @@ class SearchActivity: AppCompatActivity() {
             url = briefBookRecord.url,
             coverUrl = briefBookRecord.coverUrl,
             cat = briefBookRecord.cat,
-            title = doc.selectFirst("#gj")!!.text().trim().let {
-                if (it.isNotEmpty()) it else briefBookRecord.title
-            },
+            title = doc.selectFirst("#gj")!!.text().trim().ifEmpty { briefBookRecord.title },
             subtitle = briefBookRecord.title,
             pageNum = briefBookRecord.pageNum,
             tags = doc.select("#taglist tr").run {

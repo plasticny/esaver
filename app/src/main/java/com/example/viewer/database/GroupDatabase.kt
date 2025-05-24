@@ -1,6 +1,7 @@
 package com.example.viewer.database
 
 import android.content.Context
+import android.net.Uri
 import android.os.Environment
 import androidx.compose.runtime.key
 import androidx.core.content.ContextCompat
@@ -12,6 +13,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.viewer.R
 import java.io.File
+import java.io.FileOutputStream
 
 private const val DB_NAME = "group"
 private val Context.groupDatabase: DataStore<Preferences> by preferencesDataStore(name = DB_NAME)
@@ -159,5 +161,22 @@ class GroupDatabase (context: Context) : BaseDatabase() {
             backupFile.delete()
         }
         dbFile.copyTo(backupFile)
+    }
+
+    fun importDb (context: Context, uri: Uri) {
+        val folder = File("${context.filesDir}/datastore")
+        val dbFile = File(folder, "${DB_NAME}.preferences_pb")
+        if (!folder.exists()) {
+            folder.mkdirs()
+        }
+        if (!dbFile.exists()) {
+            dbFile.createNewFile()
+        }
+
+        FileOutputStream(dbFile).use { fos ->
+            context.contentResolver.openInputStream(uri)?.use { ins ->
+                fos.write(ins.readAllBytes())
+            }
+        }
     }
 }

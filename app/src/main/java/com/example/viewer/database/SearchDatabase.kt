@@ -1,6 +1,7 @@
 package com.example.viewer.database
 
 import android.content.Context
+import android.net.Uri
 import android.os.Environment
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -14,6 +15,7 @@ import com.example.viewer.Util
 import com.example.viewer.struct.ExcludeTagRecord
 import com.example.viewer.struct.SearchMark
 import java.io.File
+import java.io.FileOutputStream
 
 typealias Tags = Map<String, List<String>>
 
@@ -220,5 +222,22 @@ class SearchDatabase (context: Context): BaseDatabase() {
             backupFile.delete()
         }
         dbFile.copyTo(backupFile)
+    }
+
+    fun importDb (context: Context, uri: Uri) {
+        val folder = File("${context.filesDir}/datastore")
+        val dbFile = File(folder, "${DB_NAME}.preferences_pb")
+        if (!folder.exists()) {
+            folder.mkdirs()
+        }
+        if (!dbFile.exists()) {
+            dbFile.createNewFile()
+        }
+
+        FileOutputStream(dbFile).use { fos ->
+            context.contentResolver.openInputStream(uri)?.use { ins ->
+                fos.write(ins.readAllBytes())
+            }
+        }
     }
 }

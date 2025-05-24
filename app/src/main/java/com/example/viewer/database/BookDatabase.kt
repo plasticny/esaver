@@ -1,7 +1,10 @@
 package com.example.viewer.database
 
 import android.content.Context
+import android.net.Uri
 import android.os.Environment
+import android.provider.MediaStore
+import androidx.core.net.toUri
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.byteArrayPreferencesKey
@@ -15,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
 import java.io.File
+import java.io.FileOutputStream
 
 enum class BookSource (val keyString: String) {
     E("E"),
@@ -295,16 +299,34 @@ class BookDatabase (context: Context): BaseDatabase() {
     // backup
     //
     fun backup (context: Context) {
-        val dbFile = File("${context.filesDir}/datastore", "${DB_NAME}.preferences_pb")
         val backupFolder = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "eSaver")
         if (!backupFolder.exists()) {
             backupFolder.mkdirs()
         }
+
+        val dbFile = File("${context.filesDir}/datastore", "${DB_NAME}.preferences_pb")
 
         val backupFile = File(backupFolder, "book")
         if (backupFile.exists()) {
             backupFile.delete()
         }
         dbFile.copyTo(backupFile)
+    }
+
+    fun importDb (context: Context, uri: Uri) {
+        val folder = File("${context.filesDir}/datastore")
+        val dbFile = File(folder, "${DB_NAME}.preferences_pb")
+        if (!folder.exists()) {
+            folder.mkdirs()
+        }
+        if (!dbFile.exists()) {
+            dbFile.createNewFile()
+        }
+
+        FileOutputStream(dbFile).use { fos ->
+            context.contentResolver.openInputStream(uri)?.use { ins ->
+                fos.write(ins.readAllBytes())
+            }
+        }
     }
 }

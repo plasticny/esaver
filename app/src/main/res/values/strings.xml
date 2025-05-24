@@ -75,4 +75,5 @@
     <string name="group">分組</string>
     <string name="uploader">上傳者</string>
     <string name="do_apply_exclude_tag">啟用濾除標籤？</string>
+    <string name="import_db">匯入</string>
 </resources>
