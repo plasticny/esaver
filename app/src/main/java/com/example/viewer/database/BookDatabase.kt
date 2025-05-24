@@ -11,6 +11,9 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.viewer.struct.BookRecord
 import com.example.viewer.Util
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.jsoup.Jsoup
 import java.io.File
 
 enum class BookSource (val keyString: String) {
@@ -49,6 +52,10 @@ class BookDatabase (context: Context): BaseDatabase() {
         fun bookTitle (bookId: String): Preferences.Key<String> {
             assertBookIdExist(bookId)
             return stringPreferencesKey("${bookId}_title")
+        }
+        fun bookSubTitle (bookId: String): Preferences.Key<String> {
+            assertBookIdExist(bookId)
+            return stringPreferencesKey("${bookId}_subTitle")
         }
         fun bookPageUrls (bookId: String): CustomPreferencesKey<List<String>> {
             assertBookIdExist(bookId)
@@ -117,6 +124,7 @@ class BookDatabase (context: Context): BaseDatabase() {
         url: String,
         category: SearchDatabase.Companion.Category,
         title: String,
+        subtitle: String = "",
         pageNum: Int,
         tags: Map<String, List<String>>,
         source: BookSource
@@ -135,6 +143,10 @@ class BookDatabase (context: Context): BaseDatabase() {
         store(storeKeys.bookCatOrdinal(id), category.ordinal)
         // title
         store(storeKeys.bookTitle(id), title)
+        // subtitle
+        if (subtitle.isNotEmpty()) {
+            store(storeKeys.bookSubTitle(id), subtitle)
+        }
         // total page
         store(storeKeys.bookPageNum(id), pageNum)
         // tags
@@ -168,19 +180,28 @@ class BookDatabase (context: Context): BaseDatabase() {
             },
             cat = Util.categoryFromOrdinal(read(storeKeys.bookCatOrdinal(id))!!).name,
             title = read(storeKeys.bookTitle(id))!!,
+            subtitle = read(storeKeys.bookSubTitle(id)) ?: "",
             pageNum = getBookPageNum(id),
             tags = read(storeKeys.bookTags(id)) ?: mapOf(),
             author = author
         )
     }
 
-
-    fun removeBook (id: String, bookAuthor: String): Boolean {
+    /**
+     * @param bookAuthor
+     * This function has O(n) complexity on searching who is the author if this is null.
+     * Provide it to gain better performance
+     */
+    fun removeBook (id: String, bookAuthor: String?): Boolean {
         try {
-            removeAuthorBookId(bookAuthor, id)
+            removeAuthorBookId(
+                bookAuthor ?: findBookAuthor(id),
+                id
+            )
 
             remove(storeKeys.bookUrl(id))
             remove(storeKeys.bookTitle(id))
+            remove(storeKeys.bookSubTitle(id))
             remove(storeKeys.bookPageNum(id))
             remove(storeKeys.bookCatOrdinal(id))
             remove(storeKeys.bookTags(id))
@@ -198,6 +219,8 @@ class BookDatabase (context: Context): BaseDatabase() {
             removeBookId(id)
             return true
         } catch (e: Exception) {
+            println("[${this::class.simpleName}.${this::removeBook.name}] exception")
+            e.printStackTrace()
             return false
         }
     }
@@ -224,15 +247,6 @@ class BookDatabase (context: Context): BaseDatabase() {
 
         addAuthorBookId(newAuthor, bookId)
         removeAuthorBookId(oldAuthor, bookId)
-
-        if (oldAuthor != NO_AUTHOR && getAuthorBookIds(oldAuthor).isEmpty()) {
-            println("[BookDataset] removeAuthor $oldAuthor")
-            val authors = (read(storeKeys.allAuthors()) ?: listOf()).toMutableList()
-            assertAuthorExist(oldAuthor)
-            authors.remove(oldAuthor)
-            store(storeKeys.allAuthors(), authors)
-            authorListUpdated = true
-        }
 
         if (authorListUpdated) {
             store(storeKeys.authorListUpdateTime(), System.currentTimeMillis())
@@ -314,11 +328,33 @@ class BookDatabase (context: Context): BaseDatabase() {
     fun getBookLastViewTime (bookId: String) = read(storeKeys.bookLastViewTime(bookId)) ?: 0L
     fun updateBookLastViewTime (bookId: String) = store(storeKeys.bookLastViewTime(bookId), System.currentTimeMillis())
 
+    fun findBookAuthor (bookId: String): String {
+        for (author in getAllAuthors()) {
+            if (getAuthorBookIds(author).contains(bookId)) {
+                return author
+            }
+        }
+        throw Exception("book author not found for $bookId")
+    }
+
     // authors
     fun getAllAuthors (): List<String> = mutableListOf(NO_AUTHOR).also { it.addAll(
         getUserAuthors()
     ) }
     fun getUserAuthors () = read(storeKeys.allAuthors()) ?: listOf() // get authors that user added (without No Author)
+    private fun removeAuthor (name: String) {
+        println("[BookDataset] removeAuthor $name")
+
+        assertAuthorExist(name)
+
+        remove(storeKeys.authorBookIds(name))
+
+        val authors = (read(storeKeys.allAuthors()) ?: listOf()).toMutableList()
+        authors.remove(name)
+        store(storeKeys.allAuthors(), authors)
+
+        store(storeKeys.authorListUpdateTime(), System.currentTimeMillis())
+    }
     private fun assertAuthorExist (name: String) {
         if (!getAllAuthors().contains(name)) {
             throw Exception("author $name not exist")
@@ -344,7 +380,12 @@ class BookDatabase (context: Context): BaseDatabase() {
             throw Exception("bookId $bookId is not in the list of author $author")
         }
         bookIds.remove(bookId)
-        store(storeKeys.authorBookIds(author), bookIds)
+
+        if (author != NO_AUTHOR && bookIds.isEmpty()) {
+            removeAuthor(author)
+        } else {
+            store(storeKeys.authorBookIds(author), bookIds)
+        }
     }
 
     //

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:background="@color/darkgrey"
     android:orientation="vertical"
     android:padding="16dp">
@@ -30,26 +30,26 @@
         android:layout_marginTop="8dp"
         android:gravity="end">
 
-        <com.google.android.material.button.MaterialButton
+        <com.example.viewer.widget.IconButton
+            style="@style/IconButtonCommonStyle"
             android:id="@+id/cancel_button"
             android:layout_width="90dp"
             android:layout_height="wrap_content"
-            android:fontFamily="@font/icon_button_font"
-            android:text="@string/icon_button_cancel"
             android:textColor="@color/black"
-            android:theme="@style/Theme.MaterialComponents.Light"
-            android:backgroundTint="@color/grey"/>
+            android:backgroundTint="@color/grey"
+            app:viewIcon="@string/fa_xmark"
+            app:viewText="@string/cancel"/>
 
-        <com.google.android.material.button.MaterialButton
+        <com.example.viewer.widget.IconButton
+            style="@style/IconButtonCommonStyle"
             android:id="@+id/confirm_button"
             android:layout_width="90dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
-            android:fontFamily="@font/icon_button_font"
-            android:text="@string/icon_button_confirm"
             android:textColor="@color/black"
-            android:theme="@style/Theme.MaterialComponents.Light"
-            android:backgroundTint="@color/grey"/>
+            android:backgroundTint="@color/grey"
+            app:viewIcon="@string/fa_check"
+            app:viewText="@string/confirm"/>
 
     </LinearLayout>
 

@@ -85,71 +85,48 @@
 
         <TextView
             android:id="@+id/jumpTo_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="32dp"
+            android:layout_width="50dp"
+            android:layout_height="match_parent"
+            android:visibility="gone"
+            android:alpha="0"
+            android:gravity="center"
             android:fontFamily="@font/font_awesome"
             android:text="@string/fa_right_to_bracket"
             android:textColor="@color/white"
             android:textSize="20sp"
-            android:visibility="gone"
-            android:alpha="0"
-            app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/bookmark_button"/>
+            app:layout_constraintEnd_toStartOf="@id/bookmark_button"
+            app:layout_constraintTop_toTopOf="parent" />
 
         <TextView
             android:id="@+id/bookmark_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="32dp"
+            android:layout_width="50dp"
+            android:layout_height="match_parent"
+            android:layout_marginEnd="16dp"
+            android:visibility="gone"
+            android:alpha="0"
+            android:gravity="center"
             android:fontFamily="@font/font_awesome"
             android:text="@string/fa_bookmark"
             android:textColor="@color/white"
             android:textSize="20sp"
-            android:visibility="gone"
-            android:alpha="0"
-            app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"/>
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-<!--  others  -->
+<!--  progress indicator  -->
 
-    <ImageView
-        android:id="@+id/viewer_tmp_image_vew"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:visibility="invisible" />
-
-    <LinearLayout
-        android:id="@+id/progress_wrapper"
-        android:layout_width="wrap_content"
+    <include
+        layout="@layout/component_progress"
+        android:id="@+id/progress"
         android:layout_height="wrap_content"
-        android:gravity="center"
-        android:orientation="vertical"
+        android:layout_width="wrap_content"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
-
-        <ProgressBar
-            style="?android:attr/progressBarStyleLarge"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:indeterminate="true"
-            android:indeterminateTint="@color/white" />
-
-        <TextView
-            android:id="@+id/progress_textView"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="@color/white"
-            android:textSize="18sp"/>
-
-    </LinearLayout>
+        app:layout_constraintTop_toTopOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

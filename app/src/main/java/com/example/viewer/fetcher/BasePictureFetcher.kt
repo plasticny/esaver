@@ -6,6 +6,7 @@ import com.example.viewer.database.BookSource
 import com.example.viewer.database.BookDatabase
 import com.example.viewer.Util
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType
 import okhttp3.OkHttpClient
@@ -14,7 +15,6 @@ import okhttp3.ResponseBody
 import okio.Buffer
 import okio.BufferedSource
 import okio.ForwardingSource
-import okio.Okio
 import okio.buffer
 import java.io.File
 import java.net.SocketTimeoutException
@@ -97,25 +97,21 @@ abstract class BasePictureFetcher {
         val pictureFile = File(bookFolder, page.toString())
         println("[${this::class.simpleName}.${this::getPictureUrl.name}]\n${pictureFile.path}")
 
-        // when the picture is on downloading
-        if (downloadingPages.contains(page)) {
-            withContext(Dispatchers.IO) {
-                while (downloadingPages.contains(page)) {
-                    Thread.sleep(100)
-                }
-            }
-        }
+        // prevent return the url of an incomplete picture
+        waitPictureDownload(page)
 
         if (!pictureFile.exists()) {
-            downloadingPages.add(page) // fetching picture url may take time
-            savePicture(page, progressListener).let {
-                if (it == null) {
-                    return null
-                }
-            }
+            savePicture(page, progressListener) ?: return null
         }
 
         return pictureFile.path
+    }
+
+    fun deletePicture (page: Int) {
+        val file = File(bookFolder, page.toString())
+        if (file.exists()) {
+            file.delete()
+        }
     }
 
     fun close () {
@@ -135,16 +131,20 @@ abstract class BasePictureFetcher {
         headers: Map<String, String> = mapOf(),
         progressListener: ((contentLength: Long, downloadLength: Long) -> Unit)? = null
     ): File? {
-        println("[BasePictureFetcher.downloadPicture] $url")
-
         if(!Util.isInternetAvailable(context)) {
             return null
         }
 
-        downloadingPages.add(page)
-
         val file = File(bookFolder, page.toString())
 
+        // prevent multiple download
+        waitPictureDownload(page)
+        if (file.exists()) {
+            return file
+        }
+        downloadingPages.add(page)
+
+        // build the download request
         val downloadClient = progressListener?.let {
             okHttpClient.newBuilder()
                 .addInterceptor { chain ->
@@ -155,7 +155,6 @@ abstract class BasePictureFetcher {
                     }
                 }.build()
         } ?: okHttpClient
-
         val request = Request.Builder().url(url).apply {
             for (header in headers) {
                 addHeader(header.key, header.value)
@@ -164,6 +163,7 @@ abstract class BasePictureFetcher {
 
         return withContext(Dispatchers.IO) {
             try {
+                println("[BasePictureFetcher.downloadPicture] start download $page\n$url")
                 downloadClient.newCall(request).execute().use { response ->
                     if (response.isSuccessful) {
                         file.outputStream().use { response.body!!.byteStream().copyTo(it) }
@@ -185,6 +185,19 @@ abstract class BasePictureFetcher {
     protected fun assertPageInRange (page: Int) {
         if (page < 0 || page >= pageNum) {
             throw Exception("page out of range")
+        }
+    }
+
+    /**
+     * wait if the picture of "page" is downloading
+     */
+    private suspend fun waitPictureDownload (page: Int) {
+        if (downloadingPages.contains(page)) {
+            withContext(Dispatchers.IO) {
+                while (downloadingPages.contains(page)) {
+                    delay(100)
+                }
+            }
         }
     }
 }

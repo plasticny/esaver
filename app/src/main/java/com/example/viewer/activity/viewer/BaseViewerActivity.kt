@@ -2,37 +2,32 @@ package com.example.viewer.activity.viewer
 
 import android.animation.Animator
 import android.animation.Animator.AnimatorListener
-import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
+import android.graphics.BitmapFactory
+import android.graphics.ImageDecoder
+import android.graphics.ImageDecoder.DecodeException
 import android.graphics.Rect
 import android.graphics.drawable.ColorDrawable
-import android.graphics.drawable.Drawable
+import android.net.Uri
 import android.os.Bundle
+import android.text.InputType
 import android.view.GestureDetector
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
-import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.DataSource
-import com.bumptech.glide.load.engine.DiskCacheStrategy
-import com.bumptech.glide.load.engine.GlideException
-import com.bumptech.glide.request.RequestListener
-import com.bumptech.glide.request.RequestOptions
-import com.bumptech.glide.request.target.Target
-import com.bumptech.glide.signature.ObjectKey
 import com.example.viewer.R
-import com.example.viewer.Util
 import com.example.viewer.databinding.ViewerActivityBinding
 import com.example.viewer.dialog.SimpleEditTextDialog
 import kotlinx.coroutines.launch
+import java.io.File
+import java.io.IOError
+import java.io.IOException
 import kotlin.math.abs
-import kotlin.math.sign
 
 abstract class BaseViewerActivity: AppCompatActivity() {
     companion object {
@@ -56,8 +51,6 @@ abstract class BaseViewerActivity: AppCompatActivity() {
     protected var firstPage = -1 // 0 to pageNum - 1
     protected var lastPage = -1 // 0 to pageNum - 1
 
-    private val pageSignatures = mutableMapOf<Int, ObjectKey>()
-
     private var showingToolBar = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -79,22 +72,25 @@ abstract class BaseViewerActivity: AppCompatActivity() {
         viewerActivityBinding.jumpToButton.apply {
             if (enableJumpToButton) {
                 setOnClickListener {
-                    SimpleEditTextDialog(this@BaseViewerActivity, layoutInflater).show(
-                        title = "跳至頁面",
+                    SimpleEditTextDialog(this@BaseViewerActivity, layoutInflater).apply {
+                        title = "跳至頁面"
+                        hint = "${firstPage + 1} - ${lastPage + 1}"
+                        inputType = InputType.TYPE_CLASS_NUMBER
                         validator = {
                             try {
                                 val valid = (it.toInt() - 1) in firstPage..lastPage
                                 if (!valid) {
-                                    Toast.makeText(baseContext, "頁數超出範圍", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(baseContext, "頁數超出範圍", Toast.LENGTH_SHORT)
+                                        .show()
                                 }
                                 valid
                             } catch (e: Exception) {
                                 Toast.makeText(baseContext, "輸入錯誤", Toast.LENGTH_SHORT).show()
                                 false
                             }
-                        },
+                        }
                         positiveCb = { toPage(it.toInt() - 1) }
-                    )
+                    }.show()
                 }
             }
         }
@@ -145,11 +141,11 @@ abstract class BaseViewerActivity: AppCompatActivity() {
     protected fun toggleLoadingUi (toggle: Boolean) {
         viewerActivityBinding.let {
             if (toggle) {
-                it.progressWrapper.visibility = ProgressBar.VISIBLE
+                it.progress.wrapper.visibility = ProgressBar.VISIBLE
                 it.photoView.visibility = View.INVISIBLE
                 it.photoView.imageAlpha = 0
             } else {
-                it.progressWrapper.visibility = ProgressBar.GONE
+                it.progress.wrapper.visibility = ProgressBar.GONE
                 it.photoView.visibility = View.VISIBLE
                 it.photoView.imageAlpha = 255
             }
@@ -191,56 +187,37 @@ abstract class BaseViewerActivity: AppCompatActivity() {
 
             if (pictureUrl != null) {
                 showPicture(
-                    pictureUrl, getPageSignature(page),
+                    pictureUrl,
                     onPictureReady = { toggleLoadFailedScreen(false) },
-                    onFailed = { toggleLoadFailedScreen(true) },
+                    onFailed = {
+                        viewerActivityBinding.photoView.setImageDrawable(null)
+                        toggleLoadFailedScreen(true)
+                    },
                     onFinished = { toggleLoadingUi(false) }
                 )
             } else {
                 toggleLoadingUi(false)
+                viewerActivityBinding.photoView.setImageDrawable(null)
                 toggleLoadFailedScreen(true)
             }
         }
     }
 
-    protected fun showPicture (
+    private fun showPicture (
         url: String,
-        signature: ObjectKey,
-        imageView: ImageView = viewerActivityBinding.photoView,
         onPictureReady: (() -> Unit)? = null,
         onFailed: (() -> Unit)? = null,
         onFinished: (() -> Unit)? = null
-    ) = Glide.with(baseContext)
-            .asDrawable()
-            .signature(signature)
-            .load(url)
-            .listener(object: RequestListener<Drawable> {
-                override fun onResourceReady(
-                    resource: Drawable?, model: Any?, target: Target<Drawable>?, dataSource: DataSource?, isFirstResource: Boolean
-                ): Boolean {
-                    onPictureReady?.invoke()
-                    onFinished?.invoke()
-                    return false
-                }
-                override fun onLoadFailed(
-                    e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean
-                ): Boolean {
-                    onFailed?.invoke()
-                    onFinished?.invoke()
-                    return false
-                }
-            })
-            .into(imageView)
-
-    protected fun getPageSignature (page: Int): ObjectKey {
-        if (!pageSignatures.containsKey(page)) {
-            resetPageSignature(page)
+    ) {
+        val file = File(url)
+        try {
+            val drawable = ImageDecoder.decodeDrawable(ImageDecoder.createSource(file))
+            viewerActivityBinding.photoView.setImageDrawable(drawable)
+            onPictureReady?.invoke()
+        } catch (e: DecodeException) {
+            onFailed?.invoke()
         }
-        return pageSignatures.getValue(page)
-    }
-
-    protected fun resetPageSignature (page: Int) {
-        pageSignatures[page] = ObjectKey(System.currentTimeMillis())
+        onFinished?.invoke()
     }
 
     @SuppressLint("ClickableViewAccessibility")

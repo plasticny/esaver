@@ -14,7 +14,7 @@ import java.net.URL
 /**
  * Note: this fetcher always fetch for a stored book
  */
-class HiPictureFetcher (context: Context, bookId: String): BasePictureFetcher(context, bookId) {
+class HiPictureFetcher: BasePictureFetcher {
     private data class PictureInfo (
         val hash: String,
         val haswebp: Int,
@@ -67,8 +67,24 @@ class HiPictureFetcher (context: Context, bookId: String): BasePictureFetcher(co
     private var gg: GG? = null
     private var base: String? = null
 
+    private val hiBookId: String
+
+    /**
+     * local book
+     */
+    constructor (context: Context, bookId: String): super(context, bookId) {
+        hiBookId = bookId
+    }
+
+    /**
+     * online book
+     */
+    constructor (context: Context, bookId: String, pageNum: Int): super(context, pageNum) {
+        hiBookId = bookId
+    }
+
     init {
-        if (pageNum > bookFolder!!.listFiles()!!.size) {
+        if (pageNum > bookFolder.listFiles()!!.size) {
             println("[HiPictureFetcher] get data for constructing url")
 
             if (!Util.isInternetAvailable(context)) {
@@ -102,7 +118,7 @@ class HiPictureFetcher (context: Context, bookId: String): BasePictureFetcher(co
                 "sec-fetch-mode" to "no-cors",
                 "sec-fetch-site" to "same-site",
                 "user-agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 OPR/114.0.0.0 (Edition GX-CN)",
-                "referer" to "https://hitomi.la/reader/${bookId!!}.html"
+                "referer" to "https://hitomi.la/reader/${hiBookId}.html"
             )
             downloadPicture(page, url, headers, progressListener = progressListener)
         }
@@ -125,7 +141,7 @@ class HiPictureFetcher (context: Context, bookId: String): BasePictureFetcher(co
         var bookIdJs: String
         runBlocking {
             withContext(Dispatchers.IO) {
-                bookIdJs = URL("https://ltn.hitomi.la/galleries/${bookId!!}.js").readText().substring(18)
+                bookIdJs = URL("https://ltn.hitomi.la/galleries/${hiBookId}.js").readText().substring(18)
             }
         }
         val galleryInfo = Gson().fromJson(bookIdJs, GalleryInfo::class.java)!!

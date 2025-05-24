@@ -30,23 +30,23 @@ abstract class BookAdder (protected val context: Context) {
     protected abstract val bookSource: BookSource
 
     protected abstract fun getUrl (url: String): String
-    protected abstract fun getId (): String
-    protected abstract fun getFetcher (): BasePictureFetcher
-    protected abstract suspend fun storeToDataSet ()
-
-    // init in addBook
-    protected lateinit var bookId: String
-    protected lateinit var bookUrl: String
+    protected abstract fun getId (url: String): String
+    protected abstract fun getFetcher (id: String, url: String): BasePictureFetcher
+    protected abstract suspend fun storeToDataSet (id: String, url: String)
 
     protected val bookDataset = BookDatabase.getInstance(context)
 
-    suspend fun addBook (url: String, onEnded: (doAdded: Boolean) -> Unit) {
+    suspend fun addBook (
+        url: String,
+        onSavingProgress: ((contentLength: Long, downloadLength: Long) -> Unit)? = null,
+        onEnded: (doAdded: Boolean) -> Unit
+    ) {
         if (!Util.isInternetAvailable(context)) {
             throw Exception("[BookAdder.addBook] internet not available")
         }
 
-        bookUrl = getUrl(url)
-        bookId = getId()
+        val bookUrl = getUrl(url)
+        val bookId = getId(bookUrl)
 
         // check if the book is already saved
         if (bookDataset.isBookStored(bookId)) {
@@ -55,18 +55,28 @@ abstract class BookAdder (protected val context: Context) {
             return
         }
 
+        // download cover picture to tmp
+        val pictureFile = getFetcher(bookId, bookUrl).savePicture(0, onSavingProgress)
+        if(pictureFile == null) {
+            Toast.makeText(context, "儲存失敗，再試一次", Toast.LENGTH_SHORT).show()
+            onEnded(false)
+            return
+        }
+
         // create folder
-        File(context.getExternalFilesDir(null), bookId).let {
+        File(context.getExternalFilesDir(null), bookId).also {
             if (!it.exists()) {
                 it.mkdirs()
             }
+            // move cover picture
+            val file = File(it, pictureFile.name)
+            pictureFile.copyTo(file)
+            pictureFile.delete()
         }
 
-        storeToDataSet()
+        storeToDataSet(bookId, bookUrl)
 
-        // save cover picture
-        val retFlag = getFetcher().savePicture(0) != null
-        onEnded(retFlag)
+        onEnded(true)
     }
 }
 
@@ -75,20 +85,20 @@ private class EBookAdder (context: Context): BookAdder(context) {
 
     override fun getUrl(url: String): String = if (url.last() == '/') url.dropLast(1) else url
 
-    override fun getId(): String {
-        val urlTokens = bookUrl.split('/')
+    override fun getId(url: String): String {
+        val urlTokens = url.split('/')
         return urlTokens[urlTokens.size - 2]
     }
 
-    override fun getFetcher(): BasePictureFetcher = EPictureFetcher(context, bookId)
+    override fun getFetcher(id: String, url: String): BasePictureFetcher = EPictureFetcher(context, 1, url)
 
-    override suspend fun storeToDataSet() {
+    override suspend fun storeToDataSet(id: String, url: String) {
         val doc = withContext(Dispatchers.IO) {
-            Jsoup.connect(bookUrl).get()
+            Jsoup.connect(url).get()
         }
         bookDataset.addBook(
-            id = bookId,
-            url = bookUrl,
+            id = id,
+            url = url,
             category = Util.categoryFromName(
                 doc.selectFirst("#gdc")!!.text().trim()
             ),
@@ -145,28 +155,28 @@ private class HiBookAdder (context: Context): BookAdder(context) {
         return if (hashTagIdx == -1) url else url.substring(0, hashTagIdx)
     }
 
-    override fun getId(): String {
-        val idSrtIdx = bookUrl.indexOfLast { it == '/' } + 1
-        return bookUrl.substring(idSrtIdx, bookUrl.length - 5)
+    override fun getId(url: String): String {
+        val idSrtIdx = url.indexOfLast { it == '/' } + 1
+        return url.substring(idSrtIdx, url.length - 5)
     }
 
-    override fun getFetcher(): BasePictureFetcher = HiPictureFetcher(context, bookId)
+    override fun getFetcher(id: String, url: String): BasePictureFetcher = HiPictureFetcher(context, id, 1)
 
-    override suspend fun storeToDataSet() = bookDataset.addBook(
-        id = bookId,
-        url = bookUrl,
+    override suspend fun storeToDataSet(id: String, url: String) = bookDataset.addBook(
+        id = id,
+        url = url,
         category = SearchDatabase.Companion.Category.Doujinshi,
         title = "",
-        pageNum = fetchPageNum(),
+        pageNum = fetchPageNum(id),
         tags = mapOf(),
         source = BookSource.Hi
     )
 
-    fun fetchPageNum(): Int {
+    fun fetchPageNum(id: String): Int {
         var bookIdJs: String
         runBlocking {
             withContext(Dispatchers.IO) {
-                bookIdJs = URL("https://ltn.hitomi.la/galleries/${bookId}.js").readText().substring(18)
+                bookIdJs = URL("https://ltn.hitomi.la/galleries/$id.js").readText().substring(18)
             }
         }
         val galleryInfo = Gson().fromJson(bookIdJs, GalleryInfo::class.java)!!

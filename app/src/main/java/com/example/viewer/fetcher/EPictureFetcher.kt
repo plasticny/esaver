@@ -1,12 +1,10 @@
 package com.example.viewer.fetcher
 
 import android.content.Context
-import android.view.View
 import android.widget.Toast
 import com.example.viewer.Util
 import com.example.viewer.database.BookDatabase
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.jsoup.HttpStatusException
 import org.jsoup.Jsoup
@@ -22,6 +20,12 @@ class EPictureFetcher: BasePictureFetcher {
 
     private val bookDataset = BookDatabase.getInstance(context)
     private val bookUrl: String
+
+    private val fetchingPictureUrl = mutableSetOf<Int>()
+    /**
+     * map page and its picture url
+     */
+    private val pictureUrlMap = mutableMapOf<Int, String>()
 
     @Volatile
     private var gettingPageUrl = false
@@ -64,19 +68,36 @@ class EPictureFetcher: BasePictureFetcher {
     }
 
     override suspend fun fetchPictureUrl (page: Int): String? {
-        println("[${this::class.simpleName}.${this::fetchPictureUrl.name}] $page")
-
         if (page >= pageNum) {
             throw Exception("page out of range")
         }
 
-        return withContext(Dispatchers.IO) {
+        if (fetchingPictureUrl.contains(page)) {
+            withContext(Dispatchers.IO) {
+                Thread.sleep(100)
+            }
+        }
+
+        if (pictureUrlMap.containsKey(page)) {
+            return pictureUrlMap.getValue(page)
+        }
+
+        println("[${this::class.simpleName}.${this::fetchPictureUrl.name}] $page")
+
+        fetchingPictureUrl.add(page)
+        val res = withContext(Dispatchers.IO) {
             try {
                 Jsoup.connect(getPageUrl(page)).get()
             } catch (e: HttpStatusException) {
                 null
             }
-        }?.selectFirst("#i3 #img")!!.attr("src") ?: null
+        }?.selectFirst("#i3 #img")?.attr("src")
+        if (res != null) {
+            pictureUrlMap[page] = res
+        }
+        fetchingPictureUrl.remove(page)
+
+        return res
     }
 
     private suspend fun getPageUrl (page: Int): String {

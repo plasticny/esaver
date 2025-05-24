@@ -1,11 +1,13 @@
 package com.example.viewer.activity
 
+import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
 import android.widget.ProgressBar
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -34,11 +36,26 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import kotlin.math.floor
+import kotlin.math.min
 
 /**
  * ParcelableExtra: book_record
  */
 class BookProfileActivity: AppCompatActivity() {
+    companion object {
+        // (width, height)
+        private var coverMetrics: Pair<Int, Int>? = null
+        private fun getCoverMetrics (context: Context): Pair<Int, Int> {
+            return coverMetrics ?: context.resources.displayMetrics.let { displayMetrics ->
+                val width = min(Util.dp2px(context, 160F), displayMetrics.widthPixels)
+                val height = (width * 1.5).toInt()
+                println("[${this::class.simpleName}] cover metrics: ($width, $height)")
+                Pair(width, height).also { coverMetrics = it }
+            }
+        }
+    }
+
     private lateinit var bookRecord: BookRecord
     private lateinit var rootBinding: BookProfileActivityBinding
 
@@ -47,13 +64,25 @@ class BookProfileActivity: AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val bookDatabase = BookDatabase.getInstance(baseContext)
-
         bookRecord = intent.getParcelableExtra("book_record", BookRecord::class.java)!!
 
+        val bookDatabase = BookDatabase.getInstance(baseContext)
         isBookStored = bookDatabase.isBookStored(bookRecord.id)
 
+        //
+        // init ui
+        //
+
         rootBinding = BookProfileActivityBinding.inflate(layoutInflater)
+
+        rootBinding.coverWrapper.let {
+            // adjust cover image size
+            val (width, height) = getCoverMetrics(this)
+            it.layoutParams = it.layoutParams.apply {
+                this.width = width
+                this.height = height
+            }
+        }
 
         rootBinding.coverImageView.let {
             Glide.with(baseContext).load(bookRecord.coverUrl).into(it)
@@ -77,8 +106,9 @@ class BookProfileActivity: AppCompatActivity() {
             setTextColor(context.getColor(Util.categoryFromName(bookRecord.cat).color))
         }
 
-        rootBinding.readButtonWrapper.setOnClickListener {
+        rootBinding.readButton.setOnClickListener {
             if (isBookStored) {
+                BookDatabase.getInstance(baseContext).updateBookLastViewTime(bookRecord.id)
                 startActivity(Intent(baseContext, LocalViewerActivity::class.java).apply {
                     putExtra("bookId", bookRecord.id)
                 })
@@ -89,41 +119,18 @@ class BookProfileActivity: AppCompatActivity() {
             }
         }
 
-        rootBinding.saveButtonWrapper.apply {
-            visibility = if (isBookStored) View.GONE else View.VISIBLE
-
+        rootBinding.saveButton.apply {
             setOnClickListener {
-                if (isBookStored) {
-                    return@setOnClickListener
-                }
-                lifecycleScope.launch {
-                    toggleProgressBar(true)
-                    BookAdder.getBookAdder(baseContext, BookSource.E).addBook(bookRecord.url) { doAdded ->
-                        toggleProgressBar(false)
-                        if (!doAdded) {
-                            return@addBook
-                        }
-                        ConfirmDialog(this@BookProfileActivity, layoutInflater).show(
-                            "已加入到書庫，返回書庫？",
-                            positiveCallback = {
-                                startActivity(
-                                    Intent(baseContext, MainActivity::class.java).apply {
-                                        addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                                    }
-                                )
-                            }
-                        )
-                    }
-                }
+                lifecycleScope.launch { saveBook() }
             }
         }
 
-        rootBinding.localSettingButtonWrapper.apply {
-            visibility = if (isBookStored) View.VISIBLE else View.GONE
+        rootBinding.localSettingButton.apply {
             setOnClickListener {
                 if (isBookStored) {
                     LocalReadSettingDialog(this@BookProfileActivity, layoutInflater).show(
-                        bookRecord.id, bookRecord.author!!,
+                        bookRecord.id,
+                        bookRecord.author ?: bookDatabase.findBookAuthor(bookRecord.id),
                         onApplied = { coverPageUpdated ->
                             if (coverPageUpdated) {
                                 refreshCoverPage()
@@ -134,12 +141,11 @@ class BookProfileActivity: AppCompatActivity() {
             }
         }
 
-        rootBinding.infoButtonWrapper.setOnClickListener {
+        rootBinding.infoButton.setOnClickListener {
             showInfoDialog()
         }
 
-        rootBinding.deleteButtonWrapper.apply {
-            visibility = if (isBookStored) View.VISIBLE else View.GONE
+        rootBinding.deleteButton.apply {
             setOnClickListener {
                 if (!isBookStored) {
                     return@setOnClickListener
@@ -149,7 +155,7 @@ class BookProfileActivity: AppCompatActivity() {
                     positiveCallback = {
                         toggleProgressBar(true)
                         CoroutineScope(Dispatchers.IO).launch {
-                            deleteBook(bookRecord.author!!, bookRecord.id).let { retFlag ->
+                            deleteBook(bookRecord.id, bookRecord.author).let { retFlag ->
                                 withContext(Dispatchers.Main) {
                                     toggleProgressBar(false)
                                     if (retFlag) {
@@ -172,6 +178,8 @@ class BookProfileActivity: AppCompatActivity() {
         }
 
         setContentView(rootBinding.root)
+
+        refreshActionBar()
     }
 
     override fun onResume() {
@@ -189,6 +197,7 @@ class BookProfileActivity: AppCompatActivity() {
                 Button(baseContext).apply {
                     text = value
                     backgroundTintList = ColorStateList.valueOf(baseContext.getColor(R.color.darkgrey))
+                    isAllCaps = false
                     setTextColor(baseContext.getColor(R.color.grey))
                     setOnClickListener { showTagDialog(tagCat, value) }
                 }.also { tagValueWrapper.addView(it) }
@@ -196,7 +205,7 @@ class BookProfileActivity: AppCompatActivity() {
         }
 
     private fun toggleProgressBar (toggle: Boolean) {
-        rootBinding.progressBar.visibility = if (toggle) ProgressBar.VISIBLE else ProgressBar.GONE
+        rootBinding.progress.wrapper.visibility = if (toggle) ProgressBar.VISIBLE else ProgressBar.GONE
     }
 
     private fun showTagDialog (category: String, value: String) {
@@ -227,6 +236,11 @@ class BookProfileActivity: AppCompatActivity() {
         val dialog = AlertDialog.Builder(this).setView(dialogViewBinding.root).create()
 
         dialogViewBinding.urlTextView.text = bookRecord.url
+        if (bookRecord.subtitle.isEmpty()) {
+            dialogViewBinding.subtitle.visibility = View.GONE
+        } else {
+            dialogViewBinding.subtitle.text = bookRecord.subtitle
+        }
 
         dialog.show()
     }
@@ -254,6 +268,21 @@ class BookProfileActivity: AppCompatActivity() {
         }
 
     /**
+     * modify buttons in action bar based on the current book stored state
+     */
+    private fun refreshActionBar () {
+        if (isBookStored) {
+            rootBinding.saveButton.visibility = View.GONE
+            rootBinding.localSettingButton.visibility = View.VISIBLE
+            rootBinding.deleteButton.visibility = View.VISIBLE
+        } else {
+            rootBinding.saveButton.visibility = View.VISIBLE
+            rootBinding.localSettingButton.visibility = View.GONE
+            rootBinding.deleteButton.visibility = View.GONE
+        }
+    }
+
+    /**
      * only for profile of stored book
      */
     private fun refreshCoverPage () {
@@ -269,7 +298,7 @@ class BookProfileActivity: AppCompatActivity() {
         }
     }
 
-    private fun deleteBook (author: String, bookId: String): Boolean {
+    private fun deleteBook (bookId: String, author: String?): Boolean {
         val ret = BookDatabase.getInstance(baseContext).removeBook(bookId, author)
         if (ret) {
             val bookFolder = File(getExternalFilesDir(null), bookId)
@@ -279,5 +308,66 @@ class BookProfileActivity: AppCompatActivity() {
             bookFolder.delete()
         }
         return ret
+    }
+
+    private suspend fun saveBook () {
+        if (isBookStored) {
+            return
+        }
+
+        rootBinding.progress.textView.text = getString(R.string.n_percent, 0)
+        toggleProgressBar(true)
+
+        // download cover image file to tmp
+        val coverFile = withContext(Dispatchers.IO) {
+            EPictureFetcher(baseContext, 1, bookRecord.url).savePicture(0) { total, downloaded ->
+                CoroutineScope(Dispatchers.Main).launch {
+                    rootBinding.progress.textView.text = getString(
+                        R.string.n_percent, floor(downloaded.toDouble() / total * 100).toInt()
+                    )
+                }
+            }
+        }
+        if (coverFile == null) {
+            Toast.makeText(baseContext, "儲存失敗，再試一次", Toast.LENGTH_SHORT).show()
+            toggleProgressBar(false)
+            return
+        }
+
+        // create book folder
+        File(getExternalFilesDir(null), bookRecord.id).also {
+            if (!it.exists()) {
+                it.mkdirs()
+            }
+            // move cover picture
+            val file = File(it, coverFile.name)
+            coverFile.copyTo(file)
+            coverFile.delete()
+        }
+
+        BookDatabase.getInstance(baseContext).addBook(
+            id = bookRecord.id,
+            url = bookRecord.url,
+            category = Util.categoryFromName(bookRecord.cat),
+            title = bookRecord.title,
+            subtitle = bookRecord.subtitle,
+            pageNum = bookRecord.pageNum,
+            tags = bookRecord.tags,
+            source = BookSource.E
+        )
+
+        // update ui
+        isBookStored = true
+        refreshActionBar()
+        ConfirmDialog(this, layoutInflater).show(
+            "已加入到書庫，返回書庫？",
+            positiveCallback = {
+                startActivity(
+                    Intent(baseContext, MainActivity::class.java).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                    }
+                )
+            }
+        )
     }
 }

@@ -96,10 +96,6 @@ open class SearchMarkDialog (
             }
         }
 
-        dialogBinding.cancelButton.setOnClickListener {
-            dialog.dismiss()
-        }
-
         dialogBinding.saveButton.apply {
             visibility = View.GONE
             setOnClickListener {
