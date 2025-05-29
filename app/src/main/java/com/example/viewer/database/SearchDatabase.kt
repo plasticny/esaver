@@ -1,8 +1,6 @@
 package com.example.viewer.database
 
 import android.content.Context
-import android.net.Uri
-import android.os.Environment
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -14,8 +12,6 @@ import com.example.viewer.R
 import com.example.viewer.Util
 import com.example.viewer.struct.ExcludeTagRecord
 import com.example.viewer.struct.SearchMark
-import java.io.File
-import java.io.FileOutputStream
 
 typealias Tags = Map<String, List<String>>
 
@@ -24,6 +20,7 @@ private val Context.searchDataStore: DataStore<Preferences> by preferencesDataSt
 
 class SearchDatabase (context: Context): BaseDatabase() {
     companion object {
+        const val NAME = DB_NAME
         const val TAG = "searchDB"
         const val TEMP_SEARCH_MARK_ID = -1
 
@@ -205,39 +202,5 @@ class SearchDatabase (context: Context): BaseDatabase() {
         store(keys.excludeTagTags(id), excludeTagRecord.tags)
         store(keys.excludeTagCats(id), excludeTagRecord.categories.map { it.ordinal }.toSet())
         store(keys.excludeTagLastUpdate(), System.currentTimeMillis())
-    }
-
-    //
-    // backup
-    //
-    fun backup (context: Context) {
-        val dbFile = File("${context.filesDir}/datastore", "${DB_NAME}.preferences_pb")
-        val backupFolder = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "eSaver")
-        if (!backupFolder.exists()) {
-            backupFolder.mkdirs()
-        }
-
-        val backupFile = File(backupFolder, "search")
-        if (backupFile.exists()) {
-            backupFile.delete()
-        }
-        dbFile.copyTo(backupFile)
-    }
-
-    fun importDb (context: Context, uri: Uri) {
-        val folder = File("${context.filesDir}/datastore")
-        val dbFile = File(folder, "${DB_NAME}.preferences_pb")
-        if (!folder.exists()) {
-            folder.mkdirs()
-        }
-        if (!dbFile.exists()) {
-            dbFile.createNewFile()
-        }
-
-        FileOutputStream(dbFile).use { fos ->
-            context.contentResolver.openInputStream(uri)?.use { ins ->
-                fos.write(ins.readAllBytes())
-            }
-        }
     }
 }

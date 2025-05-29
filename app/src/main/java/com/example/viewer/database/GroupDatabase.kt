@@ -20,6 +20,7 @@ private val Context.groupDatabase: DataStore<Preferences> by preferencesDataStor
 
 class GroupDatabase (context: Context) : BaseDatabase() {
     companion object {
+        const val NAME = DB_NAME
         const val TAG = "groupDB"
         const val DEFAULT_GROUP_ID = 0
 
@@ -142,41 +143,6 @@ class GroupDatabase (context: Context) : BaseDatabase() {
     private fun assertGroupIdExist (id: Int) {
         if (!getAllGroupIds().contains(id)) {
             throw Exception("group with id $id not exist")
-        }
-    }
-
-    //
-    // backup
-    //
-
-    fun backup (context: Context) {
-        val dbFile = File("${context.filesDir}/datastore", "${DB_NAME}.preferences_pb")
-        val backupFolder = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "eSaver")
-        if (!backupFolder.exists()) {
-            backupFolder.mkdirs()
-        }
-
-        val backupFile = File(backupFolder, "group")
-        if (backupFile.exists()) {
-            backupFile.delete()
-        }
-        dbFile.copyTo(backupFile)
-    }
-
-    fun importDb (context: Context, uri: Uri) {
-        val folder = File("${context.filesDir}/datastore")
-        val dbFile = File(folder, "${DB_NAME}.preferences_pb")
-        if (!folder.exists()) {
-            folder.mkdirs()
-        }
-        if (!dbFile.exists()) {
-            dbFile.createNewFile()
-        }
-
-        FileOutputStream(dbFile).use { fos ->
-            context.contentResolver.openInputStream(uri)?.use { ins ->
-                fos.write(ins.readAllBytes())
-            }
         }
     }
 }

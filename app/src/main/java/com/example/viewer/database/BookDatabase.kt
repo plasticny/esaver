@@ -30,7 +30,7 @@ private val Context.bookDataStore: DataStore<Preferences> by preferencesDataStor
 
 class BookDatabase (context: Context): BaseDatabase() {
     companion object {
-        const val NO_AUTHOR = "NoAuthor"
+        const val NAME = DB_NAME
 
         @Volatile
         private var instance: BookDatabase? = null
@@ -294,39 +294,4 @@ class BookDatabase (context: Context): BaseDatabase() {
 
     fun getBookLastViewTime (bookId: String) = read(storeKeys.bookLastViewTime(bookId)) ?: 0L
     fun updateBookLastViewTime (bookId: String) = store(storeKeys.bookLastViewTime(bookId), System.currentTimeMillis())
-
-    //
-    // backup
-    //
-    fun backup (context: Context) {
-        val backupFolder = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "eSaver")
-        if (!backupFolder.exists()) {
-            backupFolder.mkdirs()
-        }
-
-        val dbFile = File("${context.filesDir}/datastore", "${DB_NAME}.preferences_pb")
-
-        val backupFile = File(backupFolder, "book")
-        if (backupFile.exists()) {
-            backupFile.delete()
-        }
-        dbFile.copyTo(backupFile)
-    }
-
-    fun importDb (context: Context, uri: Uri) {
-        val folder = File("${context.filesDir}/datastore")
-        val dbFile = File(folder, "${DB_NAME}.preferences_pb")
-        if (!folder.exists()) {
-            folder.mkdirs()
-        }
-        if (!dbFile.exists()) {
-            dbFile.createNewFile()
-        }
-
-        FileOutputStream(dbFile).use { fos ->
-            context.contentResolver.openInputStream(uri)?.use { ins ->
-                fos.write(ins.readAllBytes())
-            }
-        }
-    }
 }

@@ -1,32 +1,40 @@
 package com.example.viewer.activity.main
 
-import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
-import android.os.Environment
-import android.provider.DocumentsContract
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
-import com.example.viewer.database.BookDatabase
-import com.example.viewer.database.GroupDatabase
-import com.example.viewer.database.SearchDatabase
-import com.example.viewer.databinding.DialogImportDbBinding
+import com.example.viewer.database.BaseDatabase
 import com.example.viewer.databinding.FragmentMainOtherBinding
-import java.io.File
+import com.example.viewer.dialog.ConfirmDialog
+import java.util.Date
 
 class OtherFragment: Fragment() {
     private lateinit var context: Context
 
-    private lateinit var pickBookDbLauncher: ActivityResultLauncher<String>
-    private lateinit var pickGroupDbLauncher: ActivityResultLauncher<String>
-    private lateinit var pickSearchDbLauncher: ActivityResultLauncher<String>
+    private val importBackupLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) {
+        it?.let {
+            BaseDatabase.importDb(context, it)
+            // restart the app
+            val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+            val mi = Intent.makeRestartActivityTask(intent!!.component).apply {
+                `package` = context.packageName
+            }
+            context.startActivity(mi)
+            Runtime.getRuntime().exit(0)
+        }
+    }
+    private val saveBackupLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) {
+        it?.let {
+            BaseDatabase.backupDb(context, it)
+            Toast.makeText(context, "已儲存備份", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     override fun onCreateView (
         inflater: LayoutInflater,
@@ -37,45 +45,14 @@ class OtherFragment: Fragment() {
 
         context = requireContext()
 
-        pickBookDbLauncher = createFilePickLauncher { uri ->
-            BookDatabase.getInstance(context).importDb(context, uri)
-        }
-        pickGroupDbLauncher = createFilePickLauncher { uri ->
-            GroupDatabase.getInstance(context).importDb(context, uri)
-        }
-        pickSearchDbLauncher = createFilePickLauncher { uri ->
-            SearchDatabase.getInstance(context).importDb(context, uri)
-        }
-
         rootBinding.backupButton.setOnClickListener {
-            BookDatabase.getInstance(context).backup(context)
-            SearchDatabase.getInstance(context).backup(context)
-            GroupDatabase.getInstance(context).backup(context)
-            Toast.makeText(context, "備份已存至Documents", Toast.LENGTH_SHORT).show()
+            saveBackupLauncher.launch("eSaver_backup_${Date()}.txt")
         }
 
         rootBinding.importButton.setOnClickListener {
-            val dialogBinding = DialogImportDbBinding.inflate(inflater)
-            val dialog = AlertDialog.Builder(context).setView(dialogBinding.root).create()
-
-            dialogBinding.book.setOnClickListener {
-                pickBookDbLauncher.launch("*/*")
-            }
-            dialogBinding.search.setOnClickListener {
-                pickSearchDbLauncher.launch("*/*")
-            }
-            dialogBinding.group.setOnClickListener {
-                pickGroupDbLauncher.launch("*/*")
-            }
-
-            dialog.show()
+            importBackupLauncher.launch(arrayOf("text/plain"))
         }
 
         return rootBinding.root
     }
-
-    private fun createFilePickLauncher (cb: (Uri) -> Unit) =
-        registerForActivityResult(ActivityResultContracts.GetContent()) {
-            it?.let { cb(it) }
-        }
 }
