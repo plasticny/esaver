@@ -16,6 +16,7 @@ import com.bumptech.glide.Glide
 import com.example.viewer.struct.BookRecord
 import com.example.viewer.R
 import com.example.viewer.Util
+import com.example.viewer.database.BookDatabase
 import com.example.viewer.databinding.SearchActivityBinding
 import com.example.viewer.database.SearchDatabase
 import com.example.viewer.database.SearchDatabase.Companion.SearchMark
@@ -213,7 +214,7 @@ class SearchActivity: AppCompatActivity() {
         searchDataSet.lastExcludeTagUpdateTime().let { newTime ->
             if (newTime != lastExcludeTagUpdateTime) {
                 println("[${this::class.simpleName}.${this::onResume.name}] re-filter books")
-                recyclerViewAdapter.getBooks()?.let {
+                recyclerViewAdapter.getBooks().let {
                     recyclerViewAdapter.refreshBooks(excludeTagFilter(it))
                 }
                 lastExcludeTagUpdateTime = newTime
@@ -426,10 +427,13 @@ class SearchActivity: AppCompatActivity() {
             binding.root.apply {
                 setOnClickListener {
                     lifecycleScope.launch {
+                        val bookDb = BookDatabase.getInstance(baseContext)
                         val intent = Intent(context, BookProfileActivity::class.java)
                         intent.putExtra(
                             "book_record",
-                            withContext(Dispatchers.IO) { fetchDetailBookRecord(bookRecord) }
+                            if (bookDb.isBookStored(bookRecord.id)) {
+                                bookDb.getBook(baseContext, bookRecord.id)
+                            } else withContext(Dispatchers.IO) { fetchDetailBookRecord(bookRecord) }
                         )
                         startActivity(intent)
                     }

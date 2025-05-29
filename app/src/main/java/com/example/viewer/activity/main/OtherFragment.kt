@@ -8,6 +8,7 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import com.example.viewer.databinding.MainOtherFragmentBinding
 import com.example.viewer.database.BookDatabase
+import com.example.viewer.database.GroupDatabase
 import com.example.viewer.database.SearchDatabase
 
 class OtherFragment: Fragment() {
@@ -22,6 +23,7 @@ class OtherFragment: Fragment() {
             val context = container!!.context
             BookDatabase.getInstance(context).backup(context)
             SearchDatabase.getInstance(context).backup(context)
+            GroupDatabase.getInstance(context).backup(context)
             Toast.makeText(context, "備份已存至Documents", Toast.LENGTH_SHORT).show()
         }
 

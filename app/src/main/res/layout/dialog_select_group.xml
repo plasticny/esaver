@@ -10,19 +10,19 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/select_author"
+        android:text="@string/select_group"
         android:textColor="@color/grey"
         android:textSize="18sp"/>
 
     <com.google.android.flexbox.FlexboxLayout
-        android:id="@+id/select_author_dialog_flexboxLayout"
+        android:id="@+id/flexboxLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         app:flexWrap="wrap"
         app:justifyContent="flex_start">
 
-        <!--  some author names will be added here  -->
+        <!--  some names will be added here  -->
 
     </com.google.android.flexbox.FlexboxLayout>
 

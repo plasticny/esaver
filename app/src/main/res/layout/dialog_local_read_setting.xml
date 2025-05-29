@@ -16,7 +16,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-        <!--  author  -->
+        <!--  group  -->
 
         <LinearLayout
             android:id="@+id/constraintLayout"
@@ -26,15 +26,14 @@
             android:gravity="center_vertical">
 
             <TextView
-                android:id="@+id/profile_dialog_author_TextView"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/author"
+                android:text="@string/group"
                 android:textColor="@color/grey"
                 android:textSize="20sp" />
 
             <TextView
-                android:id="@+id/search_author_button"
+                android:id="@+id/search_button"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:fontFamily="@font/font_awesome"
@@ -44,7 +43,7 @@
                 android:layout_marginStart="8dp"/>
 
             <EditText
-                android:id="@+id/profile_dialog_author_editText"
+                android:id="@+id/group_name_editText"
                 android:layout_width="0dp"
                 android:layout_height="48dp"
                 android:layout_weight="1"

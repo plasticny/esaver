@@ -18,7 +18,7 @@ data class BookRecord (
     val subtitle: String = "",
     val pageNum: Int,
     val tags: Map<String, List<String>>,
-    val author: String? = null
+    val groupId: Int = -1
 ): Parcelable {
     companion object CREATOR : Parcelable.Creator<BookRecord> {
         override fun createFromParcel(parcel: Parcel): BookRecord {
@@ -41,7 +41,7 @@ data class BookRecord (
         parcel.readBundle(ClassLoader.getSystemClassLoader())!!.let { bundle ->
             bundle.keySet().associateWith { bundle.getStringArray(it)!!.toList() }
         },
-        parcel.readString()
+        parcel.readInt()
     )
 
     override fun describeContents(): Int = 0
@@ -61,6 +61,6 @@ data class BookRecord (
                 }
             }
         )
-        parcel.writeString(author)
+        parcel.writeInt(groupId)
     }
 }
