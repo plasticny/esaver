@@ -1,5 +1,6 @@
 package com.example.viewer.activity.viewer
 
+import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
@@ -24,7 +25,11 @@ class OnlineViewerActivity: BaseViewerActivity() {
     override val enableJumpToButton = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        bookRecord = intent.getParcelableExtra("book_record", BookRecord::class.java)!!
+        bookRecord = if (Build.VERSION.SDK_INT > Build.VERSION_CODES.S_V2) {
+            intent.getParcelableExtra("book_record", BookRecord::class.java)!!
+        } else {
+            intent.getParcelableExtra("book_record")!!
+        }
         page = 0
         firstPage = 0
         lastPage = bookRecord.pageNum - 1

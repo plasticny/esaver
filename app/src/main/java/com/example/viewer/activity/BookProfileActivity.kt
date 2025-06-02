@@ -3,6 +3,7 @@ package com.example.viewer.activity
 import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
+import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
@@ -64,7 +65,11 @@ class BookProfileActivity: AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        bookRecord = intent.getParcelableExtra("book_record", BookRecord::class.java)!!
+        bookRecord = if (Build.VERSION.SDK_INT > Build.VERSION_CODES.S_V2) {
+            intent.getParcelableExtra("book_record", BookRecord::class.java)!!
+        } else {
+            intent.getParcelableExtra("book_record")!!
+        }
 
         val bookDatabase = BookDatabase.getInstance(baseContext)
         isBookStored = bookDatabase.isBookStored(bookRecord.id)
