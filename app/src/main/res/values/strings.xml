@@ -20,6 +20,7 @@
     <string name="fa_triangle_exclamation">\uf071</string>
     <string name="fa_circle_info">\uf05a</string>
     <string name="fa_download">\uf019</string>
+    <string name="fa_ellipsis_vertical">\uf142</string>
 <!--  strings  -->
     <string name="app_name">eSaver</string>
     <string name="enter_url">輸入URL</string>
