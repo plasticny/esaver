@@ -264,7 +264,12 @@ class BookDatabase (context: Context): BaseDatabase() {
 
     fun getBookUrl (bookId: String) = read(storeKeys.bookUrl(bookId))!!
 
-    fun getBookPageUrls (bookId: String) = read(storeKeys.bookPageUrls(bookId))!!
+    fun getBookPageUrls (bookId: String): List<String> {
+        if (getBookSource(bookId) == BookSource.Hi) {
+            throw Exception("Page urls are not stored for this book source")
+        }
+        return read(storeKeys.bookPageUrls(bookId))!!
+    }
     fun setBookPageUrls (bookId: String, urls: List<String>) = store(storeKeys.bookPageUrls(bookId), urls)
 
     fun getBookP (bookId: String) = read(storeKeys.bookP(bookId))!!

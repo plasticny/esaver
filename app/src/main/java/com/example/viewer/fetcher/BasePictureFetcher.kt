@@ -135,6 +135,10 @@ abstract class BasePictureFetcher {
             return null
         }
 
+        if (!bookFolder.exists()) {
+            bookFolder.mkdirs()
+        }
+
         val file = File(bookFolder, page.toString())
 
         // prevent multiple download

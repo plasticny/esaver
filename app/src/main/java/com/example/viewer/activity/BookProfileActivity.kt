@@ -31,10 +31,12 @@ import com.example.viewer.dialog.ConfirmDialog
 import com.example.viewer.dialog.EditExcludeTagDialog
 import com.example.viewer.dialog.LocalReadSettingDialog
 import com.example.viewer.fetcher.EPictureFetcher
+import com.example.viewer.fetcher.HiPictureFetcher
 import com.example.viewer.struct.ExcludeTagRecord
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import java.io.File
 import kotlin.math.floor
@@ -90,7 +92,19 @@ class BookProfileActivity: AppCompatActivity() {
         }
 
         rootBinding.coverImageView.let {
-            Glide.with(baseContext).load(bookRecord.coverUrl).into(it)
+            if(isBookStored && !File(bookRecord.coverUrl).exists()) {
+                CoroutineScope(Dispatchers.Main).launch {
+                    withContext(Dispatchers.IO) {
+                        val id = bookRecord.id
+                        val source = bookDatabase.getBookSource(id)
+                        val fetcher = if (source == BookSource.E) EPictureFetcher(baseContext, id) else HiPictureFetcher(baseContext, id)
+                        fetcher.savePicture(bookDatabase.getBookCoverPage(bookRecord.id))
+                    }
+                    Glide.with(baseContext).load(bookRecord.coverUrl).into(it)
+                }
+            } else {
+                Glide.with(baseContext).load(bookRecord.coverUrl).into(it)
+            }
         }
 
         rootBinding.titleTextView.text = bookRecord.title

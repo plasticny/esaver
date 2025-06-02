@@ -13,10 +13,17 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.viewer.activity.BookProfileActivity
 import com.example.viewer.database.BookDatabase
+import com.example.viewer.database.BookSource
 import com.example.viewer.database.GroupDatabase
 import com.example.viewer.databinding.FragmentMainGalleryBookBinding
 import com.example.viewer.databinding.MainGalleryFragmentAuthorBinding
 import com.example.viewer.dialog.SelectGroupDialog
+import com.example.viewer.fetcher.EPictureFetcher
+import com.example.viewer.fetcher.HiPictureFetcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import kotlin.math.ceil
 
@@ -193,9 +200,18 @@ class BookGallery (
             val coverPage = bookDatabase.getBookCoverPage(id)
             val coverPageFile = File(bookFolder, coverPage.toString())
 
-            Glide.with(context).load(
-                if (coverPageFile.exists()) coverPageFile else File(bookFolder, "0")
-            ).into(holder.imageView)
+            if(!coverPageFile.exists()) {
+                CoroutineScope(Dispatchers.Main).launch {
+                    withContext(Dispatchers.IO) {
+                        val source = bookDatabase.getBookSource(id)
+                        val fetcher = if (source == BookSource.E) EPictureFetcher(context, id) else HiPictureFetcher(context, id)
+                        fetcher.savePicture(coverPage)
+                    }
+                    Glide.with(context).load(coverPageFile).into(holder.imageView)
+                }
+            } else {
+                Glide.with(context).load(coverPageFile).into(holder.imageView)
+            }
 
             holder.imageView.setOnClickListener {
                 openBook(id)
