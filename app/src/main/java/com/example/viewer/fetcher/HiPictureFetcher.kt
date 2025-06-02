@@ -31,10 +31,12 @@ class HiPictureFetcher: BasePictureFetcher {
         val cases: Set<Int>
 
         init {
+            println("[${this@HiPictureFetcher::class.simpleName}.${this::class.simpleName}]")
+
             var content: String
             runBlocking {
                 withContext(Dispatchers.IO) {
-                    content = URL("https://ltn.hitomi.la/gg.js").readText()
+                    content = URL("https://ltn.gold-usergeneratedcontent.net/gg.js").readText()
                 }
             }
 
@@ -74,6 +76,7 @@ class HiPictureFetcher: BasePictureFetcher {
      */
     constructor (context: Context, bookId: String): super(context, bookId) {
         hiBookId = bookId
+        init()
     }
 
     /**
@@ -81,10 +84,11 @@ class HiPictureFetcher: BasePictureFetcher {
      */
     constructor (context: Context, bookId: String, pageNum: Int): super(context, pageNum) {
         hiBookId = bookId
+        init()
     }
 
-    init {
-        if (pageNum > bookFolder.listFiles()!!.size) {
+    private fun init () {
+        if (pageNum > (bookFolder.listFiles()?.size ?: 0)) {
             println("[HiPictureFetcher] get data for constructing url")
 
             if (!Util.isInternetAvailable(context)) {
@@ -107,7 +111,7 @@ class HiPictureFetcher: BasePictureFetcher {
             return null
         }
 
-        return fetchPictureUrl(page)?.let { url ->
+        return fetchPictureUrl(page).let { url ->
             val headers = mapOf(
                 "accept" to "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
                 "accept-language" to "zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7",
@@ -124,24 +128,23 @@ class HiPictureFetcher: BasePictureFetcher {
         }
     }
 
-    override suspend fun fetchPictureUrl (page: Int): String? {
+    override suspend fun fetchPictureUrl (page: Int): String {
         val pictureInfo = pictureInfos!![page]
         if (pictureInfo.haswebp == 0) {
             throw Exception("no webp")
         }
         val thirdDomain = findThirdDomain(pictureInfo.hash)
-        return "https://${thirdDomain}.hitomi.la/webp/${gg!!.b}${gg!!.h(pictureInfo.hash)}/${pictureInfo.hash}.webp"
+        return "https://$thirdDomain.gold-usergeneratedcontent.net/${gg!!.b}${gg!!.h(pictureInfo.hash)}/${pictureInfo.hash}.webp"
     }
 
     private fun getPictureInfos (): List<PictureInfo> {
-        if (!Util.isInternetAvailable(context)) {
-            throw Exception("[HiPictureFetcher.updateToken] internet not available")
-        }
+        println("[${this::class.simpleName}.${this::getPictureInfos.name}]")
 
-        var bookIdJs: String
-        runBlocking {
+        val bookIdJs = runBlocking {
             withContext(Dispatchers.IO) {
-                bookIdJs = URL("https://ltn.hitomi.la/galleries/${hiBookId}.js").readText().substring(18)
+                URL("https://ltn.gold-usergeneratedcontent.net/galleries/${hiBookId}.js").also {
+                    println(it.toString())
+                }.readText().substring(18)
             }
         }
         val galleryInfo = Gson().fromJson(bookIdJs, GalleryInfo::class.java)!!
@@ -149,10 +152,12 @@ class HiPictureFetcher: BasePictureFetcher {
     }
 
     private fun getBase (): String {
+        println("[${this::class.simpleName}.${this::getBase.name}]")
+
         var content: String
         runBlocking {
             withContext(Dispatchers.IO) {
-                content = URL("https://ltn.hitomi.la/reader.js").readText()
+                content = URL("https://ltn.gold-usergeneratedcontent.net/reader.js").readText()
             }
         }
 
@@ -165,6 +170,9 @@ class HiPictureFetcher: BasePictureFetcher {
     private fun findThirdDomain (fileHash: String): String {
         val s = fileHash.last() + fileHash.substring(fileHash.length - 3, fileHash.length - 1)
         val g = s.toInt(16)
-        return (97 + gg!!.m(g)).toChar() + base!!
+        val m = gg!!.m(g)
+        println("[${this::class.simpleName}.${this::findThirdDomain.name}] g: $g, gg.m: $m")
+        return "w${1 + m}"
+//        return (97 + gg!!.m(g)).toChar() + base!!
     }
 }
