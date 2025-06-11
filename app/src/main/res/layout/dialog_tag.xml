@@ -4,7 +4,7 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:padding="16dp"
-    android:background="@color/darkgrey">
+    android:background="@color/dark_grey">
 
     <TextView
         android:id="@+id/category_textView"

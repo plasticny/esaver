@@ -1,6 +1,7 @@
 package com.example.viewer.database
 
 import android.content.Context
+import android.net.Uri
 import android.os.Environment
 import androidx.compose.runtime.key
 import androidx.core.content.ContextCompat
@@ -12,12 +13,14 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.viewer.R
 import java.io.File
+import java.io.FileOutputStream
 
 private const val DB_NAME = "group"
 private val Context.groupDatabase: DataStore<Preferences> by preferencesDataStore(name = DB_NAME)
 
 class GroupDatabase (context: Context) : BaseDatabase() {
     companion object {
+        const val NAME = DB_NAME
         const val TAG = "groupDB"
         const val DEFAULT_GROUP_ID = 0
 
@@ -141,23 +144,5 @@ class GroupDatabase (context: Context) : BaseDatabase() {
         if (!getAllGroupIds().contains(id)) {
             throw Exception("group with id $id not exist")
         }
-    }
-
-    //
-    // backup
-    //
-
-    fun backup (context: Context) {
-        val dbFile = File("${context.filesDir}/datastore", "${DB_NAME}.preferences_pb")
-        val backupFolder = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "eSaver")
-        if (!backupFolder.exists()) {
-            backupFolder.mkdirs()
-        }
-
-        val backupFile = File(backupFolder, "group")
-        if (backupFile.exists()) {
-            backupFile.delete()
-        }
-        dbFile.copyTo(backupFile)
     }
 }

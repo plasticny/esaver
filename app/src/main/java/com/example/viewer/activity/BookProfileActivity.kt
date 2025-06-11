@@ -3,6 +3,7 @@ package com.example.viewer.activity
 import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
+import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
@@ -12,7 +13,6 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
-import com.example.viewer.BookAdder
 import com.example.viewer.struct.BookRecord
 import com.example.viewer.R
 import com.example.viewer.Util
@@ -31,10 +31,12 @@ import com.example.viewer.dialog.ConfirmDialog
 import com.example.viewer.dialog.EditExcludeTagDialog
 import com.example.viewer.dialog.LocalReadSettingDialog
 import com.example.viewer.fetcher.EPictureFetcher
+import com.example.viewer.fetcher.HiPictureFetcher
 import com.example.viewer.struct.ExcludeTagRecord
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import java.io.File
 import kotlin.math.floor
@@ -65,7 +67,11 @@ class BookProfileActivity: AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        bookRecord = intent.getParcelableExtra("book_record", BookRecord::class.java)!!
+        bookRecord = if (Build.VERSION.SDK_INT > Build.VERSION_CODES.S_V2) {
+            intent.getParcelableExtra("book_record", BookRecord::class.java)!!
+        } else {
+            intent.getParcelableExtra("book_record")!!
+        }
 
         val bookDatabase = BookDatabase.getInstance(baseContext)
         isBookStored = bookDatabase.isBookStored(bookRecord.id)
@@ -86,7 +92,19 @@ class BookProfileActivity: AppCompatActivity() {
         }
 
         rootBinding.coverImageView.let {
-            Glide.with(baseContext).load(bookRecord.coverUrl).into(it)
+            if(isBookStored && !File(bookRecord.coverUrl).exists()) {
+                CoroutineScope(Dispatchers.Main).launch {
+                    withContext(Dispatchers.IO) {
+                        val id = bookRecord.id
+                        val source = bookDatabase.getBookSource(id)
+                        val fetcher = if (source == BookSource.E) EPictureFetcher(baseContext, id) else HiPictureFetcher(baseContext, id)
+                        fetcher.savePicture(bookDatabase.getBookCoverPage(bookRecord.id))
+                    }
+                    Glide.with(baseContext).load(bookRecord.coverUrl).into(it)
+                }
+            } else {
+                Glide.with(baseContext).load(bookRecord.coverUrl).into(it)
+            }
         }
 
         rootBinding.titleTextView.text = bookRecord.title
@@ -197,7 +215,7 @@ class BookProfileActivity: AppCompatActivity() {
             for (value in tagValues) {
                 Button(baseContext).apply {
                     text = value
-                    backgroundTintList = ColorStateList.valueOf(baseContext.getColor(R.color.darkgrey))
+                    backgroundTintList = ColorStateList.valueOf(baseContext.getColor(R.color.dark_grey))
                     isAllCaps = false
                     setTextColor(baseContext.getColor(R.color.grey))
                     setOnClickListener { showTagDialog(tagCat, value) }
@@ -236,7 +254,10 @@ class BookProfileActivity: AppCompatActivity() {
         val dialogViewBinding = DialogBookInfoBinding.inflate(layoutInflater)
         val dialog = AlertDialog.Builder(this).setView(dialogViewBinding.root).create()
 
+        dialogViewBinding.uploaderTextView.text = bookRecord.uploader ?: getString(R.string.noName)
+
         dialogViewBinding.urlTextView.text = bookRecord.url
+
         if (bookRecord.subtitle.isEmpty()) {
             dialogViewBinding.subtitle.visibility = View.GONE
         } else {
@@ -355,7 +376,8 @@ class BookProfileActivity: AppCompatActivity() {
             pageNum = bookRecord.pageNum,
             tags = bookRecord.tags,
             source = BookSource.E,
-            groupId = GroupDatabase.DEFAULT_GROUP_ID
+            groupId = GroupDatabase.DEFAULT_GROUP_ID,
+            uploader = bookRecord.uploader
         )
         GroupDatabase.getInstance(baseContext).addBookIdToGroup(GroupDatabase.DEFAULT_GROUP_ID, bookRecord.id)
 

@@ -3,10 +3,8 @@ package com.example.viewer.dialog
 import android.content.Context
 import android.view.LayoutInflater
 import android.widget.Toast
-import androidx.compose.ui.text.buildAnnotatedString
-import com.example.viewer.database.SearchDatabase
-import com.example.viewer.database.SearchDatabase.Companion.SearchMark
 import com.example.viewer.struct.ExcludeTagRecord
+import com.example.viewer.struct.SearchMark
 
 class EditExcludeTagDialog (
     context: Context,
@@ -15,6 +13,8 @@ class EditExcludeTagDialog (
     init {
         title = "編輯濾除規則"
         showKeywordField = false
+        showUploaderField = false
+        showDoExcludeField = false
         showNameField = false
         showSaveButton = true
     }
@@ -40,7 +40,9 @@ class EditExcludeTagDialog (
                 name = "",
                 categories = record.categories.toList(),
                 keyword = "",
-                tags = record.tags
+                tags = record.tags,
+                uploader = "",
+                doExclude = false
             )
         )
     }

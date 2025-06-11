@@ -1,0 +1,269 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/dark_grey"
+    android:padding="16dp">
+
+    <!--  the height of linear layout will set to a percent of the screen  -->
+
+    <LinearLayout
+        android:id="@+id/main_wrapper"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!--  title  -->
+
+        <TextView
+            android:id="@+id/title_textView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:textColor="@color/grey2"
+            android:textSize="18sp"
+            android:textAlignment="center"/>
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="8dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <!--  name  -->
+
+                <LinearLayout
+                    android:id="@+id/name_field_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginTop="8dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="名字"
+                        android:textSize="16sp"
+                        android:textColor="@color/grey"/>
+
+                    <EditText
+                        android:id="@+id/name_editText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="18sp"
+                        android:backgroundTint="@color/grey"
+                        android:textColor="@color/white"/>
+
+                </LinearLayout>
+
+                <!--  category  -->
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:textColor="@color/grey"
+                    android:textSize="16sp"
+                    android:text="@string/category"/>
+
+                <GridLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:columnCount="2">
+
+                    <Button
+                        android:id="@+id/cat_doujinshi"
+                        style="@style/SearchMarkCategoryStyle"
+                        android:text="@string/doujinshi" />
+
+                    <Button
+                        android:id="@+id/cat_manga"
+                        style="@style/SearchMarkCategoryStyle"
+                        android:text="@string/manga"/>
+
+                    <Button
+                        android:id="@+id/cat_artist_cg"
+                        style="@style/SearchMarkCategoryStyle"
+                        android:text="@string/artist_cg"/>
+
+                    <Button
+                        android:id="@+id/cat_non_h"
+                        style="@style/SearchMarkCategoryStyle"
+                        android:text="@string/non_h"/>
+
+                </GridLayout>
+
+                <!--  keyword  -->
+
+                <LinearLayout
+                    android:id="@+id/keyword_field_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/keyword"
+                        android:textSize="16sp"
+                        android:textColor="@color/grey"/>
+
+                    <EditText
+                        android:id="@+id/keyword_editText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="18sp"
+                        android:backgroundTint="@color/grey"
+                        android:textColor="@color/white"/>
+
+                </LinearLayout>
+
+                <!--  tags  -->
+
+                <LinearLayout
+                    android:layout_marginTop="8dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="fill_vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/tag"
+                        android:textColor="@color/grey"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:id="@+id/add_tag_button"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginLeft="8dp"
+                        android:fontFamily="@font/font_awesome"
+                        android:text="@string/fa_plus"
+                        android:textColor="@color/white"
+                        android:textSize="22sp" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/tag_wrapper"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <!--    some tag item will be added here    -->
+
+                </LinearLayout>
+
+                <!--  uploader  -->
+
+                <LinearLayout
+                    android:id="@+id/uploader_field_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/uploader"
+                        android:textSize="16sp"
+                        android:textColor="@color/grey"/>
+
+                    <EditText
+                        android:id="@+id/uploader_editText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="18sp"
+                        android:backgroundTint="@color/grey"
+                        android:textColor="@color/white"/>
+
+                </LinearLayout>
+
+                <!--  do apply exclude tag  -->
+
+                <LinearLayout
+                    android:id="@+id/do_exclude_wrapper"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/do_apply_exclude_tag"
+                        android:textSize="16sp"
+                        android:textColor="@color/grey"/>
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/do_exclude_switch"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:switchMinWidth="60dp"/>
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </ScrollView>
+
+    <!--  buttons  -->
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal"
+            android:gravity="end">
+
+            <com.example.viewer.widget.IconButton
+                style="@style/IconButtonCommonStyle"
+                android:id="@+id/save_button"
+                android:layout_width="90dp"
+                android:layout_height="wrap_content"
+                android:textColor="@color/black"
+                android:backgroundTint="@color/grey"
+                app:viewIcon="@string/fa_floppy_disk"
+                app:viewText="@string/save"/>
+
+            <com.example.viewer.widget.IconButton
+                style="@style/IconButtonCommonStyle"
+                android:id="@+id/search_button"
+                android:layout_width="90dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:textColor="@color/black"
+                android:backgroundTint="@color/grey"
+                app:viewIcon="@string/fa_magnifying_glass"
+                app:viewText="@string/search"/>
+
+            <com.example.viewer.widget.IconButton
+                style="@style/IconButtonCommonStyle"
+                android:id="@+id/confirm_button"
+                android:layout_width="90dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:textColor="@color/black"
+                android:backgroundTint="@color/grey"
+                app:viewIcon="@string/fa_check"
+                app:viewText="@string/confirm"/>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</FrameLayout>

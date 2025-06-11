@@ -5,22 +5,14 @@ import android.content.res.ColorStateList
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.Button
-import android.widget.FrameLayout
 import android.widget.GridLayout
-import android.widget.GridLayout.Spec
 import android.widget.GridLayout.UNDEFINED
-import android.widget.LinearLayout
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.core.view.marginBottom
-import androidx.core.view.marginTop
 import com.example.viewer.R
 import com.example.viewer.Util
 import com.example.viewer.database.BookDatabase
 import com.example.viewer.databinding.BookmarkDialogBinding
 import com.example.viewer.databinding.BookmarkItemBinding
-import kotlinx.coroutines.withContext
 
 class BookmarkDialog (
     context: Context,
@@ -134,7 +126,7 @@ class BookmarkDialog (
             if (toggle) R.color.grey else R.color.grey2
         ))
         setTextColor(context.getColor(
-            if (toggle) R.color.black else R.color.darkgrey
+            if (toggle) R.color.black else R.color.dark_grey
         ))
     }
 }

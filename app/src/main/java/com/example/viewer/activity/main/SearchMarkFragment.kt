@@ -19,12 +19,11 @@ import com.example.viewer.Util
 import com.example.viewer.activity.SearchActivity
 import com.example.viewer.databinding.MainSearchFragmentBinding
 import com.example.viewer.databinding.SearchMarkBinding
-import com.example.viewer.databinding.SearchMarkDialogTagBinding
 import com.example.viewer.database.SearchDatabase
-import com.example.viewer.database.SearchDatabase.Companion.SearchMark
 import com.example.viewer.dialog.ConfirmDialog
 import com.example.viewer.dialog.FilterOutDialog
 import com.example.viewer.dialog.SearchMarkDialog
+import com.example.viewer.struct.SearchMark
 
 data class SearchMarkEntry (
     val id: Int,
@@ -33,11 +32,6 @@ data class SearchMarkEntry (
 )
 
 class SearchMarkFragment: Fragment() {
-    companion object {
-        private val TAGS = mutableListOf("-").also { it.addAll(Util.TAG_TRANSLATION_MAP.keys) }.toList()
-        private val TAGS_DISPLAY = mutableListOf("-").also { it.addAll(Util.TAG_TRANSLATION_MAP.values) }.toList()
-    }
-
     private lateinit var parent: ViewGroup
     private lateinit var binding: MainSearchFragmentBinding
     private lateinit var searchDataset: SearchDatabase
@@ -71,12 +65,6 @@ class SearchMarkFragment: Fragment() {
 
         binding.advanceSearchButton.apply {
             setOnClickListener {
-                val searchMark = SearchMark (
-                    name = "",
-                    categories = listOf(),
-                    keyword = binding.searchEditText.text.toString().trim(),
-                    tags = mapOf()
-                )
                 SearchMarkDialog(context, layoutInflater).apply {
                     title = "進階搜尋"
                     showNameField = false
@@ -86,10 +74,21 @@ class SearchMarkFragment: Fragment() {
                             context,
                             retSearchMark.categories,
                             retSearchMark.keyword,
-                            retSearchMark.tags
+                            retSearchMark.tags,
+                            retSearchMark.uploader,
+                            retSearchMark.doExclude
                         )
                     }
-                }.show(searchMark)
+                }.show(
+                    SearchMark (
+                        name = "",
+                        categories = listOf(),
+                        keyword = binding.searchEditText.text.toString().trim(),
+                        tags = mapOf(),
+                        uploader = "",
+                        doExclude = true
+                    )
+                )
             }
         }
 
@@ -234,7 +233,7 @@ class SearchMarkFragment: Fragment() {
         if (doModifyBindingStyle) {
             focusedSearchMark!!.binding.let {
                 it.name.setTextColor(parent.context.getColor(R.color.white))
-                it.root.backgroundTintList = ColorStateList.valueOf(parent.context.getColor(R.color.darkgrey))
+                it.root.backgroundTintList = ColorStateList.valueOf(parent.context.getColor(R.color.dark_grey))
             }
         }
         focusedSearchMark = null
@@ -243,21 +242,12 @@ class SearchMarkFragment: Fragment() {
     private fun changeFocusSearchMark (id: Int, searchMark: SearchMark, searchMarkBinding: SearchMarkBinding) {
         focusedSearchMark!!.binding.let {
             it.name.setTextColor(parent.context.getColor(R.color.white))
-            it.root.backgroundTintList = ColorStateList.valueOf(parent.context.getColor(R.color.darkgrey))
+            it.root.backgroundTintList = ColorStateList.valueOf(parent.context.getColor(R.color.dark_grey))
         }
         searchMarkBinding.name.setTextColor(parent.context.getColor(R.color.black))
         searchMarkBinding.root.backgroundTintList = ColorStateList.valueOf(parent.context.getColor(R.color.grey))
         focusedSearchMark = SearchMarkEntry(id, searchMark, searchMarkBinding)
     }
-
-    private fun createSearchMarkDialogTag (parent: ViewGroup, cat: String? = null, value: String? = null) =
-        SearchMarkDialogTagBinding.inflate(layoutInflater, parent, false).apply {
-            spinner.apply {
-                setItems(TAGS_DISPLAY)
-                cat?.let { selectedIndex = TAGS.indexOf(it) }
-            }
-            value?.let { editText.setText(it) }
-        }
 
     /**
      * @return list of pair, first of pair is id, second is search mark instance

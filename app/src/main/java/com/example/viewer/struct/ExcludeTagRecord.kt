@@ -2,7 +2,6 @@ package com.example.viewer.struct
 
 import com.example.viewer.Util
 import com.example.viewer.database.SearchDatabase.Companion.Category
-import com.example.viewer.database.SearchDatabase.Companion.SearchMark
 
 data class ExcludeTagRecord (
     val tags: Map<String, List<String>>,

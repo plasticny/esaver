@@ -180,7 +180,7 @@
                 android:layout_width="0dp"
                 android:layout_height="60dp"
                 android:layout_weight="1"
-                android:backgroundTint="@color/darkgrey"
+                android:backgroundTint="@color/dark_grey"
                 android:textColor="@color/white"
                 android:textSize="16dp"
                 app:viewIcon="@string/fa_book_open"

@@ -1,7 +1,10 @@
 package com.example.viewer.database
 
 import android.content.Context
+import android.net.Uri
 import android.os.Environment
+import android.provider.MediaStore
+import androidx.core.net.toUri
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.byteArrayPreferencesKey
@@ -15,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
 import java.io.File
+import java.io.FileOutputStream
 
 enum class BookSource (val keyString: String) {
     E("E"),
@@ -26,7 +30,7 @@ private val Context.bookDataStore: DataStore<Preferences> by preferencesDataStor
 
 class BookDatabase (context: Context): BaseDatabase() {
     companion object {
-        const val NO_AUTHOR = "NoAuthor"
+        const val NAME = DB_NAME
 
         @Volatile
         private var instance: BookDatabase? = null
@@ -99,6 +103,10 @@ class BookDatabase (context: Context): BaseDatabase() {
             assertBookIdExist(bookId)
             return intPreferencesKey("${bookId}_groupId")
         }
+        fun bookUploader (bookId: String): Preferences.Key<String> {
+            assertBookIdExist(bookId)
+            return stringPreferencesKey("${bookId}_uploader")
+        }
         /**
          * store page of the book mark, start from 0
          */
@@ -121,7 +129,8 @@ class BookDatabase (context: Context): BaseDatabase() {
         pageNum: Int,
         tags: Map<String, List<String>>,
         source: BookSource,
-        groupId: Int
+        groupId: Int,
+        uploader: String?
     ) {
         if (pageNum < 1) {
             throw Exception("Invalid pageNum $pageNum")
@@ -147,6 +156,10 @@ class BookDatabase (context: Context): BaseDatabase() {
         store(storeKeys.bookTags(id), tags)
         // group id
         store(storeKeys.bookGroupId(id), groupId)
+        // uploader
+        uploader?.let {
+            store(storeKeys.bookUploader(id), uploader)
+        }
 
         store(storeKeys.bookSource(id), source.keyString)
         if (source == BookSource.E) {
@@ -174,7 +187,8 @@ class BookDatabase (context: Context): BaseDatabase() {
             subtitle = read(storeKeys.bookSubTitle(id)) ?: "",
             pageNum = getBookPageNum(id),
             tags = read(storeKeys.bookTags(id)) ?: mapOf(),
-            groupId = read(storeKeys.bookGroupId(id))!!
+            groupId = read(storeKeys.bookGroupId(id))!!,
+            uploader = read(storeKeys.bookUploader(id))
         )
     }
 
@@ -190,6 +204,7 @@ class BookDatabase (context: Context): BaseDatabase() {
         remove(storeKeys.bookLastViewTime(id))
         remove(storeKeys.bookBookMarks(id))
         remove(storeKeys.bookGroupId(id))
+        remove(storeKeys.bookUploader(id))
 
         if (getBookSource(id) == BookSource.E) {
             remove(storeKeys.bookPageUrls(id))
@@ -249,7 +264,12 @@ class BookDatabase (context: Context): BaseDatabase() {
 
     fun getBookUrl (bookId: String) = read(storeKeys.bookUrl(bookId))!!
 
-    fun getBookPageUrls (bookId: String) = read(storeKeys.bookPageUrls(bookId))!!
+    fun getBookPageUrls (bookId: String): List<String> {
+        if (getBookSource(bookId) == BookSource.Hi) {
+            throw Exception("Page urls are not stored for this book source")
+        }
+        return read(storeKeys.bookPageUrls(bookId))!!
+    }
     fun setBookPageUrls (bookId: String, urls: List<String>) = store(storeKeys.bookPageUrls(bookId), urls)
 
     fun getBookP (bookId: String) = read(storeKeys.bookP(bookId))!!
@@ -279,21 +299,4 @@ class BookDatabase (context: Context): BaseDatabase() {
 
     fun getBookLastViewTime (bookId: String) = read(storeKeys.bookLastViewTime(bookId)) ?: 0L
     fun updateBookLastViewTime (bookId: String) = store(storeKeys.bookLastViewTime(bookId), System.currentTimeMillis())
-
-    //
-    // backup
-    //
-    fun backup (context: Context) {
-        val dbFile = File("${context.filesDir}/datastore", "${DB_NAME}.preferences_pb")
-        val backupFolder = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "eSaver")
-        if (!backupFolder.exists()) {
-            backupFolder.mkdirs()
-        }
-
-        val backupFile = File(backupFolder, "book")
-        if (backupFile.exists()) {
-            backupFile.delete()
-        }
-        dbFile.copyTo(backupFile)
-    }
 }
