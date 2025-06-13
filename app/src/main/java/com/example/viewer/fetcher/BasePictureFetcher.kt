@@ -1,10 +1,9 @@
 package com.example.viewer.fetcher
 
 import android.content.Context
-import android.os.Environment
-import com.example.viewer.database.BookSource
-import com.example.viewer.database.BookDatabase
 import com.example.viewer.Util
+import com.example.viewer.data.database.BookDatabase
+import com.example.viewer.struct.BookSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext

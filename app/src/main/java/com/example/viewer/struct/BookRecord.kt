@@ -3,11 +3,6 @@ package com.example.viewer.struct
 import android.os.Bundle
 import android.os.Parcel
 import android.os.Parcelable
-import com.example.viewer.Util
-import com.example.viewer.database.BookSource
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import org.jsoup.Jsoup
 
 data class BookRecord (
     val id: String,

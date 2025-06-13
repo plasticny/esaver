@@ -7,8 +7,7 @@ import android.content.Context
  */
 class Dev {
     companion object {
-        fun run (context: Context) {
-        }
+        suspend fun run (context: Context) {}
     }
 
 //    private fun rotateGif () {

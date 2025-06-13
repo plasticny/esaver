@@ -1,7 +1,5 @@
 package com.example.viewer.struct
 
-import com.example.viewer.database.SearchDatabase.Companion.Category
-
 data class SearchMark (
     val name: String,
     val categories: List<Category>,

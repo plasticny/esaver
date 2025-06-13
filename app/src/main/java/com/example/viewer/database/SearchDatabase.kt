@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.viewer.R
 import com.example.viewer.Util
+import com.example.viewer.struct.Category
 import com.example.viewer.struct.ExcludeTagRecord
 import com.example.viewer.struct.SearchMark
 
@@ -28,29 +29,6 @@ class SearchDatabase (context: Context): BaseDatabase() {
         private var instance: SearchDatabase? = null
         fun getInstance (context: Context) = instance ?: synchronized(this) {
             instance ?: SearchDatabase(context).also { instance = it }
-        }
-
-        // NOTE: be very careful on arrange the order of entries
-        enum class Category {
-            Doujinshi {
-                override val color = R.color.doujinshi_red
-                override val value = 2
-            },
-            Manga {
-                override val color = R.color.manga_orange
-                override val value = 4
-            },
-            ArtistCG {
-                override val color = R.color.artistCG_yellow
-                override val value = 8
-            },
-            NonH {
-                override val color = R.color.nonH_blue
-                override val value = 256
-            };
-
-            abstract val color: Int
-            abstract val value: Int
         }
     }
 

@@ -2,18 +2,15 @@ package com.example.viewer
 
 import android.content.Context
 import android.widget.Toast
-import com.example.viewer.database.BookDatabase
-import com.example.viewer.database.BookSource
-import com.example.viewer.database.GroupDatabase
-import com.example.viewer.database.SearchDatabase
+import com.example.viewer.data.database.BookDatabase
 import com.example.viewer.fetcher.BasePictureFetcher
 import com.example.viewer.fetcher.EPictureFetcher
 import com.example.viewer.fetcher.HiPictureFetcher
+import com.example.viewer.struct.BookSource
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import java.io.File
 import java.net.URL

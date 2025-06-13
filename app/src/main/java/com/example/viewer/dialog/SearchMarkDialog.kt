@@ -7,9 +7,9 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import com.example.viewer.R
 import com.example.viewer.Util
-import com.example.viewer.database.SearchDatabase.Companion.Category
 import com.example.viewer.databinding.DialogSearchMarkBinding
 import com.example.viewer.databinding.DialogSearchMarkTagBinding
+import com.example.viewer.struct.Category
 import com.example.viewer.struct.SearchMark
 
 open class SearchMarkDialog (

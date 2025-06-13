@@ -7,7 +7,6 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import com.example.viewer.BookGallery
-import com.example.viewer.database.BookDatabase
 import com.example.viewer.database.GroupDatabase
 import com.example.viewer.databinding.MainGalleryFragmentBinding
 

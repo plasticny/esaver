@@ -10,7 +10,6 @@ import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.material3.AlertDialog
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -18,14 +17,14 @@ import com.bumptech.glide.Glide
 import com.example.viewer.struct.BookRecord
 import com.example.viewer.R
 import com.example.viewer.Util
-import com.example.viewer.database.BookDatabase
+import com.example.viewer.data.database.BookDatabase
 import com.example.viewer.databinding.SearchActivityBinding
 import com.example.viewer.database.SearchDatabase
-import com.example.viewer.database.SearchDatabase.Companion.Category
 import com.example.viewer.databinding.ActivitySearchBookBinding
 import com.example.viewer.databinding.DialogSearchInfoBinding
 import com.example.viewer.dialog.SearchMarkDialog
 import com.example.viewer.dialog.SimpleEditTextDialog
+import com.example.viewer.struct.Category
 import com.example.viewer.struct.SearchMark
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

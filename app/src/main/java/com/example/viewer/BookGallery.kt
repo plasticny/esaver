@@ -12,17 +12,18 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.viewer.activity.BookProfileActivity
-import com.example.viewer.database.BookDatabase
-import com.example.viewer.database.BookSource
+import com.example.viewer.data.database.BookDatabase
 import com.example.viewer.database.GroupDatabase
 import com.example.viewer.databinding.FragmentMainGalleryBookBinding
 import com.example.viewer.databinding.MainGalleryFragmentAuthorBinding
 import com.example.viewer.dialog.SelectGroupDialog
 import com.example.viewer.fetcher.EPictureFetcher
 import com.example.viewer.fetcher.HiPictureFetcher
+import com.example.viewer.struct.BookSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import java.io.File
 import kotlin.math.ceil
@@ -72,7 +73,7 @@ class BookGallery (
         context.startActivity(Intent(context, BookProfileActivity::class.java).apply {
             putExtra(
                 "book_record",
-                bookDatabase.getBook(context, bookId)
+                runBlocking { bookDatabase.getBook(context, bookId) }
             )
         })
     }
@@ -82,12 +83,13 @@ class BookGallery (
     inner class Filter {
         var doDownloadComplete: Boolean? = null
         fun isFiltered (context: Context, bookId: String, bookDataset: BookDatabase): Boolean {
-            if (doDownloadComplete == null) {
-                return true
-            }
-            val bookFolder = File(context.getExternalFilesDir(null), bookId)
-            val downloadedPageNum = bookFolder.listFiles()!!.size
-            return (downloadedPageNum == bookDataset.getBookPageNum(bookId)) == doDownloadComplete
+            throw NotImplementedError()
+//            if (doDownloadComplete == null) {
+//                return true
+//            }
+//            val bookFolder = File(context.getExternalFilesDir(null), bookId)
+//            val downloadedPageNum = bookFolder.listFiles()!!.size
+//            return (downloadedPageNum == bookDataset.getBookPageNum(bookId)) == doDownloadComplete
         }
     }
 
@@ -196,7 +198,9 @@ class BookGallery (
 
         override fun onBindViewHolder(holder: BookRecyclerViewHolder, position: Int) {
             val id = bookIds[position]
+            println("[${this@BookGallery::class.simpleName}.${this::class.simpleName}] binding $id")
             val bookFolder = File(context.getExternalFilesDir(null), id)
+
             val coverPage = bookDatabase.getBookCoverPage(id)
             val coverPageFile = File(bookFolder, coverPage.toString())
 
@@ -217,9 +221,9 @@ class BookGallery (
                 openBook(id)
             }
 
-//            holder.imageView.setOnLongClickListener {
-//                true
-//            }
+            holder.imageView.setOnLongClickListener {
+                true
+            }
         }
 
         fun refresh () {

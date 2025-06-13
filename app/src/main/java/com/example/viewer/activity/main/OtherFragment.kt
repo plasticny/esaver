@@ -11,7 +11,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import com.example.viewer.database.BaseDatabase
 import com.example.viewer.databinding.FragmentMainOtherBinding
-import com.example.viewer.dialog.ConfirmDialog
 import java.util.Date
 
 class OtherFragment: Fragment() {
@@ -19,7 +18,7 @@ class OtherFragment: Fragment() {
 
     private val importBackupLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) {
         it?.let {
-            BaseDatabase.importDb(context, it)
+//            BaseDatabase.importDb(context, it)
             // restart the app
             val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
             val mi = Intent.makeRestartActivityTask(intent!!.component).apply {
@@ -31,7 +30,7 @@ class OtherFragment: Fragment() {
     }
     private val saveBackupLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) {
         it?.let {
-            BaseDatabase.backupDb(context, it)
+//            BaseDatabase.backupDb(context, it)
             Toast.makeText(context, "已儲存備份", Toast.LENGTH_SHORT).show()
         }
     }
@@ -46,11 +45,13 @@ class OtherFragment: Fragment() {
         context = requireContext()
 
         rootBinding.backupButton.setOnClickListener {
-            saveBackupLauncher.launch("eSaver_backup_${Date()}.txt")
+            Toast.makeText(context, "unavailable", Toast.LENGTH_SHORT).show()
+//            saveBackupLauncher.launch("eSaver_backup_${Date()}.txt")
         }
 
         rootBinding.importButton.setOnClickListener {
-            importBackupLauncher.launch(arrayOf("text/plain"))
+            Toast.makeText(context, "unavailable", Toast.LENGTH_SHORT).show()
+//            importBackupLauncher.launch(arrayOf("text/plain"))
         }
 
         return rootBinding.root

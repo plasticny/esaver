@@ -4,10 +4,11 @@ import android.content.Context
 import android.view.LayoutInflater
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
-import com.example.viewer.database.BookDatabase
+import com.example.viewer.data.database.BookDatabase
 import com.example.viewer.database.GroupDatabase
 import com.example.viewer.databinding.DialogLocalReadSettingBinding
 import com.example.viewer.struct.BookRecord
+import kotlinx.coroutines.runBlocking
 import java.io.File
 
 class LocalReadSettingDialog (
@@ -60,7 +61,9 @@ class LocalReadSettingDialog (
             }
             if (selectedGroupId != bookRecord.groupId) {
                 groupDatabase.changeGroup(bookRecord.id, bookRecord.groupId, selectedGroupId)
-                BookDatabase.getInstance(context).changeBookGroup(bookRecord.id, selectedGroupId)
+                runBlocking {
+                    BookDatabase.getInstance(context).changeBookGroup(bookRecord.id, selectedGroupId)
+                }
             }
 
             val coverPage = dialogBinding.profileDialogCoverPageEditText.text.toString().trim().let {
@@ -76,7 +79,9 @@ class LocalReadSettingDialog (
                 }
             }
             if (coverPage != bookDatabase.getBookCoverPage(bookRecord.id) + 1) {
-                bookDatabase.setBookCoverPage(bookRecord.id, coverPage - 1)
+                runBlocking {
+                    bookDatabase.setBookCoverPage(bookRecord.id, coverPage - 1)
+                }
                 coverPageUpdated = true
             }
 
@@ -120,7 +125,9 @@ class LocalReadSettingDialog (
             }
         }
 
-        bookDatabase.setBookSkipPages(bookId, updatedSkipPages)
+        runBlocking {
+            bookDatabase.setBookSkipPages(bookId, updatedSkipPages)
+        }
     }
 
     private fun skipPagesListToString (skipPages: List<Int>): String {

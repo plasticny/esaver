@@ -19,10 +19,9 @@ import com.example.viewer.Util
 import com.example.viewer.activity.main.MainActivity
 import com.example.viewer.activity.viewer.LocalViewerActivity
 import com.example.viewer.activity.viewer.OnlineViewerActivity
+import com.example.viewer.data.database.BookDatabase
 import com.example.viewer.databinding.BookProfileActivityBinding
 import com.example.viewer.databinding.BookProfileTagBinding
-import com.example.viewer.database.BookDatabase
-import com.example.viewer.database.BookSource
 import com.example.viewer.database.GroupDatabase
 import com.example.viewer.database.SearchDatabase
 import com.example.viewer.databinding.DialogBookInfoBinding
@@ -32,6 +31,8 @@ import com.example.viewer.dialog.EditExcludeTagDialog
 import com.example.viewer.dialog.LocalReadSettingDialog
 import com.example.viewer.fetcher.EPictureFetcher
 import com.example.viewer.fetcher.HiPictureFetcher
+import com.example.viewer.struct.BookSource
+import com.example.viewer.struct.Category
 import com.example.viewer.struct.ExcludeTagRecord
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -74,7 +75,7 @@ class BookProfileActivity: AppCompatActivity() {
         }
 
         val bookDatabase = BookDatabase.getInstance(baseContext)
-        isBookStored = bookDatabase.isBookStored(bookRecord.id)
+        isBookStored = runBlocking { bookDatabase.isBookStored(bookRecord.id) }
 
         //
         // init ui
@@ -127,7 +128,9 @@ class BookProfileActivity: AppCompatActivity() {
 
         rootBinding.readButton.setOnClickListener {
             if (isBookStored) {
-                BookDatabase.getInstance(baseContext).updateBookLastViewTime(bookRecord.id)
+                runBlocking {
+                    BookDatabase.getInstance(baseContext).updateBookLastViewTime(bookRecord.id)
+                }
                 startActivity(Intent(baseContext, LocalViewerActivity::class.java).apply {
                     putExtra("bookId", bookRecord.id)
                 })
@@ -150,7 +153,9 @@ class BookProfileActivity: AppCompatActivity() {
                     LocalReadSettingDialog(this@BookProfileActivity, layoutInflater).show(
                         bookRecord,
                         onApplied = { coverPageUpdated ->
-                            bookRecord = BookDatabase.getInstance(baseContext).getBook(baseContext, bookRecord.id)
+                            bookRecord = runBlocking {
+                                BookDatabase.getInstance(baseContext).getBook(baseContext, bookRecord.id)
+                            }
                             if (coverPageUpdated) {
                                 refreshCoverPage()
                             }
@@ -271,7 +276,7 @@ class BookProfileActivity: AppCompatActivity() {
         EditExcludeTagDialog(this, layoutInflater).show(
             ExcludeTagRecord(
                 mapOf(tagCategory to listOf(tagValue)),
-                SearchDatabase.Companion.Category.entries.toSet()
+                Category.entries.toSet()
             )
         ) { recordToSave ->
             toggleProgressBar(true)
@@ -309,19 +314,22 @@ class BookProfileActivity: AppCompatActivity() {
      */
     private fun refreshCoverPage () {
         if (isBookStored) {
-            Glide.with(baseContext)
-                .load(
-                    File(
-                        "${getExternalFilesDir(null)}/${bookRecord.id}",
-                        BookDatabase.getInstance(baseContext).getBookCoverPage(bookRecord.id).toString()
-                    )
+            lifecycleScope.launch {
+                val file = File(
+                    "${getExternalFilesDir(null)}/${bookRecord.id}",
+                    BookDatabase.getInstance(baseContext).getBookCoverPage(bookRecord.id).toString()
                 )
-                .into(rootBinding.coverImageView)
+                Glide.with(baseContext)
+                    .load(file)
+                    .into(rootBinding.coverImageView)
+            }
         }
     }
 
     private fun deleteBook (bookRecord: BookRecord): Boolean {
-        BookDatabase.getInstance(baseContext).removeBook(bookRecord.id)
+        runBlocking {
+            BookDatabase.getInstance(baseContext).removeBook(bookRecord.id)
+        }
         GroupDatabase.getInstance(baseContext).removeBookIdFromGroup(bookRecord.groupId, bookRecord.id)
 
         val bookFolder = File(getExternalFilesDir(null), bookRecord.id)

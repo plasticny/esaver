@@ -4,13 +4,9 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.util.TypedValue
-import com.example.viewer.database.BookDatabase
-import com.example.viewer.database.BookSource
-import com.example.viewer.database.SearchDatabase
-import com.example.viewer.database.SearchDatabase.Companion.Category.ArtistCG
-import com.example.viewer.database.SearchDatabase.Companion.Category.Doujinshi
-import com.example.viewer.database.SearchDatabase.Companion.Category.Manga
-import com.example.viewer.database.SearchDatabase.Companion.Category.NonH
+import com.example.viewer.data.database.BookDatabase
+import com.example.viewer.struct.BookSource
+import com.example.viewer.struct.Category
 import java.io.File
 import java.io.FileInputStream
 
@@ -28,7 +24,7 @@ class Util {
             "parody" to "原作",
             "temp" to "臨時"
         )
-        private val CATEGORY_ENTRIES = SearchDatabase.Companion.Category.entries
+        private val CATEGORY_ENTRIES = Category.entries
 
         fun dp2px (context: Context, dp: Float): Int {
             val displayMetrics = context.resources.displayMetrics
@@ -52,7 +48,7 @@ class Util {
         /**
          * @return boolean represent all pages of the book is downloaded
          */
-        fun isBookDownloaded (context: Context, bookId: String): Boolean {
+        suspend fun isBookDownloaded (context: Context, bookId: String): Boolean {
             val folder = File(context.getExternalFilesDir(null), bookId)
             return BookDatabase.getInstance(context).getBookPageNum(bookId) <= folder.listFiles()!!.size
         }
@@ -71,12 +67,12 @@ class Util {
         fun categoryFromOrdinal (ordinal: Int) = CATEGORY_ENTRIES[ordinal]
 
         fun categoryFromName (name: String) = when (name) {
-            Doujinshi.name -> Doujinshi
-            Manga.name -> Manga
-            ArtistCG.name -> ArtistCG
-            "Artist CG" -> ArtistCG
-            NonH.name -> NonH
-            "Non-H" -> NonH
+            Category.Doujinshi.name -> Category.Doujinshi
+            Category.Manga.name -> Category.Manga
+            Category.ArtistCG.name -> Category.ArtistCG
+            "Artist CG" -> Category.ArtistCG
+            Category.NonH.name -> Category.NonH
+            "Non-H" -> Category.NonH
             else -> throw Exception("unexpected string $name")
         }
 

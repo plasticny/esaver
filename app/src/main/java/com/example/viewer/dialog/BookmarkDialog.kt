@@ -10,9 +10,10 @@ import android.widget.GridLayout.UNDEFINED
 import androidx.appcompat.app.AlertDialog
 import com.example.viewer.R
 import com.example.viewer.Util
-import com.example.viewer.database.BookDatabase
+import com.example.viewer.data.database.BookDatabase
 import com.example.viewer.databinding.BookmarkDialogBinding
 import com.example.viewer.databinding.BookmarkItemBinding
+import kotlinx.coroutines.runBlocking
 
 class BookmarkDialog (
     context: Context,
@@ -37,14 +38,18 @@ class BookmarkDialog (
                 if (doCurPageMarked) {
                     return@setOnClickListener
                 }
-                bookDatabase.addBookMark(bookId, curPage)
+                runBlocking {
+                    bookDatabase.addBookMark(bookId, curPage)
+                }
                 refreshBookMarks()
             }
         }
 
         dialogBinding.removeButton.setOnClickListener {
             selectedBookMarkBinding?.let {
-                bookDatabase.removeBookMark(bookId, it.bookmarkTextView.text.toString().toInt() - 1)
+                runBlocking {
+                    bookDatabase.removeBookMark(bookId, it.bookmarkTextView.text.toString().toInt() - 1)
+                }
                 refreshBookMarks()
             }
         }
