@@ -1,11 +1,15 @@
 package com.example.viewer.data.struct
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity
+@Entity(
+    tableName = "BookGroups",
+    indices = [Index(value = ["id"])]
+)
 data class Group (
-    @PrimaryKey(autoGenerate = true)
-    val id: Int = 0,
+    @PrimaryKey
+    val id: Int,
     val name: String
 )

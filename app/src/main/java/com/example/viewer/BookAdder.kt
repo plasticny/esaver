@@ -2,7 +2,7 @@ package com.example.viewer
 
 import android.content.Context
 import android.widget.Toast
-import com.example.viewer.data.database.BookDatabase
+import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.fetcher.BasePictureFetcher
 import com.example.viewer.fetcher.EPictureFetcher
 import com.example.viewer.fetcher.HiPictureFetcher
@@ -32,7 +32,7 @@ abstract class BookAdder (protected val context: Context) {
     protected abstract fun getFetcher (id: String, url: String): BasePictureFetcher
     protected abstract suspend fun storeToDataSet (id: String, url: String)
 
-    protected val bookDataset = BookDatabase.getInstance(context)
+    protected val bookDataset = BookRepository(context)
 
     suspend fun addBook (
         url: String,

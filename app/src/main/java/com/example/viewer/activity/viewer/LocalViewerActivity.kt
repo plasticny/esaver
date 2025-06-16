@@ -12,6 +12,7 @@ import com.example.viewer.fetcher.BasePictureFetcher
 import com.example.viewer.RandomBook
 import com.example.viewer.Util
 import com.example.viewer.data.database.BookDatabase
+import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.databinding.ViewerImageDialogBinding
 import com.example.viewer.dialog.BookmarkDialog
 import com.example.viewer.dialog.ConfirmDialog
@@ -33,7 +34,7 @@ class LocalViewerActivity: BaseViewerActivity() {
         private const val ROTATE_RIGHT = 90F
     }
 
-    private lateinit var bookDataset: BookDatabase
+    private lateinit var bookDataset: BookRepository
 
     private lateinit var fetcher: BasePictureFetcher
 
@@ -50,7 +51,7 @@ class LocalViewerActivity: BaseViewerActivity() {
     override val enableJumpToButton = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        bookDataset = BookDatabase.getInstance(baseContext)
+        bookDataset = BookRepository(baseContext)
         bookId = intent.getStringExtra("bookId")!!
         prepareBook(bookId)
 
@@ -178,9 +179,7 @@ class LocalViewerActivity: BaseViewerActivity() {
         // set cover page
         dialogViewBinding.viewImgDialogCoverPageButton.apply {
             setOnClickListener {
-                runBlocking {
-                    bookDataset.setBookCoverPage(bookId, page)
-                }
+                bookDataset.setBookCoverPage(bookId, page)
                 dialog.dismiss()
             }
         }
@@ -188,12 +187,10 @@ class LocalViewerActivity: BaseViewerActivity() {
         // skip page button
         dialogViewBinding.viewImgDialogSkipButton.apply {
             setOnClickListener {
-                runBlocking {
-                    bookDataset.setBookSkipPages(
-                        bookId,
-                        skipPageSet.toMutableList().also { it.add(page) }
-                    )
-                }
+                bookDataset.setBookSkipPages(
+                    bookId,
+                    skipPageSet.toMutableList().also { it.add(page) }
+                )
                 skipPageSet = bookDataset.getBookSkipPages(bookId).toSet()
 
                 if (bookDataset.getBookCoverPage(bookId) != page) {

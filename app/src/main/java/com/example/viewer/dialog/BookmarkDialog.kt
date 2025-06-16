@@ -11,6 +11,7 @@ import androidx.appcompat.app.AlertDialog
 import com.example.viewer.R
 import com.example.viewer.Util
 import com.example.viewer.data.database.BookDatabase
+import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.databinding.BookmarkDialogBinding
 import com.example.viewer.databinding.BookmarkItemBinding
 import kotlinx.coroutines.runBlocking
@@ -22,7 +23,7 @@ class BookmarkDialog (
     private val curPage: Int,
     private val onJumpToClicked: (page: Int) -> Unit
 ) {
-    private val bookDatabase = BookDatabase.getInstance(context)
+    private val bookDatabase = BookRepository(context)
 
     private val dialogBinding = BookmarkDialogBinding.inflate(layoutInflater)
     private val dialog = AlertDialog.Builder(context).setView(dialogBinding.root).create()
@@ -38,18 +39,14 @@ class BookmarkDialog (
                 if (doCurPageMarked) {
                     return@setOnClickListener
                 }
-                runBlocking {
-                    bookDatabase.addBookMark(bookId, curPage)
-                }
+                bookDatabase.addBookMark(bookId, curPage)
                 refreshBookMarks()
             }
         }
 
         dialogBinding.removeButton.setOnClickListener {
             selectedBookMarkBinding?.let {
-                runBlocking {
-                    bookDatabase.removeBookMark(bookId, it.bookmarkTextView.text.toString().toInt() - 1)
-                }
+                bookDatabase.removeBookMark(bookId, it.bookmarkTextView.text.toString().toInt() - 1)
                 refreshBookMarks()
             }
         }

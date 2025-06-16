@@ -1,9 +1,6 @@
 package com.example.viewer.database
 
 import android.content.Context
-import android.net.Uri
-import android.os.Environment
-import androidx.compose.runtime.key
 import androidx.core.content.ContextCompat
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -12,22 +9,21 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.viewer.R
-import java.io.File
-import java.io.FileOutputStream
+import com.example.viewer.data.repository.GroupRepository
 
 private const val DB_NAME = "group"
 private val Context.groupDatabase: DataStore<Preferences> by preferencesDataStore(name = DB_NAME)
 
-class GroupDatabase (context: Context) : BaseDatabase() {
+class GroupPreferences (context: Context) : BaseDatabase() {
     companion object {
         const val NAME = DB_NAME
         const val TAG = "groupDB"
         const val DEFAULT_GROUP_ID = 0
 
         @Volatile
-        private var instance: GroupDatabase? = null
+        private var instance: GroupPreferences? = null
         fun getInstance (context: Context) = instance ?: synchronized(this) {
-            instance ?: GroupDatabase(context).also { instance = it }
+            instance ?: GroupPreferences(context).also { instance = it }
         }
 
         private var defaultGroupChecked = false
@@ -50,6 +46,17 @@ class GroupDatabase (context: Context) : BaseDatabase() {
                 createGroup(ContextCompat.getString(context, R.string.noGroup))
             }
             defaultGroupChecked = true
+        }
+    }
+
+    fun syncToRoom (context: Context) {
+        val roomRp = GroupRepository(context)
+        for (id in getAllGroupIds()) {
+            if (id == 0) {
+                continue
+            }
+            println(id)
+            roomRp.addGroupFromPreference(id, getGroupName(id))
         }
     }
 

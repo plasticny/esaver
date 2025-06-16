@@ -3,6 +3,7 @@ package com.example.viewer.fetcher
 import android.content.Context
 import com.example.viewer.Util
 import com.example.viewer.data.database.BookDatabase
+import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.struct.BookSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -23,7 +24,7 @@ abstract class BasePictureFetcher {
         private val okHttpClient = OkHttpClient()
 
         fun getFetcher (context: Context, bookId: String): BasePictureFetcher {
-            val source = BookDatabase.getInstance(context).getBookSource(bookId)
+            val source = BookRepository(context).getBookSource(bookId)
             println("[BasePictureFetcher.getFetcher] $source")
             return when (source) {
                 BookSource.E -> EPictureFetcher(context, bookId)
@@ -58,7 +59,7 @@ abstract class BasePictureFetcher {
         this.context = context
         this.bookId = bookId
 
-        pageNum = BookDatabase.getInstance(context).getBookPageNum(bookId)
+        pageNum = BookRepository(context).getBookPageNum(bookId)
         bookFolder = File(context.getExternalFilesDir(null), bookId)
         isLocal = true
     }

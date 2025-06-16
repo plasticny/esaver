@@ -25,5 +25,5 @@ import androidx.room.PrimaryKey
 data class BookWithGroup (
     @PrimaryKey val bookId: String,
     @ColumnInfo(index = true)
-    val groupId: Int
+    var groupId: Int
 )

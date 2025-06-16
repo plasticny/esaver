@@ -7,7 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import com.example.viewer.BookGallery
-import com.example.viewer.database.GroupDatabase
+import com.example.viewer.data.repository.GroupRepository
 import com.example.viewer.databinding.MainGalleryFragmentBinding
 
 class GalleryFragment: Fragment() {
@@ -26,7 +26,7 @@ class GalleryFragment: Fragment() {
         binding = MainGalleryFragmentBinding.inflate(layoutInflater, container, false)
         bookGallery = BookGallery(ctx, layoutInflater, binding.recyclerView)
 
-        groupListLastUpdate = GroupDatabase.getInstance(ctx).getLastUpdateTime()
+        groupListLastUpdate = GroupRepository(ctx).getLastUpdateTime()
 
 //        binding.addImageView.setOnClickListener {
 //            if (Util.isInternetAvailable(ctx)) {
@@ -64,7 +64,7 @@ class GalleryFragment: Fragment() {
 
     override fun onResume() {
         super.onResume()
-        GroupDatabase.getInstance(ctx).getLastUpdateTime().let {
+        GroupRepository(ctx).getLastUpdateTime().let {
             if (it != groupListLastUpdate) {
                 println("[${this::class.simpleName}.${this::onResume.name}] author list updated, refresh")
                 bookGallery.refreshGroup()

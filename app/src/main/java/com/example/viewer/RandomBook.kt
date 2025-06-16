@@ -2,6 +2,7 @@ package com.example.viewer
 
 import android.content.Context
 import com.example.viewer.data.database.BookDatabase
+import com.example.viewer.data.repository.BookRepository
 import kotlinx.coroutines.runBlocking
 import java.util.PriorityQueue
 import kotlin.random.Random
@@ -23,7 +24,7 @@ class RandomBook private constructor(context: Context) {
         fun next (context: Context, onlyDownloaded: Boolean = false) = getInstance(context).next(context, onlyDownloaded)
     }
 
-    private val bookDataset = BookDatabase.getInstance(context)
+    private val bookDataset = BookRepository(context)
 
     private val bookIdSequence: MutableList<String>
     private val arrangedBookId: MutableSet<String>

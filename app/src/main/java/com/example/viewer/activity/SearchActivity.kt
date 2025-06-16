@@ -18,6 +18,7 @@ import com.example.viewer.struct.BookRecord
 import com.example.viewer.R
 import com.example.viewer.Util
 import com.example.viewer.data.database.BookDatabase
+import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.databinding.SearchActivityBinding
 import com.example.viewer.database.SearchDatabase
 import com.example.viewer.databinding.ActivitySearchBookBinding
@@ -477,7 +478,7 @@ class SearchActivity: AppCompatActivity() {
             binding.root.apply {
                 setOnClickListener {
                     lifecycleScope.launch {
-                        val bookDb = BookDatabase.getInstance(baseContext)
+                        val bookDb = BookRepository(baseContext)
                         val intent = Intent(context, BookProfileActivity::class.java)
                         intent.putExtra(
                             "book_record",
