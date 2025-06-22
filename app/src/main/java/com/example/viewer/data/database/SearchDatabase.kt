@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.example.viewer.data.dao.ExcludeTagDao
+import com.example.viewer.data.dao.SearchMarkDao
 import com.example.viewer.data.struct.ExcludeTag
 import com.example.viewer.data.struct.SearchMark
 
@@ -23,4 +25,7 @@ abstract class SearchDatabase: RoomDatabase() {
                 ).build().also { instance = it }
             }
     }
+
+    abstract fun searchMarkDao (): SearchMarkDao
+    abstract fun excludeTagDao (): ExcludeTagDao
 }

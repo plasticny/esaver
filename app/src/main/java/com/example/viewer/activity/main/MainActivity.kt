@@ -1,12 +1,11 @@
 package com.example.viewer.activity.main
 
-import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.findNavController
 import androidx.navigation.ui.setupWithNavController
 import com.example.viewer.R
-import com.example.viewer.activity.PassActivity
+import com.example.viewer.data.repository.ExcludeTagRepository
 import com.example.viewer.databinding.MainActivityBinding
 
 class MainActivity: AppCompatActivity() {
@@ -14,6 +13,9 @@ class MainActivity: AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // initialize exclude tag repo
+        ExcludeTagRepository(baseContext)
 
         binding = MainActivityBinding.inflate(layoutInflater)
         setContentView(binding.root)

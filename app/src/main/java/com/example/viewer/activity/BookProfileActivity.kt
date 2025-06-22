@@ -3,7 +3,6 @@ package com.example.viewer.activity
 import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
-import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
@@ -13,17 +12,17 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
-import com.example.viewer.struct.BookRecord
 import com.example.viewer.R
 import com.example.viewer.Util
 import com.example.viewer.activity.main.MainActivity
 import com.example.viewer.activity.viewer.LocalViewerActivity
 import com.example.viewer.activity.viewer.OnlineViewerActivity
 import com.example.viewer.data.repository.BookRepository
+import com.example.viewer.data.repository.ExcludeTagRepository
 import com.example.viewer.data.repository.GroupRepository
+import com.example.viewer.data.struct.Book
 import com.example.viewer.databinding.BookProfileActivityBinding
 import com.example.viewer.databinding.BookProfileTagBinding
-import com.example.viewer.database.SearchDatabase
 import com.example.viewer.databinding.DialogBookInfoBinding
 import com.example.viewer.databinding.DialogTagBinding
 import com.example.viewer.dialog.ConfirmDialog
@@ -33,7 +32,6 @@ import com.example.viewer.fetcher.EPictureFetcher
 import com.example.viewer.fetcher.HiPictureFetcher
 import com.example.viewer.struct.BookSource
 import com.example.viewer.struct.Category
-import com.example.viewer.struct.ExcludeTagRecord
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -60,22 +58,21 @@ class BookProfileActivity: AppCompatActivity() {
         }
     }
 
-    private lateinit var bookRecord: BookRecord
+    private lateinit var book: Book
     private lateinit var rootBinding: BookProfileActivityBinding
+    private lateinit var bookRepo: BookRepository
 
     private var isBookStored: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        bookRecord = if (Build.VERSION.SDK_INT > Build.VERSION_CODES.S_V2) {
-            intent.getParcelableExtra("book_record", BookRecord::class.java)!!
-        } else {
-            intent.getParcelableExtra("book_record")!!
-        }
+        bookRepo = BookRepository(baseContext)
+        book = bookRepo.getBook(intent.getStringExtra("bookId")!!)
 
         val bookDatabase = BookRepository(baseContext)
-        isBookStored = runBlocking { bookDatabase.isBookStored(bookRecord.id) }
+        println(book.id)
+        isBookStored = runBlocking { bookDatabase.isBookStored(book.id) }
 
         //
         // init ui
@@ -93,49 +90,54 @@ class BookProfileActivity: AppCompatActivity() {
         }
 
         rootBinding.coverImageView.let {
-            if(isBookStored && !File(bookRecord.coverUrl).exists()) {
+            val coverUrl = book.getCoverUrl(baseContext)
+            if(isBookStored) {
                 CoroutineScope(Dispatchers.Main).launch {
-                    withContext(Dispatchers.IO) {
-                        val id = bookRecord.id
-                        val source = bookDatabase.getBookSource(id)
-                        val fetcher = if (source == BookSource.E) EPictureFetcher(baseContext, id) else HiPictureFetcher(baseContext, id)
-                        fetcher.savePicture(bookDatabase.getBookCoverPage(bookRecord.id))
+                    if (!File(coverUrl).exists()) {
+                        withContext(Dispatchers.IO) {
+                            val id = book.id
+                            val source = bookDatabase.getBookSource(id)
+                            val fetcher = if (source == BookSource.E) EPictureFetcher(
+                                baseContext,
+                                id
+                            ) else HiPictureFetcher(baseContext, id)
+                            fetcher.savePicture(bookDatabase.getBookCoverPage(book.id))
+                        }
                     }
-                    Glide.with(baseContext).load(bookRecord.coverUrl).into(it)
+                    Glide.with(baseContext).load(coverUrl).into(it)
                 }
             } else {
-                Glide.with(baseContext).load(bookRecord.coverUrl).into(it)
+                Glide.with(baseContext).load(book.getPageUrls()!![0]).into(it)
             }
         }
 
-        rootBinding.titleTextView.text = bookRecord.title
+        rootBinding.titleTextView.text = book.title
 
         rootBinding.warningContainer.apply {
             // only check warning if book is not stored
             lifecycleScope.launch {
-                if (!isBookStored && EPictureFetcher.isBookWarning(bookRecord.url)) {
+                if (!isBookStored && EPictureFetcher.isBookWarning(book.url)) {
                     visibility = View.VISIBLE
                 }
             }
         }
 
-        rootBinding.pageNumTextView.text = baseContext.getString(R.string.n_page, bookRecord.pageNum)
+        rootBinding.pageNumTextView.text = baseContext.getString(R.string.n_page, book.pageNum)
 
         rootBinding.categoryTextView.apply {
-            text = bookRecord.cat
-            setTextColor(context.getColor(Util.categoryFromName(bookRecord.cat).color))
+            val name = book.getCategory().name
+            text = name
+            setTextColor(context.getColor(Util.categoryFromName(name).color))
         }
 
         rootBinding.readButton.setOnClickListener {
             if (isBookStored) {
-                BookRepository(baseContext).updateBookLastViewTime(bookRecord.id)
+                BookRepository(baseContext).updateBookLastViewTime(book.id)
                 startActivity(Intent(baseContext, LocalViewerActivity::class.java).apply {
-                    putExtra("bookId", bookRecord.id)
+                    putExtra("bookId", book.id)
                 })
             } else {
-                startActivity(Intent(baseContext, OnlineViewerActivity::class.java).apply {
-                    putExtra("book_record", bookRecord)
-                })
+                startActivity(Intent(baseContext, OnlineViewerActivity::class.java))
             }
         }
 
@@ -149,9 +151,9 @@ class BookProfileActivity: AppCompatActivity() {
             setOnClickListener {
                 if (isBookStored) {
                     LocalReadSettingDialog(this@BookProfileActivity, layoutInflater).show(
-                        bookRecord,
+                        book,
                         onApplied = { coverPageUpdated ->
-                            bookRecord = BookRepository(baseContext).getBook(baseContext, bookRecord.id)
+                            book = BookRepository(baseContext).getBook(book.id)
                             if (coverPageUpdated) {
                                 refreshCoverPage()
                             }
@@ -175,7 +177,7 @@ class BookProfileActivity: AppCompatActivity() {
                     positiveCallback = {
                         toggleProgressBar(true)
                         CoroutineScope(Dispatchers.IO).launch {
-                            deleteBook(bookRecord).let { retFlag ->
+                            deleteBook(book).let { retFlag ->
                                 withContext(Dispatchers.Main) {
                                     toggleProgressBar(false)
                                     if (retFlag) {
@@ -191,7 +193,7 @@ class BookProfileActivity: AppCompatActivity() {
 
         rootBinding.tagWrapper.apply {
             lifecycleScope.launch {
-                for (entry in bookRecord.tags.entries) {
+                for (entry in book.getTags().entries) {
                     addView(createTagRow(entry.key, entry.value).root)
                 }
             }
@@ -208,6 +210,11 @@ class BookProfileActivity: AppCompatActivity() {
             // the cover page may updated
             refreshCoverPage()
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        Book.clearTmpBook()
     }
 
     private fun createTagRow (tagCat: String, tagValues: List<String>) =
@@ -255,14 +262,14 @@ class BookProfileActivity: AppCompatActivity() {
         val dialogViewBinding = DialogBookInfoBinding.inflate(layoutInflater)
         val dialog = AlertDialog.Builder(this).setView(dialogViewBinding.root).create()
 
-        dialogViewBinding.uploaderTextView.text = bookRecord.uploader ?: getString(R.string.noName)
+        dialogViewBinding.uploaderTextView.text = book.uploader ?: getString(R.string.noName)
 
-        dialogViewBinding.urlTextView.text = bookRecord.url
+        dialogViewBinding.urlTextView.text = book.url
 
-        if (bookRecord.subtitle.isEmpty()) {
+        if (book.subTitle.isEmpty()) {
             dialogViewBinding.subtitle.visibility = View.GONE
         } else {
-            dialogViewBinding.subtitle.text = bookRecord.subtitle
+            dialogViewBinding.subtitle.text = book.subTitle
         }
 
         dialog.show()
@@ -270,14 +277,15 @@ class BookProfileActivity: AppCompatActivity() {
 
     private fun addFilterOutTag (tagCategory: String, tagValue: String) =
         EditExcludeTagDialog(this, layoutInflater).show(
-            ExcludeTagRecord(
-                mapOf(tagCategory to listOf(tagValue)),
-                Category.entries.toSet()
-            )
+            categories = Category.entries,
+            tags = mapOf(tagCategory to listOf(tagValue))
         ) { recordToSave ->
             toggleProgressBar(true)
             CoroutineScope(Dispatchers.IO).launch {
-                SearchDatabase.getInstance(baseContext).addExcludeTag(recordToSave)
+                ExcludeTagRepository(baseContext).addExcludeTag(
+                    tags = recordToSave.tags,
+                    categories = recordToSave.categories.toList()
+                )
                 withContext(Dispatchers.Main) {
                     toggleProgressBar(false)
                     ConfirmDialog(this@BookProfileActivity, layoutInflater).show(
@@ -311,8 +319,8 @@ class BookProfileActivity: AppCompatActivity() {
     private fun refreshCoverPage () {
         if (isBookStored) {
             val file = File(
-                "${getExternalFilesDir(null)}/${bookRecord.id}",
-                BookRepository(baseContext).getBookCoverPage(bookRecord.id).toString()
+                "${getExternalFilesDir(null)}/${book.id}",
+                BookRepository(baseContext).getBookCoverPage(book.id).toString()
             )
             Glide.with(baseContext)
                 .load(file)
@@ -320,17 +328,7 @@ class BookProfileActivity: AppCompatActivity() {
         }
     }
 
-    private fun deleteBook (bookRecord: BookRecord): Boolean {
-        // the corresponding record is also deleted from the book-group relationship
-        BookRepository(baseContext).removeBook(bookRecord.id)
-
-        val bookFolder = File(getExternalFilesDir(null), bookRecord.id)
-        for (file in bookFolder.listFiles()!!) {
-            file.delete()
-        }
-        bookFolder.delete()
-        return true
-    }
+    private fun deleteBook (book: Book): Boolean = BookRepository(baseContext).removeBook(book)
 
     private suspend fun saveBook () {
         if (isBookStored) {
@@ -342,7 +340,7 @@ class BookProfileActivity: AppCompatActivity() {
 
         // download cover image file to tmp
         val coverFile = withContext(Dispatchers.IO) {
-            EPictureFetcher(baseContext, 1, bookRecord.url).savePicture(0) { total, downloaded ->
+            EPictureFetcher(baseContext, 1, book.url).savePicture(0) { total, downloaded ->
                 CoroutineScope(Dispatchers.Main).launch {
                     rootBinding.progress.textView.text = getString(
                         R.string.n_percent, floor(downloaded.toDouble() / total * 100).toInt()
@@ -357,7 +355,7 @@ class BookProfileActivity: AppCompatActivity() {
         }
 
         // create book folder
-        File(getExternalFilesDir(null), bookRecord.id).also {
+        File(getExternalFilesDir(null), book.id).also {
             if (!it.exists()) {
                 it.mkdirs()
             }
@@ -368,22 +366,22 @@ class BookProfileActivity: AppCompatActivity() {
         }
 
         BookRepository(baseContext).addBook(
-            id = bookRecord.id,
-            url = bookRecord.url,
-            category = Util.categoryFromName(bookRecord.cat),
-            title = bookRecord.title,
-            subtitle = bookRecord.subtitle,
-            pageNum = bookRecord.pageNum,
-            tags = bookRecord.tags,
+            id = book.id,
+            url = book.url,
+            category = book.getCategory(),
+            title = book.title,
+            subtitle = book.subTitle,
+            pageNum = book.pageNum,
+            tags = book.getTags(),
             source = BookSource.E,
-            uploader = bookRecord.uploader
+            uploader = book.uploader
         )
-        GroupRepository(baseContext).addBookIdToGroup(GroupRepository.DEFAULT_GROUP_ID, bookRecord.id)
+        GroupRepository(baseContext).addBookIdToGroup(GroupRepository.DEFAULT_GROUP_ID, book.id)
 
         // update ui
         toggleProgressBar(false)
         isBookStored = true
-        bookRecord = BookRepository(baseContext).getBook(baseContext, bookRecord.id)
+        book = BookRepository(baseContext).getBook(book.id)
         refreshActionBar()
         ConfirmDialog(this, layoutInflater).show(
             "已加入到書庫，返回書庫？",

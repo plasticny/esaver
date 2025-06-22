@@ -7,10 +7,10 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import com.example.viewer.R
 import com.example.viewer.Util
+import com.example.viewer.data.struct.SearchMark
 import com.example.viewer.databinding.DialogSearchMarkBinding
 import com.example.viewer.databinding.DialogSearchMarkTagBinding
 import com.example.viewer.struct.Category
-import com.example.viewer.struct.SearchMark
 
 open class SearchMarkDialog (
     protected val context: Context,
@@ -76,9 +76,9 @@ open class SearchMarkDialog (
             field = value
             dialogBinding.confirmButton.visibility = if (value) View.VISIBLE else View.GONE
         }
-    var saveCb: ((SearchMark) -> Unit)? = null
-    var searchCb: ((SearchMark) -> Unit)? = null
-    var confirmCb: ((SearchMark) -> Unit)? = null
+    var saveCb: ((DialogData) -> Unit)? = null
+    var searchCb: ((DialogData) -> Unit)? = null
+    var confirmCb: ((DialogData) -> Unit)? = null
 
     init {
         // set dialog height
@@ -118,12 +118,12 @@ open class SearchMarkDialog (
         dialogBinding.saveButton.apply {
             visibility = View.GONE
             setOnClickListener {
-                val searchMark = constructSearchMark()
+                val data = buildDialogData()
                 saveCb?.let {
-                    if (!checkValid(searchMark)) {
+                    if (!checkValid(data)) {
                         return@setOnClickListener
                     }
-                    it(searchMark)
+                    it(data)
                 }
                 dialog.dismiss()
             }
@@ -132,12 +132,12 @@ open class SearchMarkDialog (
         dialogBinding.searchButton.apply {
             visibility = View.GONE
             setOnClickListener {
-                val searchMark = constructSearchMark()
+                val data = buildDialogData()
                 searchCb?.let {
-                    if (!checkValid(searchMark)) {
+                    if (!checkValid(data)) {
                         return@setOnClickListener
                     }
-                    it(searchMark)
+                    it(data)
                 }
                 dialog.dismiss()
             }
@@ -146,33 +146,50 @@ open class SearchMarkDialog (
         dialogBinding.confirmButton.apply {
             visibility = View.GONE
             setOnClickListener {
-                val searchMark = constructSearchMark()
+                val data = buildDialogData()
                 confirmCb?.let {
-                    if (!checkValid(searchMark)) {
+                    if (!checkValid(data)) {
                         return@setOnClickListener
                     }
-                    it(searchMark)
+                    it(data)
                 }
                 dialog.dismiss()
             }
         }
     }
 
-    fun show (searchMark: SearchMark? = null) {
-        selectedCats = searchMark?.categories?.toMutableSet() ?: Category.entries.toMutableSet()
+    fun show (searchMark: SearchMark) =
+        show(
+            name = searchMark.name,
+            categories = searchMark.getCategories(),
+            keyword = searchMark.keyword,
+            tags = searchMark.getTags(),
+            uploader = searchMark.uploader ?: "",
+            doExclude = searchMark.doExclude
+        )
+
+    fun show (
+        name: String = "",
+        categories: List<Category> = listOf(),
+        keyword: String = "",
+        tags: Map<String, List<String>> = mapOf(),
+        uploader: String = "",
+        doExclude: Boolean = true
+    ) {
+        selectedCats = categories.toMutableSet()
         tagBindings = mutableListOf()
 
         // name field
-        dialogBinding.nameEditText.setText(searchMark?.name ?: "")
+        dialogBinding.nameEditText.setText(name)
 
         // keyword
-        dialogBinding.keywordEditText.setText(searchMark?.keyword ?: "")
+        dialogBinding.keywordEditText.setText(keyword)
 
         // uploader
-        dialogBinding.uploaderEditText.setText(searchMark?.uploader ?: "")
+        dialogBinding.uploaderEditText.setText(uploader)
 
         // tags
-        searchMark?.tags?.forEach { entry ->
+        tags.forEach { entry ->
             val cat = entry.key
             for (value in entry.value) {
                 val tagBinding = createSearchMarkDialogTag(cat, value)
@@ -196,7 +213,7 @@ open class SearchMarkDialog (
         }
 
         // do apply exclude tag
-        dialogBinding.doExcludeSwitch.isChecked = searchMark?.doExclude == true
+        dialogBinding.doExcludeSwitch.isChecked = doExclude
 
         dialog.show()
     }
@@ -213,7 +230,7 @@ open class SearchMarkDialog (
     /**
      * check the filled in information is valid
      */
-    protected open fun checkValid (item: SearchMark): Boolean {
+    protected open fun checkValid (item: DialogData): Boolean {
         if (showNameField && item.name.isEmpty()) {
             Toast.makeText(context, "名字不能為空", Toast.LENGTH_SHORT).show()
             return false
@@ -221,23 +238,19 @@ open class SearchMarkDialog (
         return true
     }
 
-    /**
-     * construct a search mark base on what user filled
-     */
-    private fun constructSearchMark (): SearchMark =
-        SearchMark(
-            name = if (showNameField) dialogBinding.nameEditText.text.toString() else "",
-            categories = selectedCats.toList(),
-            keyword = dialogBinding.keywordEditText.text.toString(),
-            tags = tagBindings.mapNotNull {
-                if (it.spinner.selectedIndex == 0) {
-                    return@mapNotNull null
-                }
-                TAGS[it.spinner.selectedIndex] to it.editText.text.toString()
-            }.groupBy({it.first}, {it.second}),
-            uploader = dialogBinding.uploaderEditText.text.toString(),
-            doExclude = dialogBinding.doExcludeSwitch.isChecked
-        )
+    private fun buildDialogData () = DialogData (
+        name = if (showNameField) dialogBinding.nameEditText.text.toString() else "",
+        categories = selectedCats,
+        keyword = dialogBinding.keywordEditText.text.toString(),
+        tags = tagBindings.mapNotNull {
+            if (it.spinner.selectedIndex == 0) {
+                return@mapNotNull null
+            }
+            TAGS[it.spinner.selectedIndex] to it.editText.text.toString()
+        }.groupBy({it.first}, {it.second}),
+        uploader = dialogBinding.uploaderEditText.text.toString(),
+        doExclude = dialogBinding.doExcludeSwitch.isChecked
+    )
 
     /**
      * Given a value, add it if it not exist, else remove it
@@ -252,4 +265,13 @@ open class SearchMarkDialog (
             this.add(value)
         }
     }
+
+    data class DialogData (
+        val name: String,
+        val categories: Set<Category>,
+        val keyword: String,
+        val tags: Map<String, List<String>>,
+        val uploader: String,
+        val doExclude: Boolean
+    )
 }

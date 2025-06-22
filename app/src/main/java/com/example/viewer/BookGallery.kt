@@ -72,10 +72,7 @@ class BookGallery (
 
     private fun openBook (bookId: String) {
         context.startActivity(Intent(context, BookProfileActivity::class.java).apply {
-            putExtra(
-                "book_record",
-                runBlocking { bookRepo.getBook(context, bookId) }
-            )
+            putExtra("bookId", bookId)
         })
     }
 

@@ -7,9 +7,8 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import com.example.viewer.struct.BookRecord
+import com.example.viewer.struct.BookRecordT
 import com.example.viewer.Util
-import com.example.viewer.data.database.BookDatabase
 import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.struct.BookSource
 import com.example.viewer.struct.Category
@@ -188,9 +187,9 @@ class BookPreferences (context: Context): BaseDatabase() {
         }
     }
 
-    fun getBook (context: Context, id: String): BookRecord {
+    fun getBook (context: Context, id: String): BookRecordT {
         assertBookIdExist(id)
-        return BookRecord(
+        return BookRecordT(
             id = id,
             url = getBookUrl(id),
             coverUrl = getBookCoverPage(id).let { page ->

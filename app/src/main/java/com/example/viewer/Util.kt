@@ -8,6 +8,8 @@ import com.example.viewer.data.database.BookDatabase
 import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.struct.BookSource
 import com.example.viewer.struct.Category
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import java.io.File
 import java.io.FileInputStream
 
@@ -82,5 +84,17 @@ class Util {
             Regex("(http(s?)://)?hitomi.la/reader/(\\d+).html(#(\\d+))?$").matches(url) -> BookSource.Hi
             else -> null
         }
+
+        inline fun<reified T> readListFromJson (json: String): List<T> =
+            ObjectMapper().registerKotlinModule()
+                .readerFor(T::class.java)
+                .readValues<T>(json)
+                .readAll()
+
+        fun<T> readMapFromJson (json: String): Map<String, T> =
+            ObjectMapper().registerKotlinModule()
+                .readerFor(Map::class.java)
+                .readValues<Map<String, T>>(json)
+                .let { if (it.hasNextValue()) it.next() else mapOf() }
     }
 }

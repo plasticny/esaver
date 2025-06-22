@@ -13,7 +13,7 @@ data class ExcludeTagRecord (
             return "${Util.TAG_TRANSLATION_MAP[tagCategory]} - $tagValue"
         }
 
-    fun excluded (bookRecord: BookRecord): Boolean {
+    fun excluded (bookRecord: BookRecordT): Boolean {
         if (!categories.contains(Util.categoryFromName(bookRecord.cat))) {
             return false
         }

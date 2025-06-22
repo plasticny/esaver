@@ -6,8 +6,8 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.data.repository.GroupRepository
+import com.example.viewer.data.struct.Book
 import com.example.viewer.databinding.DialogLocalReadSettingBinding
-import com.example.viewer.struct.BookRecord
 import kotlinx.coroutines.runBlocking
 import java.io.File
 
@@ -22,17 +22,18 @@ class LocalReadSettingDialog (
     private val groupRepo = GroupRepository(context)
 
     fun show (
-        bookRecord: BookRecord,
+        book: Book,
         onApplied: (coverPageUpdated: Boolean) -> Unit
     ) {
-        val skipPages = bookRepo.getBookSkipPages(bookRecord.id)
+        val skipPages = bookRepo.getBookSkipPages(book.id)
+        val groupId = bookRepo.getGroupId(book.id)
 
         dialogBinding.groupNameEditText.setText(
-            groupRepo.getGroupName(bookRecord.groupId)
+            groupRepo.getGroupName(groupId)
         )
 
         dialogBinding.profileDialogCoverPageEditText.setText(
-            (bookRepo.getBookCoverPage(bookRecord.id) + 1).toString()
+            (bookRepo.getBookCoverPage(book.id) + 1).toString()
         )
 
         dialogBinding.profileDialogSkipPagesEditText.setText(skipPagesListToString(skipPages))
@@ -59,8 +60,8 @@ class LocalReadSettingDialog (
 
                 return@let groupRepo.createGroup(groupName)
             }
-            if (selectedGroupId != bookRecord.groupId) {
-                groupRepo.changeGroup(bookRecord.id, bookRecord.groupId, selectedGroupId)
+            if (selectedGroupId != groupId) {
+                groupRepo.changeGroup(book.id, groupId, selectedGroupId)
             }
 
             val coverPage = dialogBinding.profileDialogCoverPageEditText.text.toString().trim().let {
@@ -75,15 +76,15 @@ class LocalReadSettingDialog (
                     return@setOnClickListener
                 }
             }
-            if (coverPage != bookRepo.getBookCoverPage(bookRecord.id) + 1) {
+            if (coverPage != bookRepo.getBookCoverPage(book.id) + 1) {
                 runBlocking {
-                    bookRepo.setBookCoverPage(bookRecord.id, coverPage - 1)
+                    bookRepo.setBookCoverPage(book.id, coverPage - 1)
                 }
                 coverPageUpdated = true
             }
 
             updateSkipPages(
-                bookRecord.id,
+                book.id,
                 dialogBinding.profileDialogSkipPagesEditText.text.toString().trim(),
                 skipPages
             )

@@ -6,6 +6,7 @@ import com.example.viewer.R
 import com.example.viewer.data.dao.BookWithGroupDao
 import com.example.viewer.data.dao.GroupDao
 import com.example.viewer.data.database.BookDatabase
+import com.example.viewer.data.struct.Book
 import com.example.viewer.data.struct.BookWithGroup
 import com.example.viewer.data.struct.Group
 import kotlinx.coroutines.runBlocking

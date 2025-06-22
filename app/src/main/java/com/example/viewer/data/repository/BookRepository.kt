@@ -1,22 +1,19 @@
 package com.example.viewer.data.repository
 
 import android.content.Context
+import androidx.room.Transaction
 import com.example.viewer.Util
 import com.example.viewer.data.dao.BookDao
 import com.example.viewer.data.dao.BookWithGroupDao
 import com.example.viewer.data.database.BookDatabase
 import com.example.viewer.data.struct.Book
 import com.example.viewer.data.struct.BookWithGroup
-import com.example.viewer.struct.BookRecord
 import com.example.viewer.struct.BookSource
 import com.example.viewer.struct.Category
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.google.gson.Gson
 import kotlinx.coroutines.runBlocking
-import java.io.File
 
-class BookRepository (context: Context) {
+class BookRepository (private val context: Context) {
     private val bookDao: BookDao
     private val bookWithGroupDao: BookWithGroupDao
 
@@ -87,67 +84,59 @@ class BookRepository (context: Context) {
         tags: Map<String, List<String>>,
         source: BookSource,
         uploader: String?
-    ) {
+    ) = runBlocking {
         if (pageNum < 1) {
             throw Exception("Invalid pageNum $pageNum")
         }
         val gson = Gson()
-        runBlocking {
-            bookDao.insert(
-                Book(
-                    id = id,
-                    url = url,
-                    title = title,
-                    subTitle = subtitle,
-                    pageNum = pageNum,
-                    categoryOrdinal = category.ordinal,
-                    uploader = uploader,
-                    tagsJson = gson.toJson(tags).toString(),
-                    sourceOrdinal = source.ordinal,
-                    coverPage = 0,
-                    skipPagesJson = gson.toJson(listOf<Int>()).toString(),
-                    lastViewTime = -1L,
-                    bookMarksJson = gson.toJson(listOf<Int>()).toString(),
-                    pageUrlsJson = if (source == BookSource.E) {
-                        gson.toJson(listOf<String>()).toString()
-                    } else null,
-                    p = if (source == BookSource.E) 0 else null
-                )
+        bookDao.insert(
+            Book(
+                id = id,
+                url = url,
+                title = title,
+                subTitle = subtitle,
+                pageNum = pageNum,
+                categoryOrdinal = category.ordinal,
+                uploader = uploader,
+                tagsJson = gson.toJson(tags).toString(),
+                sourceOrdinal = source.ordinal,
+                coverPage = 0,
+                skipPagesJson = gson.toJson(listOf<Int>()).toString(),
+                lastViewTime = -1L,
+                bookMarksJson = gson.toJson(listOf<Int>()).toString(),
+                pageUrlsJson = if (source == BookSource.E) {
+                    gson.toJson(listOf<String>()).toString()
+                } else null,
+                p = if (source == BookSource.E) 0 else null
             )
-        }
-    }
-
-    fun getBook (context: Context, id: String): BookRecord {
-        val book = runBlocking { bookDao.queryById(id) }
-        return BookRecord(
-            id = book.id,
-            url = book.url,
-            coverUrl = book.coverPage.let { page ->
-                val folder = File(context.getExternalFilesDir(null), id)
-                val coverPageFile = File(folder, page.toString())
-                if (coverPageFile.exists()) {
-                    coverPageFile.path
-                } else {
-                    File(folder, "0").path
-                }
-            },
-            cat = Util.categoryFromOrdinal(book.categoryOrdinal).name,
-            title = book.title,
-            subtitle = book.subTitle,
-            pageNum = book.pageNum,
-            tags = readMap<List<String>>(book.tagsJson),
-            groupId = runBlocking { bookWithGroupDao.queryGroupId(id) },
-            uploader = book.uploader
         )
     }
 
-    fun removeBook (id: String) = runBlocking { bookDao.deleteById(id) }
+    fun getBook (id: String): Book =
+        if (id == "-1") { Book.getTmpBook() } else runBlocking { bookDao.queryById(id) }
+
+    @Transaction
+    fun removeBook (book: Book): Boolean {
+        runBlocking { bookDao.deleteById(book.id) }
+
+        val bookFolder = book.getBookFolder(context)
+        for (file in bookFolder.listFiles()!!) {
+            if(!file.delete()) {
+                throw Exception("delete image failed")
+            }
+        }
+        if(!bookFolder.delete()) {
+            throw Exception("delete book folder failed")
+        }
+
+        return true
+    }
 
     fun isBookStored (id: String) = runBlocking { bookDao.countId(id) != 0 }
 
     fun getBookMarks (id: String): List<Int> {
         val book = runBlocking { bookDao.queryById(id) }
-        return readList(book.bookMarksJson)
+        return Util.readListFromJson(book.bookMarksJson)
     }
 
     fun addBookMark (id: String, page: Int) {
@@ -155,7 +144,7 @@ class BookRepository (context: Context) {
         val dao = bookDao
 
         val book = runBlocking { dao.queryById(id) }
-        val bookmarks = readList<Int>(book.bookMarksJson).toMutableList()
+        val bookmarks = Util.readListFromJson<Int>(book.bookMarksJson).toMutableList()
         bookmarks.add(page)
         book.bookMarksJson = gson.toJson(bookmarks.toList()).toString()
 
@@ -167,7 +156,7 @@ class BookRepository (context: Context) {
         val dao = bookDao
 
         val book = runBlocking { dao.queryById(id) }
-        val bookmarks = readList<Int>(book.bookMarksJson).toMutableList()
+        val bookmarks = Util.readListFromJson<Int>(book.bookMarksJson).toMutableList()
         if (!bookmarks.remove(page)) {
             throw Exception("the bookmark page $page is not exist")
         }
@@ -185,17 +174,7 @@ class BookRepository (context: Context) {
         if (book.sourceOrdinal == BookSource.Hi.ordinal) {
             throw Exception("Page urls are not stored for this book source")
         }
-        return book.pageUrlsJson!!.let {
-            if (it == "[]") {
-                listOf()
-            } else {
-                it.substring(1 until it.length - 1)
-                    .split(",")
-                    .map { s ->
-                        s.trim().substring(1 until s.length - 1)
-                    }
-            }
-        }
+        return Util.readListFromJson(book.pageUrlsJson!!)
     }
     fun setBookPageUrls (id: String, urls: List<String>) {
         val dao = bookDao
@@ -232,8 +211,8 @@ class BookRepository (context: Context) {
         runBlocking { dao.update(book) }
     }
 
-    fun getBookSkipPages (id: String): List<Int> = readList(
-        runBlocking { bookDao.getSkipPagesJson(id) }
+    fun getBookSkipPages (id: String): List<Int> = Util.readListFromJson(
+        runBlocking { bookDao.getSkipPagesJson(id) }.also { println(it) }
     )
     fun setBookSkipPages (id: String, v: List<Int>) {
         val dao = bookDao
@@ -250,17 +229,7 @@ class BookRepository (context: Context) {
         runBlocking { dao.update(book) }
     }
 
-    private fun<T> readMap (json: String): Map<String, T> =
-        ObjectMapper().registerKotlinModule()
-            .readerFor(Map::class.java)
-            .readValues<Map<String, T>>(json)
-            .let { if (it.hasNextValue()) it.next() else mapOf() }
-
-    private fun<T> readList (json: String): List<T> =
-        ObjectMapper().registerKotlinModule()
-            .readerFor(List::class.java)
-            .readValues<List<T>>(json)
-            .let { if (it.hasNextValue()) it.next() else listOf() }
+    fun getGroupId (id: String): Int = runBlocking { bookWithGroupDao.queryGroupId(id) }
 
     private fun queryBook (id: String) = runBlocking { bookDao.queryById(id) }
 }

@@ -4,7 +4,7 @@ import android.os.Bundle
 import android.os.Parcel
 import android.os.Parcelable
 
-data class BookRecord (
+data class BookRecordT (
     val id: String,
     val url: String,
     val coverUrl: String,
@@ -16,12 +16,12 @@ data class BookRecord (
     val groupId: Int = -1,
     val uploader: String? = null
 ): Parcelable {
-    companion object CREATOR : Parcelable.Creator<BookRecord> {
-        override fun createFromParcel(parcel: Parcel): BookRecord {
-            return BookRecord(parcel)
+    companion object CREATOR : Parcelable.Creator<BookRecordT> {
+        override fun createFromParcel(parcel: Parcel): BookRecordT {
+            return BookRecordT(parcel)
         }
 
-        override fun newArray(size: Int): Array<BookRecord?> {
+        override fun newArray(size: Int): Array<BookRecordT?> {
             return arrayOfNulls(size)
         }
      }

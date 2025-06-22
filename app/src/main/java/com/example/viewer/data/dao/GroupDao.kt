@@ -3,6 +3,7 @@ package com.example.viewer.data.dao
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import com.example.viewer.data.struct.Book
 import com.example.viewer.data.struct.Group
 
 @Dao
