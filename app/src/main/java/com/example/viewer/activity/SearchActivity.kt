@@ -58,7 +58,7 @@ class SearchActivity: AppCompatActivity() {
             )
             context.startActivity(
                 Intent(context, SearchActivity::class.java).apply {
-                    putExtra("searchMarkId", -1)
+                    putExtra("searchMarkId", -1L)
                 }
             )
         }
@@ -68,7 +68,7 @@ class SearchActivity: AppCompatActivity() {
     private lateinit var excludeTagRepo: ExcludeTagRepository
     private lateinit var searchMarkData: SearchMarkData
     private lateinit var binding: SearchActivityBinding
-    private lateinit var allSearchMarkIds: List<Int>
+    private lateinit var allSearchMarkIds: List<Long>
 
     @Volatile
     private var loadingMore = false
@@ -101,11 +101,11 @@ class SearchActivity: AppCompatActivity() {
         lastExcludeTagUpdateTime = excludeTagRepo.lastExcludeTagUpdateTime()
 
         searchMarkData = packSearchMark(
-            intent.getIntExtra("searchMarkId", -1).let {
-                if (it == -1) SearchMark.getTmpSearchMark()!! else searchRepo.getSearchMark(it)
+            intent.getLongExtra("searchMarkId", -1L).let {
+                if (it == -1L) SearchMark.getTmpSearchMark()!! else searchRepo.getSearchMark(it)
             }
         )
-        isTemporarySearch = searchMarkData.id == -1
+        isTemporarySearch = searchMarkData.id == -1L
 
         // search mark position
         position = allSearchMarkIds.indexOf(searchMarkData.id)
@@ -472,7 +472,7 @@ class SearchActivity: AppCompatActivity() {
      * re-packed search mark data for this activity
       */
     private data class SearchMarkData (
-        val id: Int,
+        val id: Long,
         val name: String,
         val keyword: String,
         val categories: List<Category>,

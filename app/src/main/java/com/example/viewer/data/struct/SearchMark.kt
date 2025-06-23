@@ -13,18 +13,11 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue
 import com.google.gson.Gson
 
 @Entity(
-    tableName = "SearchMarks",
-    foreignKeys = [
-        ForeignKey(
-            entity = SearchMark::class,
-            parentColumns = arrayOf("id"),
-            childColumns = arrayOf("nextInList"),
-            onDelete = ForeignKey.RESTRICT
-        )
-    ]
+    tableName = "SearchMarks"
 )
 data class SearchMark (
-    @PrimaryKey val id: Int,
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
     var name: String,
     var categoryOrdinalsJson: String,
     var keyword: String,
@@ -32,8 +25,7 @@ data class SearchMark (
     var uploader: String?,
     var doExclude: Boolean,
     // for custom the search mark sorting
-    @ColumnInfo(index = true)
-    var nextInList: Int?
+    var itemOrder: Int?
 ) {
     companion object {
         private var tmpSearchMark: SearchMark? = null
@@ -55,7 +47,7 @@ data class SearchMark (
                 tagsJson = gson.toJson(tags),
                 uploader = uploader,
                 doExclude = doExclude,
-                nextInList = null
+                itemOrder = null
             )
         }
         fun getTmpSearchMark () = tmpSearchMark

@@ -9,32 +9,41 @@ import com.example.viewer.data.struct.SearchMark
 @Dao
 interface SearchMarkDao {
     @Insert
-    suspend fun insert (item: SearchMark)
+    suspend fun insert (item: SearchMark): Long
 
     @Update
     suspend fun update (item: SearchMark)
 
+    @Query("SELECT * FROM SearchMarks ORDER BY itemOrder ASC")
+    suspend fun queryAllInOrder (): List<SearchMark>
+
     @Query("SELECT * FROM SearchMarks WHERE id = :id")
-    suspend fun queryById (id: Int): SearchMark
+    suspend fun queryById (id: Long): SearchMark
 
-    @Query("SELECT nextInList FROM SearchMarks WHERE id = :id")
-    suspend fun queryNextInListById (id: Int): Int
+    @Query("SELECT itemOrder FROM SearchMarks WHERE id = :id")
+    suspend fun queryItemOrder (id: Long): Int?
 
-    @Query("SELECT id FROM SearchMarks WHERE nextInList = :id")
-    suspend fun queryPreviousId (id: Int): Int?
-
-    @Query("SELECT id FROM SearchMarks WHERE nextInList IS NULL")
-    suspend fun queryLastInListId (): Int?
+    @Query("SELECT IFNULL(MAX(ItemOrder), 0) + 1 FROM SearchMarks")
+    suspend fun getNextItemOrder (): Int
 
     @Query("SELECT id FROM SearchMarks")
-    suspend fun getAllIds (): List<Int>
+    suspend fun getAllIds (): List<Long>
 
     @Query("SELECT count(*) FROM SearchMarks")
     suspend fun countItems (): Int
 
-    @Query("DELETE FROM SearchMarks WHERE id = :id")
-    suspend fun deleteById (id: Int)
+    @Query("UPDATE SearchMarks SET itemOrder = itemOrder - 1 WHERE itemOrder >= :fromOrder")
+    suspend fun decreaseItemOrder (fromOrder: Int)
 
-    @Query("UPDATE SearchMarks SET nextInList = :nextInList WHERE id = :id")
-    suspend fun updateNextInList (id: Int, nextInList: Int?)
+    @Query("UPDATE SearchMarks SET itemOrder = itemOrder - 1 WHERE itemOrder >= :fromOrder AND itemOrder <= :toOrder")
+    suspend fun decreaseItemOrder (fromOrder: Int, toOrder: Int)
+
+    @Query("UPDATE SearchMarks SET itemOrder = itemOrder + 1 WHERE itemOrder >= :fromOrder AND itemOrder <= :toOrder")
+    suspend fun increaseItemOrder (fromOrder: Int, toOrder: Int)
+
+    @Query("UPDATE SearchMarks SET itemOrder = :itemOrder WHERE id = :id")
+    suspend fun updateItemOrder (id: Long, itemOrder: Int)
+
+    @Query("DELETE FROM SearchMarks WHERE id = :id")
+    suspend fun deleteById (id: Long)
 }

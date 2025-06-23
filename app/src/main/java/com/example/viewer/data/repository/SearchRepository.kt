@@ -12,7 +12,7 @@ import com.example.viewer.R
 import com.google.gson.Gson
 import kotlinx.coroutines.runBlocking
 
-class SearchRepository (private val context: Context) {
+class SearchRepository (context: Context) {
     companion object {
         private var searchMarkListLastUpdateTime = 0L
     }
@@ -27,32 +27,17 @@ class SearchRepository (private val context: Context) {
 
     fun getAllSearchMarkIds () = runBlocking { searchMarkDao.getAllIds() }
 
-    fun getSearchMark (id: Int) = runBlocking { searchMarkDao.queryById(id) }
+    fun getSearchMark (id: Long) = runBlocking { searchMarkDao.queryById(id) }
 
     fun getAllSearchMarkInListOrder (): List<SearchMark> = runBlocking {
-        searchMarkDao.queryLastInListId()?.let { lastId ->
-            val ret = mutableListOf<SearchMark>()
-            var curSearchMark: SearchMark = searchMarkDao.queryById(lastId)
-            while (true) {
-                ret.add(0, curSearchMark)
-                curSearchMark = searchMarkDao.queryPreviousId(curSearchMark.id)?.let {
-                    searchMarkDao.queryById(it)
-                } ?: break
-            }
-            ret
-        } ?: listOf()
+        searchMarkDao.queryAllInOrder()
     }
 
     @Transaction
-    fun removeSearchMark (id: Int) = runBlocking {
-        val nextInList = searchMarkDao.queryNextInListById(id)
-        val previousInList = searchMarkDao.queryPreviousId(id)
-
+    fun removeSearchMark (id: Long) = runBlocking {
+        val removedOrder = searchMarkDao.queryItemOrder(id)!!
         searchMarkDao.deleteById(id)
-        previousInList?.let {
-            searchMarkDao.updateNextInList(previousInList, nextInList)
-        }
-
+        searchMarkDao.decreaseItemOrder(removedOrder + 1)
         searchMarkListLastUpdateTime = System.currentTimeMillis()
     }
 
@@ -64,15 +49,10 @@ class SearchRepository (private val context: Context) {
         tags: Map<String, List<String>> = mapOf(),
         uploader: String?,
         doExclude: Boolean
-    ): Int = runBlocking {
+    ): Long = runBlocking {
         val gson = Gson()
-
-        val id = searchMarkDao.countItems() + 1
-        val lastInListId = searchMarkDao.queryLastInListId()
-
-        searchMarkDao.insert(
+        val id = searchMarkDao.insert(
             SearchMark(
-                id = id,
                 name = name,
                 categoryOrdinalsJson = gson.toJson(
                     categories.map { it.ordinal }
@@ -81,12 +61,9 @@ class SearchRepository (private val context: Context) {
                 tagsJson = gson.toJson(tags).toString(),
                 uploader = uploader,
                 doExclude = doExclude,
-                nextInList = null
+                itemOrder = searchMarkDao.getNextItemOrder()
             )
         )
-        lastInListId?.let {
-            searchMarkDao.updateNextInList(lastInListId, id)
-        }
 
         searchMarkListLastUpdateTime = System.currentTimeMillis()
 
@@ -94,7 +71,7 @@ class SearchRepository (private val context: Context) {
     }
 
     fun modifySearchMark (
-        id: Int,
+        id: Long,
         name: String,
         categories: List<Category>,
         keyword: String,
@@ -104,16 +81,14 @@ class SearchRepository (private val context: Context) {
     ) = runBlocking {
         val gson = Gson()
         searchMarkDao.update(
-            SearchMark(
-                id = id,
-                name = name,
-                categoryOrdinalsJson = gson.toJson(categories.map { it.ordinal }),
-                keyword = keyword,
-                tagsJson = gson.toJson(tags),
-                uploader = uploader,
-                doExclude = doExclude,
-                nextInList = null
-            )
+            searchMarkDao.queryById(id).apply {
+                this.name = name
+                this.categoryOrdinalsJson = gson.toJson(categories.map { it.ordinal })
+                this.keyword = keyword
+                this.tagsJson = gson.toJson(tags)
+                this.uploader = uploader
+                this.doExclude = doExclude
+            }
         )
     }
 
@@ -121,17 +96,23 @@ class SearchRepository (private val context: Context) {
      * move the search mark with id to the front of toId
      */
     @Transaction
-    fun moveSearchMarkPosition (id: Int, toId: Int) = runBlocking {
-        // link prev and next of the target search mark
-        searchMarkDao.queryPreviousId(id)?.let { prevId ->
-            val nextId = searchMarkDao.queryPreviousId(id)
-            searchMarkDao.updateNextInList(prevId, nextId)
+    fun moveSearchMarkPosition (id: Long, toId: Long) = runBlocking {
+        if (id == toId) {
+            return@runBlocking
         }
-        // move the search mark to the target position
-        searchMarkDao.queryPreviousId(toId)?.let {
-            searchMarkDao.updateNextInList(it, id)
+
+        val fromOrder = searchMarkDao.queryItemOrder(id)!!
+        val toOrder = searchMarkDao.queryItemOrder(toId)!!
+
+        if (id < toId) {
+            searchMarkDao.decreaseItemOrder(fromOrder + 1, toOrder - 1)
+            searchMarkDao.updateItemOrder(id, toOrder - 1)
         }
-        searchMarkDao.updateNextInList(id, toId)
+        // id > toId
+        else {
+            searchMarkDao.increaseItemOrder(toOrder, fromOrder - 1)
+            searchMarkDao.updateItemOrder(id, toOrder)
+        }
     }
 
     fun getSearchMarkListUpdateTime () = searchMarkListLastUpdateTime

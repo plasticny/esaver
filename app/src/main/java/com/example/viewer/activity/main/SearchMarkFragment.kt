@@ -207,7 +207,7 @@ class SearchMarkFragment: Fragment() {
                 setOnDragListener { _, event ->
                     when (event.action) {
                         DragEvent.ACTION_DROP -> {
-                            val dragId = event.clipData.getItemAt(0).text.toString().toInt()
+                            val dragId = event.clipData.getItemAt(0).text.toString().toLong()
                             if (dragId != searchMark.id) {
                                 searchRepo.moveSearchMarkPosition(dragId, searchMark.id)
                                 deFocusSearchMark(doModifyBindingStyle = false)
@@ -221,7 +221,7 @@ class SearchMarkFragment: Fragment() {
         }
     }
 
-    private fun focusSearchMark (id: Int, searchMark: SearchMark, searchMarkBinding: SearchMarkBinding) {
+    private fun focusSearchMark (id: Long, searchMark: SearchMark, searchMarkBinding: SearchMarkBinding) {
         binding.notFocusedToolBarWrapper.visibility = View.GONE
         binding.focusedToolBarWrapper.visibility = View.VISIBLE
         searchMarkBinding.name.setTextColor(parent.context.getColor(R.color.black))
@@ -241,7 +241,7 @@ class SearchMarkFragment: Fragment() {
         focusedSearchMark = null
     }
 
-    private fun changeFocusSearchMark (id: Int, searchMark: SearchMark, searchMarkBinding: SearchMarkBinding) {
+    private fun changeFocusSearchMark (id: Long, searchMark: SearchMark, searchMarkBinding: SearchMarkBinding) {
         focusedSearchMark!!.binding.let {
             it.name.setTextColor(parent.context.getColor(R.color.white))
             it.root.backgroundTintList = ColorStateList.valueOf(parent.context.getColor(R.color.dark_grey))
@@ -252,7 +252,7 @@ class SearchMarkFragment: Fragment() {
     }
 
     data class SearchMarkEntry (
-        val id: Int,
+        val id: Long,
         val searchMark: SearchMark,
         val binding: SearchMarkBinding
     )

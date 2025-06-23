@@ -70,9 +70,8 @@ class BookProfileActivity: AppCompatActivity() {
         bookRepo = BookRepository(baseContext)
         book = bookRepo.getBook(intent.getStringExtra("bookId")!!)
 
-        val bookDatabase = BookRepository(baseContext)
-        println(book.id)
-        isBookStored = runBlocking { bookDatabase.isBookStored(book.id) }
+        val bookRepo = BookRepository(baseContext)
+        isBookStored = runBlocking { bookRepo.isBookStored(book.id) }
 
         //
         // init ui
@@ -96,12 +95,12 @@ class BookProfileActivity: AppCompatActivity() {
                     if (!File(coverUrl).exists()) {
                         withContext(Dispatchers.IO) {
                             val id = book.id
-                            val source = bookDatabase.getBookSource(id)
+                            val source = bookRepo.getBookSource(id)
                             val fetcher = if (source == BookSource.E) EPictureFetcher(
                                 baseContext,
                                 id
                             ) else HiPictureFetcher(baseContext, id)
-                            fetcher.savePicture(bookDatabase.getBookCoverPage(book.id))
+                            fetcher.savePicture(bookRepo.getBookCoverPage(book.id))
                         }
                     }
                     Glide.with(baseContext).load(coverUrl).into(it)

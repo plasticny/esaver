@@ -75,7 +75,6 @@ class SearchPreference (context: Context): BaseDatabase() {
                 )
             }
         }
-
         val excludeRepo = ExcludeTagRepository(context)
         for (item in getAllExcludeTag()) {
             item.second.run {
