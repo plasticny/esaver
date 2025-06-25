@@ -34,6 +34,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
 import java.text.NumberFormat
+import java.text.ParseException
 import java.util.Locale
 
 /**
@@ -73,13 +74,14 @@ class SearchActivity: AppCompatActivity() {
     @Volatile
     private var loadingMore = false
     private var position = -1
-    private var next: String? = null // for load more books
-    private var totalBookCnt = -1
-    private var totalBookLoaded = -1
-    private var totalBookFiltered = -1
     private var lastExcludeTagUpdateTime = 0L
     private var isTemporarySearch = false
     private var resetting = true
+
+    private var next: String? = null // for load more books
+    private var foundResultString: String = ""
+    private var totalBookLoaded = -1
+    private var totalBookFiltered = -1
     private var doNoMoreAlerted = false
 
     // recycler view item metrics
@@ -276,7 +278,6 @@ class SearchActivity: AppCompatActivity() {
         resetting = true
 
         next = null
-        totalBookCnt = -1 // the value is assigned in first book fetching
         totalBookLoaded = 0
         totalBookFiltered = 0
         doNoMoreAlerted = false
@@ -347,32 +348,18 @@ class SearchActivity: AppCompatActivity() {
             return listOf()
         }
 
-        next = doc.selectFirst("#unext")?.attribute("href")?.let { attr ->
-            val tokens = attr.value.split("next=")
-            if (tokens.size == 1) {
+        next = doc.selectFirst("#unext")?.attribute("href").let { attr ->
+            if (attr == null) {
                 if (!doNoMoreAlerted) {
                     Toast.makeText(baseContext, "沒有更多了", Toast.LENGTH_LONG).show()
                     doNoMoreAlerted = true
                 }
-                return@let null
-            }
-            return@let tokens.last().trim()
-        }
-        if (totalBookCnt == -1) {
-            totalBookCnt = doc.selectFirst(".searchtext")!!.text().let {
-                val num = it.split(' ').let { tokens ->
-                    when (tokens.size) {
-                        3 -> tokens[1]
-                        4 -> tokens[2]
-                        else -> Exception("Unexpected token size ${tokens.size}")
-                    } as String
-                }
-                if (num.last() == '+') {
-                    num.dropLast(1)
-                }
-                NumberFormat.getInstance(Locale.ENGLISH).parse(num)!!.toInt()
+                null
+            } else {
+                attr.value.split("next=").last().trim()
             }
         }
+        foundResultString = doc.selectFirst(".searchtext")!!.text().trim()
 
         val books = doc.select(".itg.glte > tbody > tr")
         return books.mapNotNull { book ->
@@ -456,7 +443,7 @@ class SearchActivity: AppCompatActivity() {
         val dialog = AlertDialog.Builder(this).setView(dialogBinding.root).create()
 
         dialogBinding.apply {
-            resultNumber.text = totalBookCnt.toString()
+            resultNumber.text = foundResultString
             loadedNumber.text = totalBookLoaded.toString()
             filteredNumber.text = totalBookFiltered.toString()
             filteredDisabledLabel.visibility = if (searchMarkData.doExclude) View.GONE else View.VISIBLE
