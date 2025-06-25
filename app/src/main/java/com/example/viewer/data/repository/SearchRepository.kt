@@ -25,9 +25,9 @@ class SearchRepository (context: Context) {
         }
     }
 
-    fun getAllSearchMarkIds () = runBlocking { searchMarkDao.getAllIds() }
-
     fun getSearchMark (id: Long) = runBlocking { searchMarkDao.queryById(id) }
+
+    fun getAllSearchMarkIdsInOrder () = runBlocking { searchMarkDao.queryAllIdsInOrder() }
 
     fun getAllSearchMarkInListOrder (): List<SearchMark> = runBlocking {
         searchMarkDao.queryAllInOrder()
@@ -96,22 +96,31 @@ class SearchRepository (context: Context) {
      * move the search mark with id to the front of toId
      */
     @Transaction
-    fun moveSearchMarkPosition (id: Long, toId: Long) = runBlocking {
-        if (id == toId) {
-            return@runBlocking
-        }
+    fun moveSearchMarkPosition (id: Long, toId: Long) {
+        println("[${this::class.simpleName}.${this::moveSearchMarkPosition.name}]")
 
-        val fromOrder = searchMarkDao.queryItemOrder(id)!!
-        val toOrder = searchMarkDao.queryItemOrder(toId)!!
+        runBlocking {
+            if (id == toId) {
+                return@runBlocking
+            }
 
-        if (id < toId) {
-            searchMarkDao.decreaseItemOrder(fromOrder + 1, toOrder - 1)
-            searchMarkDao.updateItemOrder(id, toOrder - 1)
-        }
-        // id > toId
-        else {
-            searchMarkDao.increaseItemOrder(toOrder, fromOrder - 1)
-            searchMarkDao.updateItemOrder(id, toOrder)
+            val fromOrder = searchMarkDao.queryItemOrder(id)!!
+            val toOrder = searchMarkDao.queryItemOrder(toId)!!
+
+            if (fromOrder == toOrder) {
+                throw Exception("fromOrder == toOrder, something went wrong")
+            }
+
+            if (fromOrder < toOrder) {
+                searchMarkDao.decreaseItemOrder(fromOrder + 1, toOrder - 1)
+                searchMarkDao.updateItemOrder(id, toOrder - 1)
+            }
+            else {
+                searchMarkDao.increaseItemOrder(toOrder, fromOrder - 1)
+                searchMarkDao.updateItemOrder(id, toOrder)
+            }
+
+            searchMarkListLastUpdateTime = System.currentTimeMillis()
         }
     }
 

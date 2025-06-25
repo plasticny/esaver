@@ -17,6 +17,9 @@ interface SearchMarkDao {
     @Query("SELECT * FROM SearchMarks ORDER BY itemOrder ASC")
     suspend fun queryAllInOrder (): List<SearchMark>
 
+    @Query("SELECT id FROM SearchMarks ORDER BY itemOrder ASC")
+    suspend fun queryAllIdsInOrder (): List<Long>
+
     @Query("SELECT * FROM SearchMarks WHERE id = :id")
     suspend fun queryById (id: Long): SearchMark
 
@@ -25,9 +28,6 @@ interface SearchMarkDao {
 
     @Query("SELECT IFNULL(MAX(ItemOrder), 0) + 1 FROM SearchMarks")
     suspend fun getNextItemOrder (): Int
-
-    @Query("SELECT id FROM SearchMarks")
-    suspend fun getAllIds (): List<Long>
 
     @Query("SELECT count(*) FROM SearchMarks")
     suspend fun countItems (): Int

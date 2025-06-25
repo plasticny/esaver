@@ -3,16 +3,25 @@ package com.example.viewer.data.dao
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
-import com.example.viewer.data.struct.Book
 import com.example.viewer.data.struct.Group
 
 @Dao
 interface GroupDao {
     @Insert
-    suspend fun insert (group: Group): Long
+    suspend fun insert (group: Group)
 
-    @Query("SELECT id FROM BookGroups")
-    suspend fun queryAllIds (): List<Int>
+    @Query(
+        "INSERT INTO BookGroups (id, name, itemOrder) VALUES (" +
+            ":id, :name, IFNULL((SELECT MAX(itemOrder) FROM BookGroups), 0)" +
+        ")"
+    )
+    suspend fun insert (id: Int, name: String)
+
+    @Query("SELECT * FROM BookGroups ORDER BY itemOrder")
+    suspend fun queryAllInOrder (): List<Group>
+
+    @Query("SELECT id FROM BookGroups ORDER BY itemOrder")
+    suspend fun queryAllIdsInOrder (): List<Int>
 
     @Query("SELECT name FROM BookGroups WHERE id = :id")
     suspend fun queryName (id: Int): String
@@ -20,8 +29,23 @@ interface GroupDao {
     @Query("SELECT id FROM BookGroups WHERE name = :name")
     suspend fun queryId (name: String): Int?
 
+    @Query("SELECT itemOrder FROM BookGroups WHERE id = :id")
+    suspend fun queryItemOrder (id: Int): Int
+
     @Query("SELECT count(id) FROM BookGroups WHERE id = :id")
     suspend fun countId (id: Int): Int
+
+    @Query("UPDATE BookGroups SET itemOrder = itemOrder - 1 WHERE itemOrder >= :fromOrder")
+    suspend fun decreaseItemOrder (fromOrder: Int)
+
+    @Query("UPDATE BookGroups SET itemOrder = itemOrder - 1 WHERE itemOrder >= :fromOrder AND itemOrder <= :toOrder")
+    suspend fun decreaseItemOrder (fromOrder: Int, toOrder: Int)
+
+    @Query("UPDATE BookGroups SET itemOrder = itemOrder + 1 WHERE itemOrder >= :fromOrder AND itemOrder <= :toOrder")
+    suspend fun increaseItemOrder (fromOrder: Int, toOrder: Int)
+
+    @Query("UPDATE BookGroups SET itemOrder = :itemOrder WHERE id = :id")
+    suspend fun updateItemOrder (id: Int, itemOrder: Int)
 
     @Query("SELECT max(id) + 1 FROM BookGroups")
     suspend fun getNextId (): Int

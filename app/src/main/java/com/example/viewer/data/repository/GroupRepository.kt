@@ -6,7 +6,6 @@ import com.example.viewer.R
 import com.example.viewer.data.dao.BookWithGroupDao
 import com.example.viewer.data.dao.GroupDao
 import com.example.viewer.data.database.BookDatabase
-import com.example.viewer.data.struct.Book
 import com.example.viewer.data.struct.BookWithGroup
 import com.example.viewer.data.struct.Group
 import kotlinx.coroutines.runBlocking
@@ -35,11 +34,13 @@ class GroupRepository (context: Context) {
             throw Exception("do not insert group 0")
         }
         runBlocking {
-            groupDao.insert(Group(id, name))
+            groupDao.insert(id, name)
         }
     }
 
-    fun getAllGroupIds (): List<Int> = runBlocking { groupDao.queryAllIds() }
+    fun getAllGroupIdsInOrder (): List<Int> = runBlocking { groupDao.queryAllIdsInOrder() }
+
+    fun getAllGroupsInOrder (): List<Group> = runBlocking { groupDao.queryAllInOrder() }
 
     fun getGroupName (id: Int): String = runBlocking { groupDao.queryName(id) }
 
@@ -68,13 +69,38 @@ class GroupRepository (context: Context) {
         val dao = groupDao
         val id = runBlocking {
             val id = dao.getNextId()
-            dao.insert(Group(id, name))
+            dao.insert(id, name)
             id
         }
         latestUpdateTime = System.currentTimeMillis()
         return id
     }
 
+    @Transaction
+    fun moveGroup (id: Int, toId: Int) = runBlocking {
+        if (id == toId) {
+            return@runBlocking
+        }
+
+        val fromOrder = groupDao.queryItemOrder(id)
+        val toOrder = groupDao.queryItemOrder(toId)
+
+        if (fromOrder == toOrder) {
+            throw Exception("fromOrder == toOrder, something went wrong")
+        }
+
+        if (fromOrder < toOrder) {
+            groupDao.decreaseItemOrder(fromOrder + 1, toOrder - 1)
+            groupDao.updateItemOrder(id, toOrder - 1)
+        } else {
+            groupDao.increaseItemOrder(toOrder, fromOrder - 1)
+            groupDao.updateItemOrder(id, toOrder)
+        }
+
+        latestUpdateTime = System.currentTimeMillis()
+    }
+
+    @Transaction
     private fun removeGroup (id: Int) {
         if (id == 0) {
             throw Exception("cannot remove default group")
@@ -83,6 +109,7 @@ class GroupRepository (context: Context) {
             if (bookWithGroupDao.countByGroupId(id) != 0) {
                 throw Exception("Cannot delete group if some book in the group")
             }
+            groupDao.decreaseItemOrder(groupDao.queryItemOrder(id) + 1)
             groupDao.delete(id)
         }
         latestUpdateTime = System.currentTimeMillis()
@@ -92,7 +119,7 @@ class GroupRepository (context: Context) {
         val dao = groupDao
         runBlocking {
             if (dao.countId(0) == 0) {
-                dao.insert(Group(0,  context.getString(R.string.noGroup)))
+                dao.insert(0,  context.getString(R.string.noGroup))
             }
         }
     }

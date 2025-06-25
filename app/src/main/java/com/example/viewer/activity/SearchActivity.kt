@@ -97,7 +97,7 @@ class SearchActivity: AppCompatActivity() {
 
         searchRepo = SearchRepository(baseContext)
         excludeTagRepo = ExcludeTagRepository(baseContext)
-        allSearchMarkIds = searchRepo.getAllSearchMarkIds()
+        allSearchMarkIds = searchRepo.getAllSearchMarkIdsInOrder()
         lastExcludeTagUpdateTime = excludeTagRepo.lastExcludeTagUpdateTime()
 
         searchMarkData = packSearchMark(
@@ -160,7 +160,7 @@ class SearchActivity: AppCompatActivity() {
                                 )
                                 Toast.makeText(baseContext, "已儲存", Toast.LENGTH_SHORT).show()
 
-                                allSearchMarkIds = searchRepo.getAllSearchMarkIds()
+                                allSearchMarkIds = searchRepo.getAllSearchMarkIdsInOrder()
                                 position = allSearchMarkIds.indexOf(id)
                                 isTemporarySearch = false
                                 searchMarkData = packSearchMark(searchRepo.getSearchMark(id))

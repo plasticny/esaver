@@ -11,6 +11,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import androidx.room.Transaction
 import com.bumptech.glide.Glide
 import com.example.viewer.R
 import com.example.viewer.Util
@@ -42,7 +43,7 @@ import kotlin.math.floor
 import kotlin.math.min
 
 /**
- * ParcelableExtra: book_record
+ * StringExtra: bookId
  */
 class BookProfileActivity: AppCompatActivity() {
     companion object {
@@ -329,6 +330,7 @@ class BookProfileActivity: AppCompatActivity() {
 
     private fun deleteBook (book: Book): Boolean = BookRepository(baseContext).removeBook(book)
 
+    @Transaction
     private suspend fun saveBook () {
         if (isBookStored) {
             return

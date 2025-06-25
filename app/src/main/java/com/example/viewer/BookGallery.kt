@@ -70,13 +70,13 @@ class BookGallery (
 
     fun openRandomBook () = openBook(RandomBook.next(context, !Util.isInternetAvailable(context)))
 
+    fun scrollToGroup (id: Int) = recyclerView.scrollToPosition(groupRecyclerViewAdapter.getGroupPosition(id))
+
     private fun openBook (bookId: String) {
         context.startActivity(Intent(context, BookProfileActivity::class.java).apply {
             putExtra("bookId", bookId)
         })
     }
-
-    private fun scrollToGroup (id: Int) = recyclerView.scrollToPosition(groupRecyclerViewAdapter.getGroupPosition(id))
 
     inner class Filter {
         var doDownloadComplete: Boolean? = null
@@ -98,7 +98,7 @@ class BookGallery (
     inner class GroupRecyclerViewAdapter: RecyclerView.Adapter<GroupRecyclerViewAdapter.ViewHolder>() {
         inner class ViewHolder (val binding: MainGalleryFragmentAuthorBinding): RecyclerView.ViewHolder(binding.root)
 
-        private var groupIds: List<Int> = groupRepo.getAllGroupIds()
+        private var groupIds: List<Int> = groupRepo.getAllGroupIdsInOrder()
         private val groupHolderMap: MutableMap<Int, ViewHolder> = mutableMapOf()
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder =
@@ -113,11 +113,11 @@ class BookGallery (
                 text = if (id == GroupRepository.DEFAULT_GROUP_ID) {
                     ContextCompat.getString(context, R.string.noGroup)
                 } else groupRepo.getGroupName(id)
-                setOnClickListener {
-                    SelectGroupDialog(context, layoutInflater).show {
-                        id, _ -> scrollToGroup(id)
-                    }
-                }
+//                setOnClickListener {
+//                    SelectGroupDialog(context, layoutInflater).show {
+//                        id, _ -> scrollToGroup(id)
+//                    }
+//                }
             }
 
             holder.binding.galleryAuthorBookRecyclerView.apply {
@@ -134,7 +134,7 @@ class BookGallery (
         }
 
         fun refreshGroups () {
-            groupIds = groupRepo.getAllGroupIds()
+            groupIds = groupRepo.getAllGroupIdsInOrder()
             notifyDataSetChanged()
 
             val notExistAuthors = groupHolderMap.keys.minus(groupIds.toSet())

@@ -40,7 +40,7 @@ data class SearchMark (
         ) {
             val gson = Gson()
             tmpSearchMark = SearchMark(
-                id = -1,
+                id = -1L,
                 name = context.getString(R.string.search),
                 categoryOrdinalsJson = gson.toJson(categories.map { it.ordinal }),
                 keyword = keyword,
