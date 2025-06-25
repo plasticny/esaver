@@ -21,7 +21,7 @@ class ExcludeTagRepository (context: Context) {
         private val excludedTagValues = mutableSetOf<String>()
 
         private const val CACHE_SIZE = 10
-        private val excludeTagCache = mutableListOf<CacheRecord>()
+        private val excludeTagCache = arrayOfNulls<CacheRecord?>(CACHE_SIZE)
     }
 
     private val excludeTagDao: ExcludeTagDao
@@ -109,6 +109,9 @@ class ExcludeTagRepository (context: Context) {
         // check cache
         val checkedIds = mutableSetOf<Int>()
         for (cacheRecord in excludeTagCache) {
+            if (cacheRecord == null) {
+                continue
+            }
             if (!cacheRecord.categories.containsAll(categoryNames)) {
                 continue
             }
@@ -143,14 +146,15 @@ class ExcludeTagRepository (context: Context) {
                     excludeTags.containsKey(k) &&
                     v.containsAll(excludeTags.getValue(k))
                 ) {
-                    if (excludeTagCache.size < CACHE_SIZE) {
-                        excludeTagCache.add(CacheRecord(
+                    val nullIdx = excludeTagCache.indexOfFirst { it == null }
+                    if (nullIdx != -1) {
+                        excludeTagCache[nullIdx] = CacheRecord(
                             id = excludeTag.id,
                             categories = excludeCategories,
                             tags = excludeTags
-                        ))
+                        )
                     } else {
-                        excludeTagCache.fastMinByOrNull { it.count }!!.apply {
+                        excludeTagCache.minByOrNull { it!!.count }!!.apply {
                             this.id = excludeTag.id
                             this.categories = excludeCategories
                             this.tags = excludeTags

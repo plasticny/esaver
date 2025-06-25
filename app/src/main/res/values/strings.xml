@@ -23,6 +23,7 @@
     <string name="fa_ellipsis_vertical">\uf142</string>
     <string name="fa_up_down">\uf338</string>
     <string name="fa_up_down_left_right">\uf0b2</string>
+    <string name="fa_list">\uf03a</string>
 <!--  strings  -->
     <string name="app_name">eSaver</string>
     <string name="enter_url">輸入URL</string>

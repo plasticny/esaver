@@ -6,12 +6,12 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.setFragmentResultListener
 import androidx.navigation.fragment.findNavController
 import com.example.viewer.BookGallery
 import com.example.viewer.R
 import com.example.viewer.data.repository.GroupRepository
 import com.example.viewer.databinding.FragmentMainGalleryBinding
-import com.example.viewer.dialog.SelectGroupDialog
 
 class GalleryFragment: Fragment() {
     private lateinit var ctx: Context
@@ -31,19 +31,18 @@ class GalleryFragment: Fragment() {
 
         groupListLastUpdate = GroupRepository(ctx).getLastUpdateTime()
 
-        binding.sortButton.setOnClickListener {
+        binding.groupListButton.setOnClickListener {
             findNavController().navigate(R.id.main_nav_sort_group)
-        }
-
-        binding.jumpToButton.setOnClickListener {
-            val context = requireContext()
-            SelectGroupDialog(context, layoutInflater).show(title = context.getString(R.string.jump_to_group)) {
-                id, _ -> bookGallery.scrollToGroup(id)
-            }
         }
 
         binding.randomOpenButton.setOnClickListener {
             bookGallery.openRandomBook()
+        }
+
+        // handle user select group in group list fragment
+        setFragmentResultListener(GroupListFragment.REQUEST_KEY) { _, b ->
+            val id = b.getInt(GroupListFragment.BUNDLE_SELECTED_ID_KEY)
+            bookGallery.scrollToGroup(id)
         }
 
 //        binding.galleryTextAll.setOnClickListener {

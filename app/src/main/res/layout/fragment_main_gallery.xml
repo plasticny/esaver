@@ -25,44 +25,27 @@
     <LinearLayout
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="40dp"
+        android:background="@color/grey2"
+        android:gravity="center_vertical|end"
         android:orientation="horizontal"
-        android:gravity="end"
-        android:paddingVertical="8dp"
         android:paddingHorizontal="16dp"
-        android:background="@color/dark_grey"
+        android:paddingVertical="8dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent">
 
-        <TextView
-            android:id="@+id/sort_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:fontFamily="@font/font_awesome"
-            android:text="@string/fa_up_down"
-            android:textColor="@color/grey"
-            android:textSize="24sp"/>
+        <Button
+            android:id="@+id/group_list_button"
+            style="@style/ToolBarButtonStyle"
+            android:text="@string/fa_list"
+            android:textColor="@color/grey"/>
 
-        <TextView
-            android:id="@+id/jump_to_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="24dp"
-            android:fontFamily="@font/font_awesome"
-            android:text="@string/fa_right_to_bracket"
-            android:textColor="@color/grey"
-            android:textSize="24sp"/>
-
-        <TextView
+        <Button
             android:id="@+id/random_open_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="24dp"
-            android:fontFamily="@font/font_awesome"
+            style="@style/ToolBarButtonStyle"
             android:text="@string/fa_play"
-            android:textColor="@color/grey"
-            android:textSize="24sp"/>
+            android:textColor="@color/grey"/>
 
     </LinearLayout>
 

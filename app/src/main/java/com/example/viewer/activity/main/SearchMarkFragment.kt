@@ -5,6 +5,7 @@ import android.content.ClipData
 import android.content.ClipDescription
 import android.content.Intent
 import android.content.res.ColorStateList
+import android.graphics.Point
 import android.os.Bundle
 import android.view.DragEvent
 import android.view.KeyEvent
@@ -19,8 +20,8 @@ import com.example.viewer.Util
 import com.example.viewer.activity.SearchActivity
 import com.example.viewer.data.repository.SearchRepository
 import com.example.viewer.data.struct.SearchMark
+import com.example.viewer.databinding.ComponentListItemBinding
 import com.example.viewer.databinding.MainSearchFragmentBinding
-import com.example.viewer.databinding.SearchMarkBinding
 import com.example.viewer.dialog.ConfirmDialog
 import com.example.viewer.dialog.FilterOutDialog
 import com.example.viewer.dialog.SearchMarkDialog
@@ -160,7 +161,7 @@ class SearchMarkFragment: Fragment() {
         binding.searchMarkWrapper.removeAllViews()
 
         for (searchMark in searchRepo.getAllSearchMarkInListOrder()) {
-            val searchMarkBinding = SearchMarkBinding.inflate(layoutInflater, binding.searchMarkWrapper, true)
+            val searchMarkBinding = ComponentListItemBinding.inflate(layoutInflater, binding.searchMarkWrapper, true)
 
             searchMarkBinding.name.text = searchMark.name
 
@@ -196,7 +197,7 @@ class SearchMarkFragment: Fragment() {
                         )
                         v.startDragAndDrop(
                             dragData,
-                            View.DragShadowBuilder(v),
+                            DragShadowBuilder(v),
                             null,
                             0
                         )
@@ -221,7 +222,7 @@ class SearchMarkFragment: Fragment() {
         }
     }
 
-    private fun focusSearchMark (id: Long, searchMark: SearchMark, searchMarkBinding: SearchMarkBinding) {
+    private fun focusSearchMark (id: Long, searchMark: SearchMark, searchMarkBinding: ComponentListItemBinding) {
         binding.notFocusedToolBarWrapper.visibility = View.GONE
         binding.focusedToolBarWrapper.visibility = View.VISIBLE
         searchMarkBinding.name.setTextColor(parent.context.getColor(R.color.black))
@@ -241,7 +242,7 @@ class SearchMarkFragment: Fragment() {
         focusedSearchMark = null
     }
 
-    private fun changeFocusSearchMark (id: Long, searchMark: SearchMark, searchMarkBinding: SearchMarkBinding) {
+    private fun changeFocusSearchMark (id: Long, searchMark: SearchMark, searchMarkBinding: ComponentListItemBinding) {
         focusedSearchMark!!.binding.let {
             it.name.setTextColor(parent.context.getColor(R.color.white))
             it.root.backgroundTintList = ColorStateList.valueOf(parent.context.getColor(R.color.dark_grey))
@@ -254,6 +255,13 @@ class SearchMarkFragment: Fragment() {
     data class SearchMarkEntry (
         val id: Long,
         val searchMark: SearchMark,
-        val binding: SearchMarkBinding
+        val binding: ComponentListItemBinding
     )
+
+    private class DragShadowBuilder (v: View) : View.DragShadowBuilder(v) {
+        override fun onProvideShadowMetrics(outShadowSize: Point, outShadowTouchPoint: Point) {
+            outShadowSize.set(view.width, view.height)
+            outShadowTouchPoint.set(0, outShadowSize.y / 2)
+        }
+    }
 }

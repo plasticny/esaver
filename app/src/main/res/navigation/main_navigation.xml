@@ -21,6 +21,6 @@
 
     <fragment
         android:id="@+id/main_nav_sort_group"
-        android:name="com.example.viewer.activity.main.SortGroupFragment"/>
+        android:name="com.example.viewer.activity.main.GroupListFragment"/>
 
 </navigation>
