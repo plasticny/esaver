@@ -102,7 +102,7 @@ class SearchActivity: AppCompatActivity() {
 
         searchMarkData = packSearchMark(
             intent.getLongExtra("searchMarkId", -1L).let {
-                if (it == -1L) SearchMark.getTmpSearchMark()!! else searchRepo.getSearchMark(it)
+                if (it == -1L) SearchMark.getTmpSearchMark() else searchRepo.getSearchMark(it)
             }
         )
         isTemporarySearch = searchMarkData.id == -1L
@@ -195,7 +195,14 @@ class SearchActivity: AppCompatActivity() {
                     )
                     lifecycleScope.launch { reset() }
                 }
-            }.show(searchRepo.getSearchMark(searchMarkData.id))
+            }.show(
+                name = searchMarkData.name,
+                categories = searchMarkData.categories,
+                keyword = searchMarkData.keyword,
+                tags = searchMarkData.tags,
+                uploader = searchMarkData.uploader ?: "",
+                doExclude = searchMarkData.doExclude
+            )
         }
 
         binding.prevSearchMarkButton.apply {

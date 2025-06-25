@@ -50,7 +50,7 @@ data class SearchMark (
                 itemOrder = null
             )
         }
-        fun getTmpSearchMark () = tmpSearchMark
+        fun getTmpSearchMark () = tmpSearchMark!!
     }
 
     fun getCategories (): List<Category> =
