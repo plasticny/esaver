@@ -29,13 +29,12 @@ import com.example.viewer.dialog.SimpleEditTextDialog
 import com.example.viewer.struct.BookSource
 import com.example.viewer.struct.Category
 import com.google.gson.Gson
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
-import java.text.NumberFormat
-import java.text.ParseException
-import java.util.Locale
 
 /**
  * intExtra: searchMarkId; -1 for temporary search mark
@@ -68,7 +67,7 @@ class SearchActivity: AppCompatActivity() {
     private lateinit var searchRepo: SearchRepository
     private lateinit var excludeTagRepo: ExcludeTagRepository
     private lateinit var searchMarkData: SearchMarkData
-    private lateinit var binding: SearchActivityBinding
+    private lateinit var rootBinding: SearchActivityBinding
     private lateinit var allSearchMarkIds: List<Long>
 
     @Volatile
@@ -83,13 +82,14 @@ class SearchActivity: AppCompatActivity() {
     private var totalBookLoaded = -1
     private var totalBookFiltered = -1
     private var doNoMoreAlerted = false
+    private var lastNextHistory: String? = null
 
     // recycler view item metrics
     private var coverImageWidth: Int = -1
     private var coverImageHeight: Int = -1
 
     private val recyclerViewAdapter: BookRecyclerViewAdapter
-        get() = binding.recyclerView.adapter as BookRecyclerViewAdapter
+        get() = rootBinding.recyclerView.adapter as BookRecyclerViewAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -112,9 +112,9 @@ class SearchActivity: AppCompatActivity() {
         // search mark position
         position = allSearchMarkIds.indexOf(searchMarkData.id)
 
-        binding = SearchActivityBinding.inflate(layoutInflater)
+        rootBinding = SearchActivityBinding.inflate(layoutInflater)
 
-        binding.recyclerView.apply {
+        rootBinding.recyclerView.apply {
             layoutManager = GridLayoutManager(context, 2)
             adapter = BookRecyclerViewAdapter()
             addOnScrollListener(object: RecyclerView.OnScrollListener() {
@@ -138,7 +138,7 @@ class SearchActivity: AppCompatActivity() {
             })
         }
 
-        binding.searchMarkNameContainer.setOnClickListener {
+        rootBinding.searchMarkNameContainer.setOnClickListener {
             SearchMarkDialog(this, layoutInflater).apply {
                 title = if (isTemporarySearch) "編輯搜尋" else "編輯搜尋標記"
                 showNameField = !isTemporarySearch
@@ -207,7 +207,7 @@ class SearchActivity: AppCompatActivity() {
             )
         }
 
-        binding.prevSearchMarkButton.apply {
+        rootBinding.prevSearchMarkButton.apply {
             if (isTemporarySearch) {
                 visibility = View.INVISIBLE
             }
@@ -220,7 +220,7 @@ class SearchActivity: AppCompatActivity() {
                 lifecycleScope.launch { reset() }
             }
         }
-        binding.nextSearchMarkButton.apply {
+        rootBinding.nextSearchMarkButton.apply {
             if (isTemporarySearch) {
                 visibility = View.INVISIBLE
             }
@@ -233,7 +233,7 @@ class SearchActivity: AppCompatActivity() {
                 lifecycleScope.launch { reset() }
             }
         }
-        binding.infoButton.setOnClickListener {
+        rootBinding.infoButton.setOnClickListener {
             if (!resetting) {
                 showInfoDialog()
             }
@@ -241,7 +241,7 @@ class SearchActivity: AppCompatActivity() {
 
         lifecycleScope.launch { reset() }
 
-        setContentView(binding.root)
+        setContentView(rootBinding.root)
     }
 
     override fun onResume() {
@@ -281,13 +281,14 @@ class SearchActivity: AppCompatActivity() {
         totalBookLoaded = 0
         totalBookFiltered = 0
         doNoMoreAlerted = false
+        lastNextHistory = searchRepo.getLastNext(searchMarkData.id)
 
-        binding.searchMarkName.text = searchMarkData.name
+        rootBinding.searchMarkName.text = searchMarkData.name
 
         if (!isTemporarySearch) {
             // no need to update these button if temporary search mark
-            binding.prevSearchMarkButton.visibility = if (position == 0) Button.INVISIBLE else Button.VISIBLE
-            binding.nextSearchMarkButton.visibility = if (position == allSearchMarkIds.lastIndex) Button.INVISIBLE else Button.VISIBLE
+            rootBinding.prevSearchMarkButton.visibility = if (position == 0) Button.INVISIBLE else Button.VISIBLE
+            rootBinding.nextSearchMarkButton.visibility = if (position == allSearchMarkIds.lastIndex) Button.INVISIBLE else Button.VISIBLE
         }
 
         recyclerViewAdapter.clear()
@@ -316,14 +317,18 @@ class SearchActivity: AppCompatActivity() {
 
         loadingMore = true
 
-        binding.searchProgressBar.wrapper.visibility = ProgressBar.VISIBLE
+        withContext(Dispatchers.Main) {
+            rootBinding.searchProgressBar.wrapper.visibility = ProgressBar.VISIBLE
+        }
         val fetchedBooks = fetchBooks().also { totalBookLoaded += it.size }
         val books = if (searchMarkData.doExclude) {
             excludeTagFilter(fetchedBooks).also {
                 totalBookFiltered += (fetchedBooks.size - it.size)
             }
         } else fetchedBooks
-        binding.searchProgressBar.wrapper.visibility = ProgressBar.GONE
+        withContext(Dispatchers.Main) {
+            rootBinding.searchProgressBar.wrapper.visibility = ProgressBar.GONE
+        }
 
         if (mySearchId == searchMarkData.id) {
             recyclerViewAdapter.addBooks(books)
@@ -342,6 +347,7 @@ class SearchActivity: AppCompatActivity() {
                 searchMarkData.getSearchUrl(next).also { println("[SearchActivity.fetchBooks] fetch book from\n$it") }
             ).get()
         }
+        searchRepo.storeLastNext(searchMarkData.id, next)
 
         if (mySearchId != searchMarkData.id) {
             println("[${this::class.simpleName}.${this::fetchBooks.name}] terminated")
@@ -408,11 +414,16 @@ class SearchActivity: AppCompatActivity() {
         }
 
     private suspend fun storeTmpBook (searchBookData: SearchBookData) {
-        withContext(Dispatchers.Main) { binding.screenProgressBarWrapper.visibility = View.VISIBLE }
+        withContext(Dispatchers.Main) { rootBinding.screenProgressBarWrapper.visibility = View.VISIBLE }
         val doc = withContext(Dispatchers.IO) {
-            Jsoup.connect(searchBookData.url).get()
+            val d = Jsoup.connect(searchBookData.url).get()
+            if (d.html().contains("<h1>Content Warning</h1>")) {
+                Jsoup.connect("${searchBookData.url}&nw=always").get()
+            } else {
+                d
+            }
         }
-        withContext(Dispatchers.Main) { binding.screenProgressBarWrapper.visibility = View.GONE }
+        withContext(Dispatchers.Main) { rootBinding.screenProgressBarWrapper.visibility = View.GONE }
 
         val gson = Gson()
 
@@ -447,6 +458,22 @@ class SearchActivity: AppCompatActivity() {
             loadedNumber.text = totalBookLoaded.toString()
             filteredNumber.text = totalBookFiltered.toString()
             filteredDisabledLabel.visibility = if (searchMarkData.doExclude) View.GONE else View.VISIBLE
+        }
+
+        dialogBinding.jumpToHistoryButton.apply {
+            visibility = if (lastNextHistory == null) View.GONE else View.VISIBLE
+            setOnClickListener {
+                next = lastNextHistory
+                resetting = true // prevent trigger infinity scroll
+                recyclerViewAdapter.clear()
+                CoroutineScope(Dispatchers.IO).launch {
+                    runBlocking {
+                        loadMoreBooks()
+                        resetting = false
+                    }
+                }
+                dialog.dismiss()
+            }
         }
 
         dialog.show()

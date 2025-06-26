@@ -4,14 +4,18 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.viewer.data.dao.ExcludeTagDao
+import com.example.viewer.data.dao.SearchHistoryDao
 import com.example.viewer.data.dao.SearchMarkDao
 import com.example.viewer.data.struct.ExcludeTag
+import com.example.viewer.data.struct.SearchHistory
 import com.example.viewer.data.struct.SearchMark
 
 @Database(
-    entities = [SearchMark::class, ExcludeTag::class],
-    version = 1,
+    entities = [SearchMark::class, ExcludeTag::class, SearchHistory::class],
+    version = 2,
     exportSchema = false
 )
 abstract class SearchDatabase: RoomDatabase() {
@@ -22,10 +26,29 @@ abstract class SearchDatabase: RoomDatabase() {
             instance ?: synchronized(this) {
                 Room.databaseBuilder(
                     context, SearchDatabase::class.java, "search_db"
-                ).build().also { instance = it }
+                ).addMigrations(migration_1_2).build().also { instance = it }
             }
+
+        private val migration_1_2 = object: Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("" +
+                    "CREATE TABLE SearchHistories (" +
+                        "searchMarkId INTEGER PRIMARY KEY NOT NULL," +
+                        "lastNext TEXT," +
+                        "CONSTRAINT fk_searchMarkID " +
+                            "FOREIGN KEY(searchMarkId) REFERENCES SearchMarks(id) " +
+                            "ON DELETE CASCADE" +
+                    ")"
+                )
+                db.execSQL("" +
+                    "INSERT INTO SearchHistories (searchMarkId)" +
+                        "SELECT id FROM SearchMarks"
+                )
+            }
+        }
     }
 
     abstract fun searchMarkDao (): SearchMarkDao
     abstract fun excludeTagDao (): ExcludeTagDao
+    abstract fun searchHistoryDao (): SearchHistoryDao
 }

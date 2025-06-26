@@ -73,4 +73,11 @@
 
     </LinearLayout>
 
+    <Button
+        android:layout_marginTop="8dp"
+        android:id="@+id/jump_to_history_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="跳至上次的位置"/>
+
 </LinearLayout>

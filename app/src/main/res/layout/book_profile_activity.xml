@@ -56,7 +56,8 @@
 
                 <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content">
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="-3dp">
 
                     <TextView
                         android:id="@+id/info_button"
@@ -91,14 +92,6 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:fontFamily="@font/font_awesome"
-                        android:text="@string/fa_triangle_exclamation"
-                        android:textColor="@color/warning_yellow"/>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
                         android:text="@string/contain_offensive_context"
                         android:textColor="@color/warning_yellow"/>
 
