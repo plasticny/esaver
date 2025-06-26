@@ -10,6 +10,7 @@ import com.example.viewer.data.struct.SearchMark
 import com.example.viewer.struct.Category
 import com.example.viewer.R
 import com.example.viewer.data.dao.SearchHistoryDao
+import com.example.viewer.data.struct.SearchHistory
 import com.google.gson.Gson
 import kotlinx.coroutines.runBlocking
 
@@ -67,6 +68,7 @@ class SearchRepository (context: Context) {
                 itemOrder = searchMarkDao.getNextItemOrder()
             )
         )
+        searchHistoryDao.insert(SearchHistory(id, null))
 
         searchMarkListLastUpdateTime = System.currentTimeMillis()
 
@@ -134,6 +136,10 @@ class SearchRepository (context: Context) {
     }
 
     fun storeLastNext (searchMarkId: Long, next: String?) = runBlocking {
-        searchHistoryDao.updateLastNext(searchMarkId, next)
+        if (next == null) {
+            searchHistoryDao.clearLastNext(searchMarkId)
+        } else {
+            searchHistoryDao.updateLastNext(searchMarkId, next)
+        }
     }
 }

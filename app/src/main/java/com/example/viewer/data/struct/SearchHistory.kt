@@ -18,5 +18,8 @@ import androidx.room.PrimaryKey
 data class SearchHistory (
     @PrimaryKey
     val searchMarkId: Long,
+    /**
+     * This should be the parameter next in the last fetched url of the search mark
+     */
     var lastNext: String?
 )

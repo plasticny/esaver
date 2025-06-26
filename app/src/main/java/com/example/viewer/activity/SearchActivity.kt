@@ -62,6 +62,9 @@ class SearchActivity: AppCompatActivity() {
                 }
             )
         }
+
+        private const val NO_SET = -1
+        private const val ENDED = -2
     }
 
     private lateinit var searchRepo: SearchRepository
@@ -77,12 +80,14 @@ class SearchActivity: AppCompatActivity() {
     private var isTemporarySearch = false
     private var resetting = true
 
-    private var next: String? = null // for load more books
     private var foundResultString: String = ""
     private var totalBookLoaded = -1
     private var totalBookFiltered = -1
-    private var doNoMoreAlerted = false
     private var lastNextHistory: String? = null
+
+    // for load more books
+    private var next: Int = NO_SET
+    private var prev: Int = NO_SET
 
     // recycler view item metrics
     private var coverImageWidth: Int = -1
@@ -118,21 +123,35 @@ class SearchActivity: AppCompatActivity() {
             layoutManager = GridLayoutManager(context, 2)
             adapter = BookRecyclerViewAdapter()
             addOnScrollListener(object: RecyclerView.OnScrollListener() {
+                override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                    super.onScrollStateChanged(recyclerView, newState)
+                    if (!loadingMore && newState == 1 && prev != ENDED) {
+                        val lm = layoutManager as GridLayoutManager
+                        if (lm.findFirstCompletelyVisibleItemPosition() == 0) {
+                            lifecycleScope.launch { loadPrevBooks() }
+                        }
+                    }
+                }
+
                 override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                     super.onScrolled(recyclerView, dx, dy)
 
-                    if (resetting) {
-                        return
-                    }
-
-                    // trigger load more book
-                    if (next == null) {
+                    if (resetting || loadingMore) {
                         return
                     }
 
                     val lm = layoutManager as GridLayoutManager
-                    if (lm.findLastCompletelyVisibleItemPosition() == recyclerViewAdapter.itemCount - 1) {
-                        lifecycleScope.launch { loadMoreBooks() }
+                    if (
+                        next != ENDED && dy > 0 &&
+                        lm.findLastCompletelyVisibleItemPosition() == recyclerViewAdapter.itemCount - 1
+                    ) {
+                        lifecycleScope.launch { loadNextBooks() }
+                    }
+                    else if (
+                        prev != ENDED && dy < 0 &&
+                        lm.findFirstCompletelyVisibleItemPosition() == 0
+                    ) {
+                        lifecycleScope.launch { loadPrevBooks() }
                     }
                 }
             })
@@ -277,10 +296,9 @@ class SearchActivity: AppCompatActivity() {
     private suspend fun reset () {
         resetting = true
 
-        next = null
+        next = NO_SET
         totalBookLoaded = 0
         totalBookFiltered = 0
-        doNoMoreAlerted = false
         lastNextHistory = searchRepo.getLastNext(searchMarkData.id)
 
         rootBinding.searchMarkName.text = searchMarkData.name
@@ -294,16 +312,19 @@ class SearchActivity: AppCompatActivity() {
         recyclerViewAdapter.clear()
 
         if (excludeTagRepo.doExclude(searchMarkData.categories, searchMarkData.tags)) {
-            doNoMoreAlerted = true
             Toast.makeText(baseContext, "所有書都被濾除了", Toast.LENGTH_SHORT).show()
         } else {
-            loadMoreBooks()
+            loadNextBooks()
         }
 
         resetting = false
     }
 
-    private suspend fun loadMoreBooks () {
+    private suspend fun loadNextBooks () {
+        if (this.next == ENDED) {
+            throw Exception("next equal to ENDED")
+        }
+
         val mySearchId = searchMarkData.id
 
         withContext(Dispatchers.IO) {
@@ -320,7 +341,9 @@ class SearchActivity: AppCompatActivity() {
         withContext(Dispatchers.Main) {
             rootBinding.searchProgressBar.wrapper.visibility = ProgressBar.VISIBLE
         }
-        val fetchedBooks = fetchBooks().also { totalBookLoaded += it.size }
+        val fetchedBooks = fetchBooks(
+            next = if (this.next == NO_SET) null else this.next
+        ).also { totalBookLoaded += it.size }
         val books = if (searchMarkData.doExclude) {
             excludeTagFilter(fetchedBooks).also {
                 totalBookFiltered += (fetchedBooks.size - it.size)
@@ -331,7 +354,44 @@ class SearchActivity: AppCompatActivity() {
         }
 
         if (mySearchId == searchMarkData.id) {
-            recyclerViewAdapter.addBooks(books)
+            recyclerViewAdapter.addNextBooks(books)
+        }
+        loadingMore = false
+    }
+
+    private suspend fun loadPrevBooks () {
+        if (this.prev == ENDED) {
+            throw Exception("prev equal to ENDED")
+        }
+
+        val mySearchId = searchMarkData.id
+
+        withContext(Dispatchers.IO) {
+            while (loadingMore) {
+                Thread.sleep(100)
+            }
+        }
+        if (mySearchId != searchMarkData.id) {
+            return
+        }
+
+        loadingMore = true
+
+        withContext(Dispatchers.Main) {
+            rootBinding.searchProgressBar.wrapper.visibility = ProgressBar.VISIBLE
+        }
+        val fetchedBooks = fetchBooks(prev = if (this.prev == NO_SET) null else this.prev).also { totalBookLoaded += it.size }
+        val books = if (searchMarkData.doExclude) {
+            excludeTagFilter(fetchedBooks).also {
+                totalBookFiltered += (fetchedBooks.size - it.size)
+            }
+        } else fetchedBooks
+        withContext(Dispatchers.Main) {
+            rootBinding.searchProgressBar.wrapper.visibility = ProgressBar.GONE
+        }
+
+        if (mySearchId == searchMarkData.id) {
+            recyclerViewAdapter.addPrevBooks(books)
         }
         loadingMore = false
     }
@@ -339,31 +399,42 @@ class SearchActivity: AppCompatActivity() {
     /**
      * This method will access and change the private variable next
      */
-    private suspend fun fetchBooks (): List<SearchBookData> {
+    private suspend fun fetchBooks (
+        next: Int? = null,
+        prev: Int? = null
+    ): List<SearchBookData> {
         val mySearchId = searchMarkData.id
 
         val doc = withContext(Dispatchers.IO) {
-            Jsoup.connect(
-                searchMarkData.getSearchUrl(next).also { println("[SearchActivity.fetchBooks] fetch book from\n$it") }
-            ).get()
+            if (prev != null) {
+                Jsoup.connect(
+                    searchMarkData.getSearchUrl(prev = prev.toString()).also { println("[SearchActivity.fetchBooks] fetch book from\n$it") }
+                ).get()
+            }
+            else {
+                searchRepo.storeLastNext(searchMarkData.id, next?.toString())
+                Jsoup.connect(
+                    searchMarkData.getSearchUrl(next = next?.toString()).also { println("[SearchActivity.fetchBooks] fetch book from\n$it") }
+                ).get()
+            }
         }
-        searchRepo.storeLastNext(searchMarkData.id, next)
 
         if (mySearchId != searchMarkData.id) {
             println("[${this::class.simpleName}.${this::fetchBooks.name}] terminated")
             return listOf()
         }
 
-        next = doc.selectFirst("#unext")?.attribute("href").let { attr ->
-            if (attr == null) {
-                if (!doNoMoreAlerted) {
-                    Toast.makeText(baseContext, "沒有更多了", Toast.LENGTH_LONG).show()
-                    doNoMoreAlerted = true
-                }
-                null
-            } else {
-                attr.value.split("next=").last().trim()
-            }
+        if (this.next != ENDED) {
+            this.next = doc.selectFirst("#unext")?.attribute("href")?.let {
+                val n = it.value.split("next=").last().trim().toInt()
+                if (this.next == NO_SET || n < this.next) n else this.next
+            } ?: ENDED
+        }
+        if (this.prev != ENDED) {
+            this.prev = doc.selectFirst("#uprev")?.attribute("href")?.let {
+                val p = it.value.split("prev=").last().trim().toInt()
+                if (this.prev == NO_SET || p > this.prev) p else this.prev
+            } ?: ENDED
         }
         foundResultString = doc.selectFirst(".searchtext")!!.text().trim()
 
@@ -419,9 +490,7 @@ class SearchActivity: AppCompatActivity() {
             val d = Jsoup.connect(searchBookData.url).get()
             if (d.html().contains("<h1>Content Warning</h1>")) {
                 Jsoup.connect("${searchBookData.url}&nw=always").get()
-            } else {
-                d
-            }
+            } else d
         }
         withContext(Dispatchers.Main) { rootBinding.screenProgressBarWrapper.visibility = View.GONE }
 
@@ -463,12 +532,13 @@ class SearchActivity: AppCompatActivity() {
         dialogBinding.jumpToHistoryButton.apply {
             visibility = if (lastNextHistory == null) View.GONE else View.VISIBLE
             setOnClickListener {
-                next = lastNextHistory
                 resetting = true // prevent trigger infinity scroll
+                prev = NO_SET
+                next = lastNextHistory!!.toInt()
                 recyclerViewAdapter.clear()
                 CoroutineScope(Dispatchers.IO).launch {
                     runBlocking {
-                        loadMoreBooks()
+                        loadNextBooks()
                         resetting = false
                     }
                 }
@@ -501,7 +571,14 @@ class SearchActivity: AppCompatActivity() {
         val uploader: String?,
         val doExclude: Boolean
     ) {
-        fun getSearchUrl (next: String? = null): String {
+        fun getSearchUrl (
+            next: String? = null,
+            prev: String? = null
+        ): String {
+            if (next != null && prev != null) {
+                throw Exception("Do not pass in next and prev together")
+            }
+
             val fCatsValue = 1023 - if (categories.isNotEmpty()) {
                 categories.sumOf { it.value }
             } else {
@@ -533,6 +610,7 @@ class SearchActivity: AppCompatActivity() {
             }
             ret += "inline_set=dm_e&"
             next?.let { ret += "next=$next" }
+            prev?.let { ret += "prev=$prev" }
 
             return ret
         }
@@ -609,10 +687,15 @@ class SearchActivity: AppCompatActivity() {
 
         fun getBooks (): List<SearchBookData> = bookRecords
 
-        fun addBooks (books: List<SearchBookData>) {
+        fun addNextBooks (books: List<SearchBookData>) {
             val positionStart = bookRecords.size
             bookRecords.addAll(books)
             notifyItemRangeInserted(positionStart, books.size)
+        }
+
+        fun addPrevBooks (books: List<SearchBookData>) {
+            bookRecords.addAll(0, books)
+            notifyItemRangeInserted(0, books.size)
         }
 
         fun refreshBooks (books: List<SearchBookData>) {
