@@ -3,7 +3,6 @@ package com.example.viewer.fetcher
 import android.content.Context
 import android.widget.Toast
 import com.example.viewer.Util
-import com.example.viewer.data.database.BookDatabase
 import com.example.viewer.data.repository.BookRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -12,13 +11,6 @@ import org.jsoup.Jsoup
 import java.io.File
 
 class EPictureFetcher: BasePictureFetcher {
-    companion object {
-        suspend fun isBookWarning (url: String) =
-            withContext(Dispatchers.IO) {
-                Jsoup.connect(url).get()
-            }.html().contains("<h1>Content Warning</h1>")
-    }
-
     private val bookDataset = BookRepository(context)
     private val bookUrl: String
 
@@ -113,14 +105,10 @@ class EPictureFetcher: BasePictureFetcher {
 
             println("[${this::class.simpleName}.${this::getPageUrl.name}] load next p $p")
 
-            val doc = withContext(Dispatchers.IO) {
-                val url = if (isBookWarning(bookUrl)) "${bookUrl}/?p=$p&nw=always" else "${bookUrl}/?p=$p"
-                println("[${this@EPictureFetcher::class.simpleName}.${this@EPictureFetcher::getPageUrl.name}]\nfetching page url from $url")
-                Jsoup.connect(url).get()
-            }
-            doc.select("#gdt a").map { it.attr("href") }.let { pageUrlSegment ->
+            withContext(Dispatchers.IO) {
+                Jsoup.connect("${bookUrl}?p=$p").cookies(mapOf("nw" to "1")).get()
+            }.select("#gdt a").map { it.attr("href") }.let { pageUrlSegment ->
                 if (pageUrlSegment.isEmpty()) {
-                    println(doc.html())
                     throw Exception("[${this@EPictureFetcher::class.simpleName}.${this@EPictureFetcher::getPageUrl.name}] no page url fetched")
                 }
                 pageUrls.addAll(pageUrlSegment)

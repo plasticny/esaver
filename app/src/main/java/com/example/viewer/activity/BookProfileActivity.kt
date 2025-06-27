@@ -38,6 +38,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import org.jsoup.Jsoup
 import java.io.File
 import kotlin.math.floor
 import kotlin.math.min
@@ -116,7 +117,11 @@ class BookProfileActivity: AppCompatActivity() {
         rootBinding.warningContainer.apply {
             // only check warning if book is not stored
             lifecycleScope.launch {
-                if (!isBookStored && EPictureFetcher.isBookWarning(book.url)) {
+                val isBookWarning = withContext(Dispatchers.IO) {
+                    Jsoup.connect(book.url).get()
+                }.html().contains("<h1>Content Warning</h1>")
+
+                if (!isBookStored && isBookWarning) {
                     visibility = View.VISIBLE
                 }
             }

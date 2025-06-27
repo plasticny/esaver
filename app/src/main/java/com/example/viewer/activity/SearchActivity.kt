@@ -436,7 +436,7 @@ class SearchActivity: AppCompatActivity() {
                 if (this.prev == NO_SET || p > this.prev) p else this.prev
             } ?: ENDED
         }
-        foundResultString = doc.selectFirst(".searchtext")!!.text().trim()
+        foundResultString = doc.selectFirst(".searchtext")?.run { text().trim() } ?: "沒有搜尋結果"
 
         val books = doc.select(".itg.glte > tbody > tr")
         return books.mapNotNull { book ->
@@ -487,10 +487,7 @@ class SearchActivity: AppCompatActivity() {
     private suspend fun storeTmpBook (searchBookData: SearchBookData) {
         withContext(Dispatchers.Main) { rootBinding.screenProgressBarWrapper.visibility = View.VISIBLE }
         val doc = withContext(Dispatchers.IO) {
-            val d = Jsoup.connect(searchBookData.url).get()
-            if (d.html().contains("<h1>Content Warning</h1>")) {
-                Jsoup.connect("${searchBookData.url}&nw=always").get()
-            } else d
+            Jsoup.connect(searchBookData.url).cookies(mapOf("nw" to "1")).get()
         }
         withContext(Dispatchers.Main) { rootBinding.screenProgressBarWrapper.visibility = View.GONE }
 
