@@ -3,6 +3,7 @@ package com.example.viewer.activity
 import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
+import android.graphics.Paint
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
@@ -63,6 +64,7 @@ class BookProfileActivity: AppCompatActivity() {
     private lateinit var book: Book
     private lateinit var rootBinding: BookProfileActivityBinding
     private lateinit var bookRepo: BookRepository
+    private lateinit var excludedTags: Map<String, Set<String>>
 
     private var isBookStored: Boolean = false
 
@@ -70,10 +72,13 @@ class BookProfileActivity: AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         bookRepo = BookRepository(baseContext)
+
         book = bookRepo.getBook(intent.getStringExtra("bookId")!!)
 
         val bookRepo = BookRepository(baseContext)
         isBookStored = runBlocking { bookRepo.isBookStored(book.id) }
+
+        excludedTags = ExcludeTagRepository(baseContext).findExcludedTags(book)
 
         //
         // init ui
@@ -230,7 +235,12 @@ class BookProfileActivity: AppCompatActivity() {
                     text = value
                     backgroundTintList = ColorStateList.valueOf(baseContext.getColor(R.color.dark_grey))
                     isAllCaps = false
-                    setTextColor(baseContext.getColor(R.color.grey))
+                    setTextColor(getColor(
+                        if (excludedTags[tagCat]?.contains(value) == true) {
+                            R.color.grey2
+                        } else R.color.grey
+                    ))
+
                     setOnClickListener { showTagDialog(tagCat, value) }
                 }.also { tagValueWrapper.addView(it) }
             }
