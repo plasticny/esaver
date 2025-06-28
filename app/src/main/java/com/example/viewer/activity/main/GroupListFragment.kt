@@ -9,6 +9,7 @@ import android.view.DragEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.setFragmentResult
@@ -18,6 +19,7 @@ import com.example.viewer.data.repository.GroupRepository
 import com.example.viewer.data.struct.Group
 import com.example.viewer.databinding.ComponentListItemWithButtonBinding
 import com.example.viewer.databinding.FragmentMainSortGroupBinding
+import com.example.viewer.dialog.SimpleEditTextDialog
 
 class GroupListFragment: Fragment() {
     companion object {
@@ -26,6 +28,7 @@ class GroupListFragment: Fragment() {
     }
 
     private lateinit var rootBinding: FragmentMainSortGroupBinding
+    private lateinit var groupRepo: GroupRepository
 
     private var droppingItem: ComponentListItemWithButtonBinding? = null
 
@@ -34,6 +37,8 @@ class GroupListFragment: Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        groupRepo = GroupRepository(requireContext())
+
         rootBinding = FragmentMainSortGroupBinding.inflate(layoutInflater, container, false)
 
         rootBinding.backButton.setOnClickListener {
@@ -47,7 +52,7 @@ class GroupListFragment: Fragment() {
 
     private fun refresh () {
         rootBinding.groupContainer.removeAllViews()
-        for (group in GroupRepository(requireContext()).getAllGroupsInOrder()) {
+        for (group in groupRepo.getAllGroupsInOrder()) {
             rootBinding.groupContainer.addView(buildItem(group).root)
         }
     }
@@ -56,6 +61,38 @@ class GroupListFragment: Fragment() {
         val binding = ComponentListItemWithButtonBinding.inflate(layoutInflater, rootBinding.groupContainer, false)
 
         binding.name.text = group.name
+
+        binding.editButton.setOnClickListener {
+            val name = groupRepo.getGroupName(group.id)
+            SimpleEditTextDialog(requireContext(), layoutInflater).apply {
+                title = "修改組別名稱"
+                hint = name
+                validator = { input ->
+                    if (input.isEmpty()) {
+                        Toast.makeText(
+                            requireContext(),
+                            "名字不能為空",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        false
+                    }
+                    else if (input == name) {
+                        Toast.makeText(
+                            requireContext(),
+                            "名字跟之前一樣",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        false
+                    } else {
+                        true
+                    }
+                }
+                positiveCb = { input ->
+                    groupRepo.changeGroupName(group.id, input)
+                    refresh()
+                }
+            }.show()
+        }
 
         binding.goButton.setOnClickListener {
             setFragmentResult(
