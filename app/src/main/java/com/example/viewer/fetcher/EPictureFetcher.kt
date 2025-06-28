@@ -37,7 +37,12 @@ class EPictureFetcher: BasePictureFetcher {
     /**
      * for online book
      */
-    constructor (context: Context, pageNum: Int, bookUrl: String): super(context, pageNum) {
+    constructor (
+        context: Context,
+        pageNum: Int,
+        bookUrl: String,
+        bookId: String? = null
+    ): super(context, pageNum, bookId) {
         p = 0
         this.bookUrl = bookUrl
         pageUrls = mutableListOf()

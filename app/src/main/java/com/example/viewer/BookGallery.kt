@@ -2,6 +2,8 @@ package com.example.viewer
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.ImageDecoder
+import android.graphics.ImageDecoder.DecodeException
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -113,11 +115,6 @@ class BookGallery (
                 text = if (id == GroupRepository.DEFAULT_GROUP_ID) {
                     ContextCompat.getString(context, R.string.noGroup)
                 } else groupRepo.getGroupName(id)
-//                setOnClickListener {
-//                    SelectGroupDialog(context, layoutInflater).show {
-//                        id, _ -> scrollToGroup(id)
-//                    }
-//                }
             }
 
             holder.binding.galleryAuthorBookRecyclerView.apply {
@@ -203,16 +200,14 @@ class BookGallery (
             val coverPageFile = File(bookFolder, coverPage.toString())
 
             if(!coverPageFile.exists()) {
-                CoroutineScope(Dispatchers.Main).launch {
-                    withContext(Dispatchers.IO) {
-                        val source = bookRepo.getBookSource(id)
-                        val fetcher = if (source == BookSource.E) EPictureFetcher(context, id) else HiPictureFetcher(context, id)
-                        fetcher.savePicture(coverPage)
-                    }
-                    Glide.with(context).load(coverPageFile).into(holder.imageView)
-                }
+                downloadCoverAndLoadInto(id, coverPage, coverPageFile, holder.imageView)
             } else {
-                Glide.with(context).load(coverPageFile).into(holder.imageView)
+                try {
+                    val drawable = ImageDecoder.decodeDrawable(ImageDecoder.createSource(coverPageFile))
+                    holder.imageView.setImageDrawable(drawable)
+                } catch (e: DecodeException) {
+                    downloadCoverAndLoadInto(id, coverPage, coverPageFile, holder.imageView)
+                }
             }
 
             holder.imageView.setOnClickListener {
@@ -227,6 +222,22 @@ class BookGallery (
         fun refresh () {
             bookIds = getBookIds()
             notifyDataSetChanged()
+        }
+
+        private fun downloadCoverAndLoadInto (
+            bookId: String,
+            coverPage: Int,
+            coverPageFile: File,
+            imageView: ImageView
+        ) {
+            CoroutineScope(Dispatchers.Main).launch {
+                withContext(Dispatchers.IO) {
+                    val source = bookRepo.getBookSource(bookId)
+                    val fetcher = if (source == BookSource.E) EPictureFetcher(context, bookId) else HiPictureFetcher(context, bookId)
+                    fetcher.savePicture(coverPage)
+                }
+                Glide.with(context).load(coverPageFile).into(imageView)
+            }
         }
 
         private fun getBookIds (): List<String> {

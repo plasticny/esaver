@@ -66,19 +66,29 @@ abstract class BasePictureFetcher {
 
     /**
      * for online book
+     * @param bookId system will store this id, and avoid repeat downloading if the current book id is same as previous one
      */
-    protected constructor (context: Context, pageNum: Int) {
+    protected constructor (context: Context, pageNum: Int, bookId: String? = null) {
         this.context = context
         this.pageNum = pageNum
         this.bookId = null
 
-        this.bookFolder = File(context.getExternalFilesDir(null), "tmp").also {
-            if (!it.exists()) {
-                it.mkdirs()
-            } else {
-                for (file in it.listFiles()!!) {
-                    file.delete()
-                }
+        this.bookFolder = File(context.getExternalFilesDir(null), "tmp")
+        if (!this.bookFolder.exists()) {
+            this.bookFolder.mkdirs()
+        }
+
+        // compare previous tmp book id and that of current
+        // to determine whether if the tmp folder should be cleared
+        val bookIdTxt = File(this.bookFolder, "bookId.txt")
+        if (bookId == null || !bookIdTxt.exists() || bookId != bookIdTxt.readText()) {
+            println("[${this::class.simpleName}] clear tmp folder")
+            for (file in this.bookFolder.listFiles()!!) {
+                file.delete()
+            }
+            bookId?.let {
+                bookIdTxt.createNewFile()
+                bookIdTxt.writeText(bookId)
             }
         }
 
@@ -111,14 +121,6 @@ abstract class BasePictureFetcher {
         val file = File(bookFolder, page.toString())
         if (file.exists()) {
             file.delete()
-        }
-    }
-
-    fun close () {
-        if (!isLocal) {
-            for (file in bookFolder.listFiles()!!) {
-                file.delete()
-            }
         }
     }
 

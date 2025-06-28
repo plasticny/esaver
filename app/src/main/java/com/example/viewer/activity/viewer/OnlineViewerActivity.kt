@@ -11,6 +11,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 import kotlin.math.floor
 
 class OnlineViewerActivity: BaseViewerActivity() {
@@ -32,15 +33,13 @@ class OnlineViewerActivity: BaseViewerActivity() {
         firstPage = 0
         lastPage = book.pageNum - 1
 
-        fetcher = EPictureFetcher(this, pageNum = book.pageNum, bookUrl = book.url)
-        pictureUrls = MutableList(book.pageNum) { null }
+        fetcher = EPictureFetcher(this, pageNum = book.pageNum, bookUrl = book.url, bookId = book.id)
+        pictureUrls = MutableList(book.pageNum) {
+            val file = File(fetcher.bookFolder, it.toString())
+            if (file.exists()) file.path else null
+        }
 
         super.onCreate(savedInstanceState)
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        fetcher.close()
     }
 
     override fun onImageLongClicked(): Boolean = true

@@ -344,20 +344,25 @@ class BookProfileActivity: AppCompatActivity() {
         rootBinding.progress.textView.text = getString(R.string.n_percent, 0)
         toggleProgressBar(true)
 
-        // download cover image file to tmp
-        val coverFile = withContext(Dispatchers.IO) {
-            EPictureFetcher(baseContext, 1, book.url).savePicture(0) { total, downloaded ->
-                CoroutineScope(Dispatchers.Main).launch {
-                    rootBinding.progress.textView.text = getString(
-                        R.string.n_percent, floor(downloaded.toDouble() / total * 100).toInt()
-                    )
+        val fetcher = EPictureFetcher(baseContext, 1, book.url, book.id)
+
+        // download cover page if not exist
+        if (!File(fetcher.bookFolder, "0").exists()) {
+            val success = withContext(Dispatchers.IO) {
+                val file = fetcher.savePicture(0) { total, downloaded ->
+                    CoroutineScope(Dispatchers.Main).launch {
+                        rootBinding.progress.textView.text = getString(
+                            R.string.n_percent, floor(downloaded.toDouble() / total * 100).toInt()
+                        )
+                    }
                 }
+                file != null
             }
-        }
-        if (coverFile == null) {
-            Toast.makeText(baseContext, "儲存失敗，再試一次", Toast.LENGTH_SHORT).show()
-            toggleProgressBar(false)
-            return
+            if (!success) {
+                Toast.makeText(baseContext, "儲存失敗，再試一次", Toast.LENGTH_SHORT).show()
+                toggleProgressBar(false)
+                return
+            }
         }
 
         // create book folder
@@ -365,10 +370,12 @@ class BookProfileActivity: AppCompatActivity() {
             if (!it.exists()) {
                 it.mkdirs()
             }
-            // move cover picture
-            val file = File(it, coverFile.name)
-            coverFile.copyTo(file)
-            coverFile.delete()
+            // move picture from tmp folder to book folder
+            for (tmpFile in fetcher.bookFolder.listFiles()!!) {
+                if (tmpFile.extension != "txt") {
+                    tmpFile.copyTo(File(it, tmpFile.name))
+                }
+            }
         }
 
         BookRepository(baseContext).addBook(
