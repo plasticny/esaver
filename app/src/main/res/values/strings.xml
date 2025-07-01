@@ -20,6 +20,7 @@
     <string name="fa_triangle_exclamation">\uf071</string>
     <string name="fa_circle_info">\uf05a</string>
     <string name="fa_download">\uf019</string>
+    <string name="fa_ellipsis_vertical">\uf142</string>
 <!--  strings  -->
     <string name="app_name">eSaver</string>
     <string name="enter_url">輸入URL</string>
@@ -76,4 +77,8 @@
     <string name="uploader">上傳者</string>
     <string name="do_apply_exclude_tag">啟用濾除標籤？</string>
     <string name="import_db">匯入</string>
+    <string name="number_of_result">結果數﹕</string>
+    <string name="loaded">已讀取﹕</string>
+    <string name="filtered_out">已濾去﹕</string>
+    <string name="filtered_tag_is_disabled">(禁用了濾去標籤)</string>
 </resources>

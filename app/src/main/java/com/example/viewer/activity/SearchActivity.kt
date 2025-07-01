@@ -8,7 +8,9 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.material3.AlertDialog
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -21,6 +23,7 @@ import com.example.viewer.databinding.SearchActivityBinding
 import com.example.viewer.database.SearchDatabase
 import com.example.viewer.database.SearchDatabase.Companion.Category
 import com.example.viewer.databinding.ActivitySearchBookBinding
+import com.example.viewer.databinding.DialogSearchInfoBinding
 import com.example.viewer.dialog.SearchMarkDialog
 import com.example.viewer.dialog.SimpleEditTextDialog
 import com.example.viewer.struct.SearchMark
@@ -28,6 +31,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
+import java.text.NumberFormat
+import java.util.Locale
+import kotlin.math.sign
 
 /**
  * intExtra: searchMarkId; -1 for temporary search mark
@@ -70,6 +76,9 @@ class SearchActivity: AppCompatActivity() {
     private var loadingMore = false
     private var position = -1
     private var next: String? = null // for load more books
+    private var totalBookCnt = -1
+    private var totalBookLoaded = -1
+    private var totalBookFiltered = -1
     private var lastExcludeTagUpdateTime = 0L
     private var isTemporarySearch = false
     private var reseting = true
@@ -210,6 +219,11 @@ class SearchActivity: AppCompatActivity() {
                 lifecycleScope.launch { reset() }
             }
         }
+        binding.infoButton.setOnClickListener {
+            if (!reseting) {
+                showInfoDialog()
+            }
+        }
 
         lifecycleScope.launch { reset() }
 
@@ -238,6 +252,9 @@ class SearchActivity: AppCompatActivity() {
         reseting = true
 
         next = null
+        totalBookCnt = -1 // the value is assigned in first book fetching
+        totalBookLoaded = 0
+        totalBookFiltered = 0
         doNoMoreAlerted = false
 
         binding.searchMarkName.text = searchMark.name
@@ -274,9 +291,12 @@ class SearchActivity: AppCompatActivity() {
         loadingMore = true
 
         binding.searchProgressBar.wrapper.visibility = ProgressBar.VISIBLE
+        val fetchedBooks = fetchBooks().also { totalBookLoaded += it.size }
         val books = if (searchMark.doExclude) {
-            excludeTagFilter(fetchBooks())
-        } else fetchBooks()
+            excludeTagFilter(fetchedBooks).also {
+                totalBookFiltered += (fetchedBooks.size - it.size)
+            }
+        } else fetchedBooks
         binding.searchProgressBar.wrapper.visibility = ProgressBar.GONE
 
         if (mySearchId == searchMarkId) {
@@ -297,7 +317,12 @@ class SearchActivity: AppCompatActivity() {
             ).get()
         }
 
-        val newNext = doc.selectFirst("#unext")?.attribute("href")?.let { attr ->
+        if (mySearchId != searchMarkId) {
+            println("[${this::class.simpleName}.${this::fetchBooks.name}] terminated")
+            return listOf()
+        }
+
+        next = doc.selectFirst("#unext")?.attribute("href")?.let { attr ->
             val tokens = attr.value.split("next=")
             if (tokens.size == 1) {
                 if (!doNoMoreAlerted) {
@@ -308,12 +333,11 @@ class SearchActivity: AppCompatActivity() {
             }
             return@let tokens.last().trim()
         }
-
-        if (mySearchId != searchMarkId) {
-            println("[${this::class.simpleName}.${this::fetchBooks.name}] terminated")
-            return listOf()
+        if (totalBookCnt == -1) {
+            totalBookCnt = doc.selectFirst(".searchtext")!!.text().let {
+                NumberFormat.getInstance(Locale.ENGLISH).parse(it.split(' ')[2])!!.toInt()
+            }
         }
-        next = newNext
 
         val books = doc.select(".itg.glte > tbody > tr")
         return books.mapNotNull { book ->
@@ -396,6 +420,20 @@ class SearchActivity: AppCompatActivity() {
             },
             uploader = doc.selectFirst("#gdn a")?.text()
         )
+    }
+
+    private fun showInfoDialog () {
+        val dialogBinding = DialogSearchInfoBinding.inflate(layoutInflater)
+        val dialog = AlertDialog.Builder(this).setView(dialogBinding.root).create()
+
+        dialogBinding.apply {
+            resultNumber.text = totalBookCnt.toString()
+            loadedNumber.text = totalBookLoaded.toString()
+            filteredNumber.text = totalBookFiltered.toString()
+            filteredDisabledLabel.visibility = if (searchMark.doExclude) View.GONE else View.VISIBLE
+        }
+
+        dialog.show()
     }
 
     //
