@@ -3,7 +3,6 @@ package com.example.viewer.activity
 import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
-import android.graphics.Paint
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
@@ -14,6 +13,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.room.Transaction
 import com.bumptech.glide.Glide
+import com.bumptech.glide.signature.MediaStoreSignature
 import com.example.viewer.R
 import com.example.viewer.Util
 import com.example.viewer.activity.main.MainActivity
@@ -96,10 +96,10 @@ class BookProfileActivity: AppCompatActivity() {
         }
 
         rootBinding.coverImageView.let {
-            val coverUrl = book.getCoverUrl(baseContext)
             if(isBookStored) {
                 CoroutineScope(Dispatchers.Main).launch {
-                    if (!File(coverUrl).exists()) {
+                    val coverFile = File(book.getCoverUrl(baseContext))
+                    if (!coverFile.exists()) {
                         withContext(Dispatchers.IO) {
                             val id = book.id
                             val source = bookRepo.getBookSource(id)
@@ -110,7 +110,10 @@ class BookProfileActivity: AppCompatActivity() {
                             fetcher.savePicture(bookRepo.getBookCoverPage(book.id))
                         }
                     }
-                    Glide.with(baseContext).load(coverUrl).into(it)
+                    Glide.with(baseContext)
+                        .load(coverFile)
+                        .signature(MediaStoreSignature("", coverFile.lastModified(), 0))
+                        .into(it)
                 }
             } else {
                 Glide.with(baseContext).load(book.getPageUrls()!![0]).into(it)
