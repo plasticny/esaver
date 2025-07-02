@@ -1,41 +1,30 @@
 package com.example.viewer.database
 
 import android.content.Context
-import android.net.Uri
-import android.os.Environment
-import android.provider.MediaStore
-import androidx.core.net.toUri
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.byteArrayPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import com.example.viewer.struct.BookRecord
+import com.example.viewer.struct.BookRecordT
 import com.example.viewer.Util
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import org.jsoup.Jsoup
+import com.example.viewer.data.repository.BookRepository
+import com.example.viewer.struct.BookSource
+import com.example.viewer.struct.Category
 import java.io.File
-import java.io.FileOutputStream
-
-enum class BookSource (val keyString: String) {
-    E("E"),
-    Hi("Hi")
-}
 
 private const val DB_NAME = "book"
 private val Context.bookDataStore: DataStore<Preferences> by preferencesDataStore(name = DB_NAME)
 
-class BookDatabase (context: Context): BaseDatabase() {
+class BookPreferences (context: Context): BaseDatabase() {
     companion object {
         const val NAME = DB_NAME
 
         @Volatile
-        private var instance: BookDatabase? = null
+        private var instance: BookPreferences? = null
         fun getInstance (context: Context) = instance ?: synchronized(this) {
-            instance ?: BookDatabase(context).also { instance = it }
+            instance ?: BookPreferences(context).also { instance = it }
         }
     }
 
@@ -116,6 +105,36 @@ class BookDatabase (context: Context): BaseDatabase() {
         }
     }
 
+    fun syncToRoom (context: Context) {
+        val roomDb = BookRepository(context)
+        for (id in getAllBookIds()) {
+            val book = getBook(context, id)
+            val source = getBookSource(id)
+            roomDb.addBookFromPreference(
+                id = id,
+                url = book.url,
+                category = Util.categoryFromName(book.cat),
+                title = book.title,
+                subtitle = book.subtitle,
+                pageNum = book.pageNum,
+                tags = book.tags,
+                source = source,
+                groupId = book.groupId,
+                uploader = book.uploader,
+                coverPage = getBookCoverPage(id),
+                skipPages = getBookSkipPages(id),
+                lastViewTime = getBookLastViewTime(id),
+                bookMarks = getBookMarks(id),
+                pageUrls = if (source == BookSource.E) {
+                    getBookPageUrls(id)
+                } else null,
+                p = if (source == BookSource.E) {
+                    getBookP(id)
+                } else null
+            )
+        }
+    }
+
     //
     // public methods
     //
@@ -123,7 +142,7 @@ class BookDatabase (context: Context): BaseDatabase() {
     fun addBook (
         id: String,
         url: String,
-        category: SearchDatabase.Companion.Category,
+        category: Category,
         title: String,
         subtitle: String = "",
         pageNum: Int,
@@ -168,9 +187,9 @@ class BookDatabase (context: Context): BaseDatabase() {
         }
     }
 
-    fun getBook (context: Context, id: String): BookRecord {
+    fun getBook (context: Context, id: String): BookRecordT {
         assertBookIdExist(id)
-        return BookRecord(
+        return BookRecordT(
             id = id,
             url = getBookUrl(id),
             coverUrl = getBookCoverPage(id).let { page ->

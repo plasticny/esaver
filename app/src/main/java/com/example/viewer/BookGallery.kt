@@ -12,17 +12,19 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.viewer.activity.BookProfileActivity
-import com.example.viewer.database.BookDatabase
-import com.example.viewer.database.BookSource
-import com.example.viewer.database.GroupDatabase
+import com.example.viewer.data.database.BookDatabase
+import com.example.viewer.data.repository.BookRepository
+import com.example.viewer.data.repository.GroupRepository
 import com.example.viewer.databinding.FragmentMainGalleryBookBinding
 import com.example.viewer.databinding.MainGalleryFragmentAuthorBinding
 import com.example.viewer.dialog.SelectGroupDialog
 import com.example.viewer.fetcher.EPictureFetcher
 import com.example.viewer.fetcher.HiPictureFetcher
+import com.example.viewer.struct.BookSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import java.io.File
 import kotlin.math.ceil
@@ -32,8 +34,8 @@ class BookGallery (
     private val layoutInflater: LayoutInflater,
     private val recyclerView: RecyclerView
 ) {
-    private val bookDatabase = BookDatabase.getInstance(context)
-    private val groupDatabase = GroupDatabase.getInstance(context)
+    private val bookRepo = BookRepository(context)
+    private val groupRepo = GroupRepository(context)
     private val filter = Filter()
 
     // recycler view item metrics
@@ -52,8 +54,8 @@ class BookGallery (
     }
 
     fun notifyBookAdded () {
-        groupRecyclerViewAdapter.refreshGroupBooks(GroupDatabase.DEFAULT_GROUP_ID)
-        scrollToGroup(GroupDatabase.DEFAULT_GROUP_ID)
+        groupRecyclerViewAdapter.refreshGroupBooks(GroupRepository.DEFAULT_GROUP_ID)
+        scrollToGroup(GroupRepository.DEFAULT_GROUP_ID)
     }
 
     fun applyFilter (doDownloadComplete: Boolean? = null) {
@@ -68,26 +70,24 @@ class BookGallery (
 
     fun openRandomBook () = openBook(RandomBook.next(context, !Util.isInternetAvailable(context)))
 
+    fun scrollToGroup (id: Int) = recyclerView.scrollToPosition(groupRecyclerViewAdapter.getGroupPosition(id))
+
     private fun openBook (bookId: String) {
         context.startActivity(Intent(context, BookProfileActivity::class.java).apply {
-            putExtra(
-                "book_record",
-                bookDatabase.getBook(context, bookId)
-            )
+            putExtra("bookId", bookId)
         })
     }
-
-    private fun scrollToGroup (id: Int) = recyclerView.scrollToPosition(groupRecyclerViewAdapter.getGroupPosition(id))
 
     inner class Filter {
         var doDownloadComplete: Boolean? = null
         fun isFiltered (context: Context, bookId: String, bookDataset: BookDatabase): Boolean {
-            if (doDownloadComplete == null) {
-                return true
-            }
-            val bookFolder = File(context.getExternalFilesDir(null), bookId)
-            val downloadedPageNum = bookFolder.listFiles()!!.size
-            return (downloadedPageNum == bookDataset.getBookPageNum(bookId)) == doDownloadComplete
+            throw NotImplementedError()
+//            if (doDownloadComplete == null) {
+//                return true
+//            }
+//            val bookFolder = File(context.getExternalFilesDir(null), bookId)
+//            val downloadedPageNum = bookFolder.listFiles()!!.size
+//            return (downloadedPageNum == bookDataset.getBookPageNum(bookId)) == doDownloadComplete
         }
     }
 
@@ -98,7 +98,7 @@ class BookGallery (
     inner class GroupRecyclerViewAdapter: RecyclerView.Adapter<GroupRecyclerViewAdapter.ViewHolder>() {
         inner class ViewHolder (val binding: MainGalleryFragmentAuthorBinding): RecyclerView.ViewHolder(binding.root)
 
-        private var groupIds: List<Int> = groupDatabase.getAllGroupIds()
+        private var groupIds: List<Int> = groupRepo.getAllGroupIdsInOrder()
         private val groupHolderMap: MutableMap<Int, ViewHolder> = mutableMapOf()
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder =
@@ -110,14 +110,14 @@ class BookGallery (
             val id = groupIds[position]
 
             holder.binding.galleryAuthorText.apply {
-                text = if (id == GroupDatabase.DEFAULT_GROUP_ID) {
+                text = if (id == GroupRepository.DEFAULT_GROUP_ID) {
                     ContextCompat.getString(context, R.string.noGroup)
-                } else groupDatabase.getGroupName(id)
-                setOnClickListener {
-                    SelectGroupDialog(context, layoutInflater).show {
-                        id, _ -> scrollToGroup(id)
-                    }
-                }
+                } else groupRepo.getGroupName(id)
+//                setOnClickListener {
+//                    SelectGroupDialog(context, layoutInflater).show {
+//                        id, _ -> scrollToGroup(id)
+//                    }
+//                }
             }
 
             holder.binding.galleryAuthorBookRecyclerView.apply {
@@ -134,7 +134,7 @@ class BookGallery (
         }
 
         fun refreshGroups () {
-            groupIds = groupDatabase.getAllGroupIds()
+            groupIds = groupRepo.getAllGroupIdsInOrder()
             notifyDataSetChanged()
 
             val notExistAuthors = groupHolderMap.keys.minus(groupIds.toSet())
@@ -196,14 +196,16 @@ class BookGallery (
 
         override fun onBindViewHolder(holder: BookRecyclerViewHolder, position: Int) {
             val id = bookIds[position]
+            println("[${this@BookGallery::class.simpleName}.${this::class.simpleName}] binding $id")
             val bookFolder = File(context.getExternalFilesDir(null), id)
-            val coverPage = bookDatabase.getBookCoverPage(id)
+
+            val coverPage = bookRepo.getBookCoverPage(id)
             val coverPageFile = File(bookFolder, coverPage.toString())
 
             if(!coverPageFile.exists()) {
                 CoroutineScope(Dispatchers.Main).launch {
                     withContext(Dispatchers.IO) {
-                        val source = bookDatabase.getBookSource(id)
+                        val source = bookRepo.getBookSource(id)
                         val fetcher = if (source == BookSource.E) EPictureFetcher(context, id) else HiPictureFetcher(context, id)
                         fetcher.savePicture(coverPage)
                     }
@@ -217,9 +219,9 @@ class BookGallery (
                 openBook(id)
             }
 
-//            holder.imageView.setOnLongClickListener {
-//                true
-//            }
+            holder.imageView.setOnLongClickListener {
+                true
+            }
         }
 
         fun refresh () {
@@ -228,7 +230,7 @@ class BookGallery (
         }
 
         private fun getBookIds (): List<String> {
-            return groupDatabase.getGroupBookIds(groupId)
+            return groupRepo.getGroupBookIds(groupId)
 //            return groupDatabase.getGroupBookIds(groupId).filter {
 //                filter.isFiltered(context, it, bookDatabase)
 //            }

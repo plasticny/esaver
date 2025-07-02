@@ -1,7 +1,9 @@
 package com.example.viewer
 
 import android.content.Context
-import com.example.viewer.database.BookDatabase
+import com.example.viewer.data.database.BookDatabase
+import com.example.viewer.data.repository.BookRepository
+import kotlinx.coroutines.runBlocking
 import java.util.PriorityQueue
 import kotlin.random.Random
 
@@ -22,7 +24,7 @@ class RandomBook private constructor(context: Context) {
         fun next (context: Context, onlyDownloaded: Boolean = false) = getInstance(context).next(context, onlyDownloaded)
     }
 
-    private val bookDataset = BookDatabase.getInstance(context)
+    private val bookDataset = BookRepository(context)
 
     private val bookIdSequence: MutableList<String>
     private val arrangedBookId: MutableSet<String>
@@ -42,8 +44,11 @@ class RandomBook private constructor(context: Context) {
                 return Random.nextInt(-1, 2)
             }
         })
-        for (bookId in bookDataset.getAllBookIds()) {
-            pq.add(Pair(bookId, bookDataset.getBookLastViewTime(bookId)))
+
+        runBlocking {
+            for (bookId in bookDataset.getAllBookIds()) {
+                pq.add(Pair(bookId, bookDataset.getBookLastViewTime(bookId)))
+            }
         }
 
         // store result
@@ -78,7 +83,7 @@ class RandomBook private constructor(context: Context) {
         val res = mutableListOf<String>()
 
         // the returned book id is supposed to be sorted by added time, asc
-        val allBookIds = bookDataset.getAllBookIds()
+        val allBookIds = runBlocking { bookDataset.getAllBookIds() }
         for (bookId in allBookIds.reversed()) {
             if (arrangedBookId.contains(bookId)) {
                 break
@@ -97,7 +102,7 @@ class RandomBook private constructor(context: Context) {
         }
         while (true) {
             val id = randomPool.random()
-            if (Util.isBookDownloaded(context, id)) {
+            if (runBlocking { Util.isBookDownloaded(context, id) }) {
                 return id
             }
             randomPool.remove(id)

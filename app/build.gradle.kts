@@ -1,6 +1,8 @@
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.jetbrains.kotlin.android)
+    id("org.jetbrains.kotlin.plugin.compose")
+    id("org.jetbrains.kotlin.android")
+    id("com.google.devtools.ksp")
 }
 
 configurations.all {
@@ -76,18 +78,26 @@ dependencies {
 
     implementation(libs.glide)
     implementation("androidx.appcompat:appcompat:1.7.0")
-    implementation("com.github.chrisbanes:PhotoView:2.3.0")
-    implementation("androidx.datastore:datastore-preferences:1.1.1")
-    implementation("androidx.recyclerview:recyclerview:1.2.1")
     implementation("androidx.cardview:cardview:1.0.0")
     implementation("androidx.constraintlayout:constraintlayout:2.0.4")
-    implementation("com.google.code.gson:gson:2.11.0")
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("androidx.recyclerview:recyclerview:1.2.1")
+    implementation("com.github.chrisbanes:PhotoView:2.3.0")
     implementation("com.google.android.flexbox:flexbox:3.0.0")
-    implementation("androidx.navigation:navigation-ui-ktx:2.8.8")
-    implementation("androidx.navigation:navigation-fragment-ktx:2.8.8")
-    implementation("org.jsoup:jsoup:1.18.3")
+    implementation("com.google.code.gson:gson:2.11.0")
     implementation("com.jaredrummler:material-spinner:1.3.1")
-//    implementation("pl.droidsonroids.gif:android-gif-drawable:1.2.29")
-//    implementation("com.squareup:gifencoder:0.10.1")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("org.jsoup:jsoup:1.18.3")
+
+    implementation("androidx.navigation:navigation-fragment-ktx:2.8.8")
+    implementation("androidx.navigation:navigation-ui-ktx:2.8.8")
+
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+
+    implementation("androidx.room:room-runtime:2.7.1")
+    implementation("androidx.room:room-ktx:2.7.1")
+    ksp("androidx.room:room-compiler:2.7.1")
+
+    implementation("com.fasterxml.jackson.core:jackson-core:2.19.0")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.19.0")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.19.+")
 }

@@ -3,11 +3,9 @@ package com.example.viewer.dialog
 import android.content.Context
 import android.view.LayoutInflater
 import androidx.appcompat.app.AlertDialog
-import com.example.viewer.Util
-import com.example.viewer.database.SearchDatabase
+import com.example.viewer.data.repository.ExcludeTagRepository
 import com.example.viewer.databinding.DialogFilterOutBinding
 import com.example.viewer.databinding.DialogFilterOutItemBinding
-import com.example.viewer.struct.ExcludeTagRecord
 
 class FilterOutDialog (
     private val context: Context,
@@ -17,19 +15,19 @@ class FilterOutDialog (
     private val dialog = AlertDialog.Builder(context).setView(dialogBinding.root).create()
 
     fun show () {
-        val searchDatabase = SearchDatabase.getInstance(context)
+        val repo = ExcludeTagRepository(context)
 
-        searchDatabase.getAllExcludeTag().forEach { (id, record) ->
+        repo.getAllExcludeTag().forEach { record ->
             val itemBinding = DialogFilterOutItemBinding.inflate(layoutInflater, dialogBinding.tagWrapper, false)
 
-            itemBinding.name.text = record.name
+            itemBinding.name.text = record.getName()
 
             itemBinding.root.setOnClickListener {
                 EditExcludeTagDialog(
                     context, layoutInflater
-                ).show(searchDatabase.getExcludeTag(id)) { recordToSave ->
-                    itemBinding.name.text = recordToSave.name
-                    SearchDatabase.getInstance(context).modifyExcludeTag(id, recordToSave)
+                ).show(repo.getExcludeTag(record.id)) { data ->
+                    repo.modifyExcludeTag(record.id, data.tags, data.categories.toList())
+                    itemBinding.name.text = repo.getExcludeTag(record.id).getName()
                 }
             }
 

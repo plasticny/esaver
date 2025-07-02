@@ -5,21 +5,27 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.Button
 import androidx.appcompat.app.AlertDialog
-import com.example.viewer.database.GroupDatabase
+import com.example.viewer.data.repository.GroupRepository
 import com.example.viewer.databinding.DialogSelectGroupBinding
+import com.example.viewer.R
 
 class SelectGroupDialog (
-    context: Context,
+    private val context: Context,
     layoutInflater: LayoutInflater,
 ) {
     private val dialogBinding = DialogSelectGroupBinding.inflate(layoutInflater)
     private val dialog = AlertDialog.Builder(context).setView(dialogBinding.root).create()
 
-    fun show (cb: ((Int, String) -> Unit)? = null) {
+    fun show (
+        title: String = context.getString(R.string.select_group),
+        cb: ((Int, String) -> Unit)? = null
+    ) {
+        dialogBinding.title.text = title
+
         dialogBinding.flexboxLayout.apply {
-            val groupDb = GroupDatabase.getInstance(context)
-            for (id in groupDb.getAllGroupIds()) {
-                val name = groupDb.getGroupName(id)
+            val groupRepo = GroupRepository(context)
+            for (id in groupRepo.getAllGroupIdsInOrder()) {
+                val name = groupRepo.getGroupName(id)
                 addView(Button(context).apply {
                     text = name
                     layoutParams = ViewGroup.LayoutParams(

@@ -8,8 +8,10 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import com.example.viewer.R
 import com.example.viewer.Util
+import com.example.viewer.data.repository.ExcludeTagRepository
+import com.example.viewer.data.repository.SearchRepository
+import com.example.viewer.struct.Category
 import com.example.viewer.struct.ExcludeTagRecord
 import com.example.viewer.struct.SearchMark
 
@@ -18,39 +20,16 @@ typealias Tags = Map<String, List<String>>
 private const val DB_NAME = "search"
 private val Context.searchDataStore: DataStore<Preferences> by preferencesDataStore(name = DB_NAME)
 
-class SearchDatabase (context: Context): BaseDatabase() {
+class SearchPreference (context: Context): BaseDatabase() {
     companion object {
         const val NAME = DB_NAME
         const val TAG = "searchDB"
         const val TEMP_SEARCH_MARK_ID = -1
 
         @Volatile
-        private var instance: SearchDatabase? = null
+        private var instance: SearchPreference? = null
         fun getInstance (context: Context) = instance ?: synchronized(this) {
-            instance ?: SearchDatabase(context).also { instance = it }
-        }
-
-        // NOTE: be very careful on arrange the order of entries
-        enum class Category {
-            Doujinshi {
-                override val color = R.color.doujinshi_red
-                override val value = 2
-            },
-            Manga {
-                override val color = R.color.manga_orange
-                override val value = 4
-            },
-            ArtistCG {
-                override val color = R.color.artistCG_yellow
-                override val value = 8
-            },
-            NonH {
-                override val color = R.color.nonH_blue
-                override val value = 256
-            };
-
-            abstract val color: Int
-            abstract val value: Int
+            instance ?: SearchPreference(context).also { instance = it }
         }
     }
 
@@ -80,6 +59,31 @@ class SearchDatabase (context: Context): BaseDatabase() {
         fun excludeTagTags (id: Int) = CustomPreferencesKey<Tags>("${TAG}_excludeTagTags_$id")
         fun excludeTagCats (id: Int) = CustomPreferencesKey<Set<Int>>("${TAG}_excludeTagCats_$id")
         fun excludeTagLastUpdate () = longPreferencesKey("${TAG}_excludeTagLastUpdate")
+    }
+
+    fun syncToRoom (context: Context) {
+        val searchRepo = SearchRepository(context)
+        for (id in getAllSearchMarkIds()) {
+            getSearchMark(id).run {
+                searchRepo.addSearchMark(
+                    name = name,
+                    categories = categories,
+                    keyword = keyword,
+                    tags = tags,
+                    uploader = uploader.ifEmpty { null },
+                    doExclude = doExclude
+                )
+            }
+        }
+        val excludeRepo = ExcludeTagRepository(context)
+        for (item in getAllExcludeTag()) {
+            item.second.run {
+                excludeRepo.addExcludeTag(
+                    tags = tags,
+                    categories = categories.toList()
+                )
+            }
+        }
     }
 
     //

@@ -10,9 +10,11 @@ import android.widget.GridLayout.UNDEFINED
 import androidx.appcompat.app.AlertDialog
 import com.example.viewer.R
 import com.example.viewer.Util
-import com.example.viewer.database.BookDatabase
+import com.example.viewer.data.database.BookDatabase
+import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.databinding.BookmarkDialogBinding
 import com.example.viewer.databinding.BookmarkItemBinding
+import kotlinx.coroutines.runBlocking
 
 class BookmarkDialog (
     context: Context,
@@ -21,7 +23,7 @@ class BookmarkDialog (
     private val curPage: Int,
     private val onJumpToClicked: (page: Int) -> Unit
 ) {
-    private val bookDatabase = BookDatabase.getInstance(context)
+    private val bookDatabase = BookRepository(context)
 
     private val dialogBinding = BookmarkDialogBinding.inflate(layoutInflater)
     private val dialog = AlertDialog.Builder(context).setView(dialogBinding.root).create()

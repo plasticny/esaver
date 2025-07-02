@@ -36,52 +36,31 @@
         app:layout_constraintStart_toStartOf="parent">
 
         <TextView
-            android:id="@+id/gallery_text_all"
+            android:id="@+id/sort_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:text="@string/all"
-            android:textColor="@color/white"
-            android:textSize="24sp"
-            android:visibility="gone"/>
+            android:fontFamily="@font/font_awesome"
+            android:text="@string/fa_up_down"
+            android:textColor="@color/grey"
+            android:textSize="24sp"/>
 
         <TextView
-            android:id="@+id/gallery_text_downloaded"
+            android:id="@+id/jump_to_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:text="@string/downloaded"
+            android:layout_marginStart="24dp"
+            android:fontFamily="@font/font_awesome"
+            android:text="@string/fa_right_to_bracket"
             android:textColor="@color/grey"
-            android:textSize="24sp"
-            android:visibility="gone"/>
-
-        <TextView
-            android:id="@+id/gallery_text_not_downloaded"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:text="@string/not_downloaded"
-            android:textColor="@color/grey"
-            android:textSize="24sp"
-            android:visibility="gone"/>
+            android:textSize="24sp"/>
 
         <TextView
             android:id="@+id/random_open_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginStart="24dp"
             android:fontFamily="@font/font_awesome"
             android:text="@string/fa_play"
-            android:textColor="@color/grey"
-            android:textSize="24sp"/>
-
-        <TextView
-            android:id="@+id/add_image_view"
-            android:visibility="gone"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:fontFamily="@font/font_awesome"
-            android:text="@string/fa_plus"
             android:textColor="@color/grey"
             android:textSize="24sp"/>
 

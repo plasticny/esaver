@@ -10,30 +10,31 @@ import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.material3.AlertDialog
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import com.example.viewer.struct.BookRecord
 import com.example.viewer.R
 import com.example.viewer.Util
-import com.example.viewer.database.BookDatabase
+import com.example.viewer.data.repository.BookRepository
+import com.example.viewer.data.repository.ExcludeTagRepository
+import com.example.viewer.data.repository.SearchRepository
+import com.example.viewer.data.struct.Book
+import com.example.viewer.data.struct.SearchMark
 import com.example.viewer.databinding.SearchActivityBinding
-import com.example.viewer.database.SearchDatabase
-import com.example.viewer.database.SearchDatabase.Companion.Category
 import com.example.viewer.databinding.ActivitySearchBookBinding
 import com.example.viewer.databinding.DialogSearchInfoBinding
 import com.example.viewer.dialog.SearchMarkDialog
 import com.example.viewer.dialog.SimpleEditTextDialog
-import com.example.viewer.struct.SearchMark
+import com.example.viewer.struct.BookSource
+import com.example.viewer.struct.Category
+import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
 import java.text.NumberFormat
 import java.util.Locale
-import kotlin.math.sign
 
 /**
  * intExtra: searchMarkId; -1 for temporary search mark
@@ -51,27 +52,24 @@ class SearchActivity: AppCompatActivity() {
             uploader: String = "",
             doExclude: Boolean = true
         ) {
-            SearchDatabase.getInstance(context).setTmpSearchMark(
-                SearchMark(
-                    name = context.getString(R.string.search),
-                    categories, keyword, tags, uploader, doExclude
-                )
+            SearchMark.setTmpSearchMark(
+                context,
+                categories, keyword, tags, uploader, doExclude
             )
             context.startActivity(
                 Intent(context, SearchActivity::class.java).apply {
-                    putExtra("searchMarkId", SearchDatabase.TEMP_SEARCH_MARK_ID)
+                    putExtra("searchMarkId", -1L)
                 }
             )
         }
     }
 
-    private lateinit var searchDataSet: SearchDatabase
-    private lateinit var searchMark: SearchMark
+    private lateinit var searchRepo: SearchRepository
+    private lateinit var excludeTagRepo: ExcludeTagRepository
+    private lateinit var searchMarkData: SearchMarkData
     private lateinit var binding: SearchActivityBinding
-    private lateinit var allSearchMarkIds: List<Int>
+    private lateinit var allSearchMarkIds: List<Long>
 
-    @Volatile
-    private var searchMarkId = -1
     @Volatile
     private var loadingMore = false
     private var position = -1
@@ -81,7 +79,7 @@ class SearchActivity: AppCompatActivity() {
     private var totalBookFiltered = -1
     private var lastExcludeTagUpdateTime = 0L
     private var isTemporarySearch = false
-    private var reseting = true
+    private var resetting = true
     private var doNoMoreAlerted = false
 
     // recycler view item metrics
@@ -97,17 +95,20 @@ class SearchActivity: AppCompatActivity() {
         coverImageWidth = (resources.displayMetrics.widthPixels - Util.dp2px(this, 80F)) / 2
         coverImageHeight = (coverImageWidth * 1.5).toInt()
 
-        searchDataSet = SearchDatabase.getInstance(baseContext)
-        allSearchMarkIds = searchDataSet.getAllSearchMarkIds()
-        lastExcludeTagUpdateTime = searchDataSet.lastExcludeTagUpdateTime()
+        searchRepo = SearchRepository(baseContext)
+        excludeTagRepo = ExcludeTagRepository(baseContext)
+        allSearchMarkIds = searchRepo.getAllSearchMarkIdsInOrder()
+        lastExcludeTagUpdateTime = excludeTagRepo.lastExcludeTagUpdateTime()
 
-        searchMarkId = intent.getIntExtra("searchMarkId", -1)
-        searchMark = searchDataSet.getSearchMark(searchMarkId)
-        println(searchMark.uploader)
-        isTemporarySearch = searchMarkId == -1
+        searchMarkData = packSearchMark(
+            intent.getLongExtra("searchMarkId", -1L).let {
+                if (it == -1L) SearchMark.getTmpSearchMark() else searchRepo.getSearchMark(it)
+            }
+        )
+        isTemporarySearch = searchMarkData.id == -1L
 
         // search mark position
-        position = allSearchMarkIds.indexOf(searchMarkId)
+        position = allSearchMarkIds.indexOf(searchMarkData.id)
 
         binding = SearchActivityBinding.inflate(layoutInflater)
 
@@ -118,7 +119,7 @@ class SearchActivity: AppCompatActivity() {
                 override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                     super.onScrolled(recyclerView, dx, dy)
 
-                    if (reseting) {
+                    if (resetting) {
                         return
                     }
 
@@ -141,7 +142,7 @@ class SearchActivity: AppCompatActivity() {
                 showNameField = !isTemporarySearch
                 showSaveButton = true
                 showSearchButton = true
-                saveCb = { retSearchMark ->
+                saveCb = { data ->
                     // save tmp search
                     if (isTemporarySearch) {
                         SimpleEditTextDialog(this@SearchActivity, layoutInflater).apply {
@@ -149,46 +150,59 @@ class SearchActivity: AppCompatActivity() {
                             hint = "起個名字"
                             validator = { it.trim().isNotEmpty() }
                             positiveCb = { name ->
-                                val saveSearchMark = SearchMark(
+                                val id = searchRepo.addSearchMark(
                                     name = name,
-                                    categories = retSearchMark.categories,
-                                    keyword = retSearchMark.keyword,
-                                    tags = retSearchMark.tags,
-                                    uploader = retSearchMark.uploader,
-                                    doExclude = retSearchMark.doExclude
+                                    categories = data.categories.toList(),
+                                    keyword = data.keyword,
+                                    tags = data.tags,
+                                    uploader = data.uploader,
+                                    doExclude = data.doExclude
                                 )
-                                searchMarkId = searchDataSet.addSearchMark(saveSearchMark)
-                                allSearchMarkIds = searchDataSet.getAllSearchMarkIds()
-                                position = allSearchMarkIds.indexOf(searchMarkId)
-                                isTemporarySearch = false
                                 Toast.makeText(baseContext, "已儲存", Toast.LENGTH_SHORT).show()
-                                searchMark = saveSearchMark
+
+                                allSearchMarkIds = searchRepo.getAllSearchMarkIdsInOrder()
+                                position = allSearchMarkIds.indexOf(id)
+                                isTemporarySearch = false
+                                searchMarkData = packSearchMark(searchRepo.getSearchMark(id))
                                 lifecycleScope.launch { reset() }
                             }
                         }.show()
                     }
                     // save modification
                     else {
-                        searchDataSet.modifySearchMark(searchMarkId, retSearchMark)
-                        searchMark = retSearchMark
+                        searchRepo.modifySearchMark(
+                            searchMarkData.id,
+                            name = data.name,
+                            categories = data.categories.toList(),
+                            keyword = data.keyword,
+                            tags = data.tags,
+                            uploader = data.uploader,
+                            doExclude = data.doExclude
+                        )
+                        searchMarkData = packSearchMark(searchRepo.getSearchMark(searchMarkData.id))
                         lifecycleScope.launch { reset() }
                     }
                 }
-                searchCb = { retSearchMark ->
-                    searchMark =
-                        if (isTemporarySearch)
-                            SearchMark (
-                                name = getString(R.string.search),
-                                categories = retSearchMark.categories,
-                                keyword = retSearchMark.keyword,
-                                tags = retSearchMark.tags,
-                                uploader = retSearchMark.uploader,
-                                doExclude = retSearchMark.doExclude
-                            )
-                        else retSearchMark
+                searchCb = { data ->
+                    searchMarkData = SearchMarkData(
+                        id = searchMarkData.id,
+                        name = if (isTemporarySearch) getString(R.string.search) else data.name,
+                        keyword = data.keyword,
+                        categories = data.categories.toList(),
+                        tags = data.tags,
+                        uploader = data.uploader,
+                        doExclude = data.doExclude
+                    )
                     lifecycleScope.launch { reset() }
                 }
-            }.show(searchMark)
+            }.show(
+                name = searchMarkData.name,
+                categories = searchMarkData.categories,
+                keyword = searchMarkData.keyword,
+                tags = searchMarkData.tags,
+                uploader = searchMarkData.uploader ?: "",
+                doExclude = searchMarkData.doExclude
+            )
         }
 
         binding.prevSearchMarkButton.apply {
@@ -200,8 +214,7 @@ class SearchActivity: AppCompatActivity() {
                     return@setOnClickListener
                 }
                 val id = allSearchMarkIds[--position]
-                searchMark = searchDataSet.getSearchMark(id)
-                searchMarkId = id
+                searchMarkData = packSearchMark(searchRepo.getSearchMark(id))
                 lifecycleScope.launch { reset() }
             }
         }
@@ -214,13 +227,12 @@ class SearchActivity: AppCompatActivity() {
                     return@setOnClickListener
                 }
                 val id = allSearchMarkIds[++position]
-                searchMark = searchDataSet.getSearchMark(id)
-                searchMarkId = id
+                searchMarkData = packSearchMark(searchRepo.getSearchMark(id))
                 lifecycleScope.launch { reset() }
             }
         }
         binding.infoButton.setOnClickListener {
-            if (!reseting) {
+            if (!resetting) {
                 showInfoDialog()
             }
         }
@@ -233,12 +245,12 @@ class SearchActivity: AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         // after paused, the exclude tags may updated, do the filter again
-        searchDataSet.lastExcludeTagUpdateTime().let { newTime ->
+        excludeTagRepo.lastExcludeTagUpdateTime().let { newTime ->
             if (newTime != lastExcludeTagUpdateTime) {
                 println("[${this::class.simpleName}.${this::onResume.name}] re-filter books")
                 recyclerViewAdapter.getBooks().let {
                     recyclerViewAdapter.refreshBooks(
-                        if (searchMark.doExclude) {
+                        if (searchMarkData.doExclude) {
                             excludeTagFilter(it)
                         } else it
                     )
@@ -248,8 +260,20 @@ class SearchActivity: AppCompatActivity() {
         }
     }
 
+    private fun packSearchMark (searchMark: SearchMark) =
+        SearchMarkData (
+            id = searchMark.id,
+            name = searchMark.name,
+            keyword = searchMark.keyword,
+            categories = Util.readListFromJson<Int>(searchMark.categoryOrdinalsJson)
+                .map { Util.categoryFromOrdinal(it) },
+            tags = Util.readMapFromJson(searchMark.tagsJson),
+            uploader = searchMark.uploader,
+            doExclude = searchMark.doExclude
+        )
+
     private suspend fun reset () {
-        reseting = true
+        resetting = true
 
         next = null
         totalBookCnt = -1 // the value is assigned in first book fetching
@@ -257,7 +281,7 @@ class SearchActivity: AppCompatActivity() {
         totalBookFiltered = 0
         doNoMoreAlerted = false
 
-        binding.searchMarkName.text = searchMark.name
+        binding.searchMarkName.text = searchMarkData.name
 
         if (!isTemporarySearch) {
             // no need to update these button if temporary search mark
@@ -266,25 +290,26 @@ class SearchActivity: AppCompatActivity() {
         }
 
         recyclerViewAdapter.clear()
-        if (isSearchMarkExcluded(searchMark)) {
+
+        if (excludeTagRepo.doExclude(searchMarkData.categories, searchMarkData.tags)) {
             doNoMoreAlerted = true
             Toast.makeText(baseContext, "所有書都被濾除了", Toast.LENGTH_SHORT).show()
         } else {
             loadMoreBooks()
         }
 
-        reseting = false
+        resetting = false
     }
 
     private suspend fun loadMoreBooks () {
-        val mySearchId = searchMarkId
+        val mySearchId = searchMarkData.id
 
         withContext(Dispatchers.IO) {
             while (loadingMore) {
                 Thread.sleep(100)
             }
         }
-        if (mySearchId != searchMarkId) {
+        if (mySearchId != searchMarkData.id) {
             return
         }
 
@@ -292,14 +317,14 @@ class SearchActivity: AppCompatActivity() {
 
         binding.searchProgressBar.wrapper.visibility = ProgressBar.VISIBLE
         val fetchedBooks = fetchBooks().also { totalBookLoaded += it.size }
-        val books = if (searchMark.doExclude) {
+        val books = if (searchMarkData.doExclude) {
             excludeTagFilter(fetchedBooks).also {
                 totalBookFiltered += (fetchedBooks.size - it.size)
             }
         } else fetchedBooks
         binding.searchProgressBar.wrapper.visibility = ProgressBar.GONE
 
-        if (mySearchId == searchMarkId) {
+        if (mySearchId == searchMarkData.id) {
             recyclerViewAdapter.addBooks(books)
         }
         loadingMore = false
@@ -308,16 +333,16 @@ class SearchActivity: AppCompatActivity() {
     /**
      * This method will access and change the private variable next
      */
-    private suspend fun fetchBooks (): List<BookRecord> {
-        val mySearchId = searchMarkId
+    private suspend fun fetchBooks (): List<SearchBookData> {
+        val mySearchId = searchMarkData.id
 
         val doc = withContext(Dispatchers.IO) {
             Jsoup.connect(
-                searchMark.getSearchUrl(next).also { println("[SearchActivity.fetchBooks] fetch book from\n$it") }
+                searchMarkData.getSearchUrl(next).also { println("[SearchActivity.fetchBooks] fetch book from\n$it") }
             ).get()
         }
 
-        if (mySearchId != searchMarkId) {
+        if (mySearchId != searchMarkData.id) {
             println("[${this::class.simpleName}.${this::fetchBooks.name}] terminated")
             return listOf()
         }
@@ -335,7 +360,17 @@ class SearchActivity: AppCompatActivity() {
         }
         if (totalBookCnt == -1) {
             totalBookCnt = doc.selectFirst(".searchtext")!!.text().let {
-                NumberFormat.getInstance(Locale.ENGLISH).parse(it.split(' ')[2])!!.toInt()
+                val num = it.split(' ').let { tokens ->
+                    when (tokens.size) {
+                        3 -> tokens[1]
+                        4 -> tokens[2]
+                        else -> Exception("Unexpected token size ${tokens.size}")
+                    } as String
+                }
+                if (num.last() == '+') {
+                    num.dropLast(1)
+                }
+                NumberFormat.getInstance(Locale.ENGLISH).parse(num)!!.toInt()
             }
         }
 
@@ -346,7 +381,7 @@ class SearchActivity: AppCompatActivity() {
             }
 
             val url = book.selectFirst(".gl1e a")!!.attr("href")
-            BookRecord(
+            SearchBookData(
                 id = url.let {
                     (if (url.last() == '/') url.dropLast(1) else url)
                         .split("/").let {
@@ -376,49 +411,43 @@ class SearchActivity: AppCompatActivity() {
         }
     }
 
-    private fun excludeTagFilter (books: List<BookRecord>): List<BookRecord> {
-        val excludeTagEntries = searchDataSet.getAllExcludeTag()
-        return books.filterNot {
-            book -> excludeTagEntries.any { it.second.excluded(book) }.also {
-                if (it) {
-                    println("[${this::class.simpleName}.${this::excludeTagFilter.name}] ${book.id} is excluded")
+    private fun excludeTagFilter (books: List<SearchBookData>): List<SearchBookData> =
+        books.filterNot {
+            excludeTagRepo.doExclude(listOf(Util.categoryFromName(it.cat)), it.tags).also { excluded ->
+                if (excluded) {
+                    println("[${this::class.simpleName}.${this::excludeTagFilter.name}] ${it.id} is excluded")
                 }
             }
         }
-    }
 
-    /**
-     * @return if the search mark is excluded by any exclude tag record
-     */
-    private fun isSearchMarkExcluded (searchMark: SearchMark): Boolean {
-        val excludeTagEntries = searchDataSet.getAllExcludeTag()
-        return excludeTagEntries.any { it.second.excluded(searchMark) }
-    }
-
-    private suspend fun fetchDetailBookRecord (briefBookRecord: BookRecord): BookRecord {
+    private suspend fun storeTmpBook (searchBookData: SearchBookData) {
         withContext(Dispatchers.Main) { binding.screenProgressBarWrapper.visibility = View.VISIBLE }
         val doc = withContext(Dispatchers.IO) {
-            Jsoup.connect(briefBookRecord.url).get()
+            Jsoup.connect(searchBookData.url).get()
         }
         withContext(Dispatchers.Main) { binding.screenProgressBarWrapper.visibility = View.GONE }
 
-        return BookRecord(
-            id = briefBookRecord.id,
-            url = briefBookRecord.url,
-            coverUrl = briefBookRecord.coverUrl,
-            cat = briefBookRecord.cat,
-            title = doc.selectFirst("#gj")!!.text().trim().ifEmpty { briefBookRecord.title },
-            subtitle = briefBookRecord.title,
-            pageNum = briefBookRecord.pageNum,
-            tags = doc.select("#taglist tr").run {
-                val tags = mutableMapOf<String, List<String>>()
-                forEach { tr ->
-                    val category = tr.selectFirst(".tc")!!.text().trim().dropLast(1)
-                    tags[category] = tr.select(".gt,.gtl,.gtw").map { it.text().trim() }
-                }
-                tags
-            },
-            uploader = doc.selectFirst("#gdn a")?.text()
+        val gson = Gson()
+
+        val tags = doc.select("#taglist tr").run {
+            val tags = mutableMapOf<String, List<String>>()
+            forEach { tr ->
+                val category = tr.selectFirst(".tc")!!.text().trim().dropLast(1)
+                tags[category] = tr.select(".gt,.gtl,.gtw").map { it.text().trim() }
+            }
+            tags
+        }
+        Book.setTmpBook(
+            id = searchBookData.id,
+            url = searchBookData.url,
+            title = doc.selectFirst("#gj")!!.text().trim().ifEmpty { searchBookData.title },
+            subTitle = searchBookData.title,
+            pageNum = searchBookData.pageNum,
+            categoryOrdinal = Util.categoryFromName(searchBookData.cat).ordinal,
+            uploader = doc.selectFirst("#gdn a")?.text(),
+            tagsJson = gson.toJson(tags),
+            sourceOrdinal = BookSource.E.ordinal,
+            pageUrlsJson = gson.toJson(listOf(searchBookData.coverUrl))
         )
     }
 
@@ -430,10 +459,77 @@ class SearchActivity: AppCompatActivity() {
             resultNumber.text = totalBookCnt.toString()
             loadedNumber.text = totalBookLoaded.toString()
             filteredNumber.text = totalBookFiltered.toString()
-            filteredDisabledLabel.visibility = if (searchMark.doExclude) View.GONE else View.VISIBLE
+            filteredDisabledLabel.visibility = if (searchMarkData.doExclude) View.GONE else View.VISIBLE
         }
 
         dialog.show()
+    }
+
+    data class SearchBookData (
+        val id: String,
+        val url: String,
+        val coverUrl: String,
+        val cat: String,
+        val title: String,
+        val pageNum: Int,
+        val tags: Map<String, List<String>>
+    )
+
+    /**
+     * re-packed search mark data for this activity
+      */
+    private data class SearchMarkData (
+        val id: Long,
+        val name: String,
+        val keyword: String,
+        val categories: List<Category>,
+        val tags: Map<String, List<String>>,
+        val uploader: String?,
+        val doExclude: Boolean
+    ) {
+        fun getSearchUrl (next: String? = null): String {
+            val fCatsValue = 1023 - if (categories.isNotEmpty()) {
+                categories.sumOf { it.value }
+            } else {
+                Category.entries.sumOf { it.value }
+            }
+
+            // f search
+            var fSearch = ""
+            if (keyword.isNotEmpty()) {
+                fSearch += "$keyword+"
+            }
+            if (tags.isNotEmpty() || uploader?.isNotEmpty() == true) {
+                val tokens = mutableListOf<String>()
+                tags.forEach { entry ->
+                    val cat = entry.key
+                    for (value in entry.value) {
+                        tokens.add(buildTagValueString(cat, value))
+                    }
+                }
+                if (uploader?.isNotEmpty() == true) {
+                    tokens.add(buildTagValueString("uploader", uploader))
+                }
+                fSearch += tokens.joinToString(" ")
+            }
+
+            var ret = "https://e-hentai.org/?f_cats=$fCatsValue&"
+            if (fSearch.isNotEmpty()) {
+                ret += "f_search=$fSearch&"
+            }
+            ret += "inline_set=dm_e&"
+            next?.let { ret += "next=$next" }
+
+            return ret
+        }
+
+        private fun buildTagValueString (category: String, value: String): String {
+            return if (value.contains(' ')) {
+                "${category}%3A\"${value}%24\""
+            } else {
+                "${category}%3A${value}%24"
+            }
+        }
     }
 
     //
@@ -443,7 +539,7 @@ class SearchActivity: AppCompatActivity() {
     inner class BookRecyclerViewAdapter: RecyclerView.Adapter<BookRecyclerViewAdapter.ViewHolder>() {
         inner class ViewHolder (val binding: ActivitySearchBookBinding): RecyclerView.ViewHolder(binding.root)
 
-        private val bookRecords = mutableListOf<BookRecord>()
+        private val bookRecords = mutableListOf<SearchBookData>()
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
             val binding = ActivitySearchBookBinding.inflate(layoutInflater, parent, false)
@@ -478,13 +574,18 @@ class SearchActivity: AppCompatActivity() {
             binding.root.apply {
                 setOnClickListener {
                     lifecycleScope.launch {
-                        val bookDb = BookDatabase.getInstance(baseContext)
+                        val bookDb = BookRepository(baseContext)
                         val intent = Intent(context, BookProfileActivity::class.java)
                         intent.putExtra(
-                            "book_record",
+                            "bookId",
                             if (bookDb.isBookStored(bookRecord.id)) {
-                                bookDb.getBook(baseContext, bookRecord.id)
-                            } else withContext(Dispatchers.IO) { fetchDetailBookRecord(bookRecord) }
+                                bookRecord.id
+                            } else {
+                                withContext(Dispatchers.IO) {
+                                    storeTmpBook(bookRecord)
+                                }
+                                "-1"
+                            }
                         )
                         startActivity(intent)
                     }
@@ -492,15 +593,15 @@ class SearchActivity: AppCompatActivity() {
             }
         }
 
-        fun getBooks (): List<BookRecord> = bookRecords
+        fun getBooks (): List<SearchBookData> = bookRecords
 
-        fun addBooks (books: List<BookRecord>) {
+        fun addBooks (books: List<SearchBookData>) {
             val positionStart = bookRecords.size
             bookRecords.addAll(books)
             notifyItemRangeInserted(positionStart, books.size)
         }
 
-        fun refreshBooks (books: List<BookRecord>) {
+        fun refreshBooks (books: List<SearchBookData>) {
             bookRecords.clear()
             bookRecords.addAll(books)
             notifyDataSetChanged()

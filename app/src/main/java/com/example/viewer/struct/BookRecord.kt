@@ -3,13 +3,8 @@ package com.example.viewer.struct
 import android.os.Bundle
 import android.os.Parcel
 import android.os.Parcelable
-import com.example.viewer.Util
-import com.example.viewer.database.BookSource
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import org.jsoup.Jsoup
 
-data class BookRecord (
+data class BookRecordT (
     val id: String,
     val url: String,
     val coverUrl: String,
@@ -21,12 +16,12 @@ data class BookRecord (
     val groupId: Int = -1,
     val uploader: String? = null
 ): Parcelable {
-    companion object CREATOR : Parcelable.Creator<BookRecord> {
-        override fun createFromParcel(parcel: Parcel): BookRecord {
-            return BookRecord(parcel)
+    companion object CREATOR : Parcelable.Creator<BookRecordT> {
+        override fun createFromParcel(parcel: Parcel): BookRecordT {
+            return BookRecordT(parcel)
         }
 
-        override fun newArray(size: Int): Array<BookRecord?> {
+        override fun newArray(size: Int): Array<BookRecordT?> {
             return arrayOfNulls(size)
         }
      }

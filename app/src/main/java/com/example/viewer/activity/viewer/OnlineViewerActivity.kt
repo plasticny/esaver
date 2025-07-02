@@ -1,12 +1,11 @@
 package com.example.viewer.activity.viewer
 
-import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
 import com.example.viewer.R
-import com.example.viewer.dialog.ConfirmDialog
-import com.example.viewer.struct.BookRecord
+import com.example.viewer.data.repository.BookRepository
+import com.example.viewer.data.struct.Book
 import com.example.viewer.fetcher.EPictureFetcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -15,9 +14,10 @@ import kotlinx.coroutines.withContext
 import kotlin.math.floor
 
 class OnlineViewerActivity: BaseViewerActivity() {
-    private lateinit var bookRecord: BookRecord
+    private lateinit var book: Book
     private lateinit var fetcher: EPictureFetcher
     private lateinit var pictureUrls: MutableList<String?>
+    private lateinit var bookRepo: BookRepository
 
     private var endOfBookNotified = false
 
@@ -25,17 +25,15 @@ class OnlineViewerActivity: BaseViewerActivity() {
     override val enableJumpToButton = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        bookRecord = if (Build.VERSION.SDK_INT > Build.VERSION_CODES.S_V2) {
-            intent.getParcelableExtra("book_record", BookRecord::class.java)!!
-        } else {
-            intent.getParcelableExtra("book_record")!!
-        }
+        bookRepo = BookRepository(baseContext)
+
+        book = Book.getTmpBook()
         page = 0
         firstPage = 0
-        lastPage = bookRecord.pageNum - 1
+        lastPage = book.pageNum - 1
 
-        fetcher = EPictureFetcher(this, pageNum = bookRecord.pageNum, bookUrl = bookRecord.url)
-        pictureUrls = MutableList(bookRecord.pageNum) { null }
+        fetcher = EPictureFetcher(this, pageNum = book.pageNum, bookUrl = book.url)
+        pictureUrls = MutableList(book.pageNum) { null }
 
         super.onCreate(savedInstanceState)
     }

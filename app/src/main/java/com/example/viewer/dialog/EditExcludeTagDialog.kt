@@ -3,6 +3,8 @@ package com.example.viewer.dialog
 import android.content.Context
 import android.view.LayoutInflater
 import android.widget.Toast
+import com.example.viewer.data.struct.ExcludeTag
+import com.example.viewer.struct.Category
 import com.example.viewer.struct.ExcludeTagRecord
 import com.example.viewer.struct.SearchMark
 
@@ -19,7 +21,7 @@ class EditExcludeTagDialog (
         showSaveButton = true
     }
 
-    override fun checkValid(item: SearchMark): Boolean {
+    override fun checkValid(item: DialogData): Boolean {
         if (item.tags.isEmpty()) {
             Toast.makeText(context, "需要至少一個標籤", Toast.LENGTH_SHORT).show()
             return false
@@ -27,23 +29,33 @@ class EditExcludeTagDialog (
         return super.checkValid(item)
     }
 
-    fun show(record: ExcludeTagRecord, onSave: (ExcludeTagRecord) -> Unit) {
+    fun show (
+        categories: List<Category>,
+        tags: Map<String, List<String>>,
+        onSave: (OnSaveData) -> Unit
+    ) {
         saveCb = { itemToSave ->
-            val recordToSave = ExcludeTagRecord(
+            val recordToSave = OnSaveData(
                 itemToSave.tags,
                 itemToSave.categories.toSet()
             )
             onSave(recordToSave)
         }
         super.show(
-            SearchMark(
-                name = "",
-                categories = record.categories.toList(),
-                keyword = "",
-                tags = record.tags,
-                uploader = "",
-                doExclude = false
-            )
+            name = "",
+            categories = categories,
+            keyword = "",
+            tags = tags,
+            uploader = "",
+            doExclude = false
         )
     }
+
+    fun show(record: ExcludeTag, onSave: (OnSaveData) -> Unit) =
+        show(record.getCategories(), record.getTags(), onSave)
+
+    data class OnSaveData (
+        val tags: Map<String, List<String>>,
+        val categories: Set<Category>
+    )
 }

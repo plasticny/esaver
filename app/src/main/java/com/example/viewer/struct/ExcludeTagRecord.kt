@@ -1,7 +1,6 @@
 package com.example.viewer.struct
 
 import com.example.viewer.Util
-import com.example.viewer.database.SearchDatabase.Companion.Category
 
 data class ExcludeTagRecord (
     val tags: Map<String, List<String>>,
@@ -14,7 +13,7 @@ data class ExcludeTagRecord (
             return "${Util.TAG_TRANSLATION_MAP[tagCategory]} - $tagValue"
         }
 
-    fun excluded (bookRecord: BookRecord): Boolean {
+    fun excluded (bookRecord: BookRecordT): Boolean {
         if (!categories.contains(Util.categoryFromName(bookRecord.cat))) {
             return false
         }

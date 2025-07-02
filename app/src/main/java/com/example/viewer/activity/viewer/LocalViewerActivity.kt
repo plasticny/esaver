@@ -9,15 +9,17 @@ import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.lifecycleScope
 import com.example.viewer.R
 import com.example.viewer.fetcher.BasePictureFetcher
-import com.example.viewer.database.BookDatabase
 import com.example.viewer.RandomBook
 import com.example.viewer.Util
+import com.example.viewer.data.database.BookDatabase
+import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.databinding.ViewerImageDialogBinding
 import com.example.viewer.dialog.BookmarkDialog
 import com.example.viewer.dialog.ConfirmDialog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
@@ -32,7 +34,7 @@ class LocalViewerActivity: BaseViewerActivity() {
         private const val ROTATE_RIGHT = 90F
     }
 
-    private lateinit var bookDataset: BookDatabase
+    private lateinit var bookDataset: BookRepository
 
     private lateinit var fetcher: BasePictureFetcher
 
@@ -49,7 +51,7 @@ class LocalViewerActivity: BaseViewerActivity() {
     override val enableJumpToButton = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        bookDataset = BookDatabase.getInstance(baseContext)
+        bookDataset = BookRepository(baseContext)
         bookId = intent.getStringExtra("bookId")!!
         prepareBook(bookId)
 
@@ -185,7 +187,10 @@ class LocalViewerActivity: BaseViewerActivity() {
         // skip page button
         dialogViewBinding.viewImgDialogSkipButton.apply {
             setOnClickListener {
-                bookDataset.setBookSkipPages(bookId, skipPageSet.toMutableList().also { it.add(page) })
+                bookDataset.setBookSkipPages(
+                    bookId,
+                    skipPageSet.toMutableList().also { it.add(page) }
+                )
                 skipPageSet = bookDataset.getBookSkipPages(bookId).toSet()
 
                 if (bookDataset.getBookCoverPage(bookId) != page) {
@@ -240,7 +245,9 @@ class LocalViewerActivity: BaseViewerActivity() {
     private fun nextBook () {
         bookId = RandomBook.next(this, !Util.isInternetAvailable(this))
         prepareBook(bookId)
-        bookDataset.updateBookLastViewTime(bookId)
+        runBlocking {
+            bookDataset.updateBookLastViewTime(bookId)
+        }
         loadPage()
     }
 

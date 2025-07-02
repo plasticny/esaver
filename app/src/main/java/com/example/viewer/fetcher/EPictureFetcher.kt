@@ -3,7 +3,8 @@ package com.example.viewer.fetcher
 import android.content.Context
 import android.widget.Toast
 import com.example.viewer.Util
-import com.example.viewer.database.BookDatabase
+import com.example.viewer.data.database.BookDatabase
+import com.example.viewer.data.repository.BookRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jsoup.HttpStatusException
@@ -18,7 +19,7 @@ class EPictureFetcher: BasePictureFetcher {
             }.html().contains("<h1>Content Warning</h1>")
     }
 
-    private val bookDataset = BookDatabase.getInstance(context)
+    private val bookDataset = BookRepository(context)
     private val bookUrl: String
 
     private val fetchingPictureUrl = mutableSetOf<Int>()

@@ -21,6 +21,8 @@
     <string name="fa_circle_info">\uf05a</string>
     <string name="fa_download">\uf019</string>
     <string name="fa_ellipsis_vertical">\uf142</string>
+    <string name="fa_up_down">\uf338</string>
+    <string name="fa_up_down_left_right">\uf0b2</string>
 <!--  strings  -->
     <string name="app_name">eSaver</string>
     <string name="enter_url">輸入URL</string>
@@ -41,6 +43,7 @@
     <string name="rotate_left_90">左轉90°</string>
     <string name="rotate_right_90">右轉90°</string>
     <string name="select_group">選擇分組</string>
+    <string name="jump_to_group">跳至分組</string>
     <string name="book_gallery">書庫</string>
     <string name="search">搜尋</string>
     <string name="category">類別</string>

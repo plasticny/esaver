@@ -17,24 +17,18 @@ import androidx.fragment.app.Fragment
 import com.example.viewer.R
 import com.example.viewer.Util
 import com.example.viewer.activity.SearchActivity
+import com.example.viewer.data.repository.SearchRepository
+import com.example.viewer.data.struct.SearchMark
 import com.example.viewer.databinding.MainSearchFragmentBinding
 import com.example.viewer.databinding.SearchMarkBinding
-import com.example.viewer.database.SearchDatabase
 import com.example.viewer.dialog.ConfirmDialog
 import com.example.viewer.dialog.FilterOutDialog
 import com.example.viewer.dialog.SearchMarkDialog
-import com.example.viewer.struct.SearchMark
-
-data class SearchMarkEntry (
-    val id: Int,
-    val searchMark: SearchMark,
-    val binding: SearchMarkBinding
-)
 
 class SearchMarkFragment: Fragment() {
     private lateinit var parent: ViewGroup
     private lateinit var binding: MainSearchFragmentBinding
-    private lateinit var searchDataset: SearchDatabase
+    private lateinit var searchRepo: SearchRepository
 
     private var focusedSearchMark: SearchMarkEntry? = null
     private var searchMarkListLastUpdate = 0L
@@ -45,10 +39,10 @@ class SearchMarkFragment: Fragment() {
         savedInstanceState: Bundle?
     ): View {
         parent = container!!
-        searchDataset = SearchDatabase.getInstance(parent.context)
+        searchRepo = SearchRepository(parent.context)
         binding = MainSearchFragmentBinding.inflate(layoutInflater, parent, false)
 
-        searchMarkListLastUpdate = searchDataset.getSearchMarkListUpdateTime()
+        searchMarkListLastUpdate = searchRepo.getSearchMarkListUpdateTime()
 
         binding.searchEditText.apply {
             setOnEditorActionListener { _, actionId, event ->
@@ -69,25 +63,18 @@ class SearchMarkFragment: Fragment() {
                     title = "進階搜尋"
                     showNameField = false
                     showSearchButton = true
-                    searchCb = { retSearchMark ->
+                    searchCb = { data ->
                         SearchActivity.startTmpSearch(
                             context,
-                            retSearchMark.categories,
-                            retSearchMark.keyword,
-                            retSearchMark.tags,
-                            retSearchMark.uploader,
-                            retSearchMark.doExclude
+                            data.categories.toList(),
+                            data.keyword,
+                            data.tags,
+                            data.uploader,
+                            data.doExclude
                         )
                     }
                 }.show(
-                    SearchMark (
-                        name = "",
-                        categories = listOf(),
-                        keyword = binding.searchEditText.text.toString().trim(),
-                        tags = mapOf(),
-                        uploader = "",
-                        doExclude = true
-                    )
+                    keyword = binding.searchEditText.text.toString().trim()
                 )
             }
         }
@@ -96,8 +83,15 @@ class SearchMarkFragment: Fragment() {
             SearchMarkDialog(parent.context, layoutInflater).apply {
                 title = "新增搜尋標記"
                 showConfirmButton = true
-                confirmCb = { retSearchMark ->
-                    searchDataset.addSearchMark(retSearchMark)
+                confirmCb = { data ->
+                    searchRepo.addSearchMark(
+                        name = data.name,
+                        categories = data.categories.toList(),
+                        keyword = data.keyword,
+                        tags = data.tags,
+                        uploader = data.uploader,
+                        doExclude = data.doExclude
+                    )
                     refreshSearchMarkWrapper()
                 }
             }.show()
@@ -114,8 +108,16 @@ class SearchMarkFragment: Fragment() {
                 SearchMarkDialog(parent.context, layoutInflater).apply {
                     title = "編輯搜尋標記"
                     showConfirmButton = true
-                    confirmCb = { retSearchMark ->
-                        searchDataset.modifySearchMark(entry.id, retSearchMark)
+                    confirmCb = { data ->
+                        searchRepo.modifySearchMark(
+                            id = entry.id,
+                            name = data.name,
+                            categories = data.categories.toList(),
+                            keyword = data.keyword,
+                            tags = data.tags,
+                            uploader = data.uploader,
+                            doExclude = data.doExclude
+                        )
                         deFocusSearchMark(doModifyBindingStyle = false)
                         refreshSearchMarkWrapper()
                     }
@@ -128,7 +130,7 @@ class SearchMarkFragment: Fragment() {
                 ConfirmDialog(parent.context, inflater).show(
                     "刪除${it.searchMark.name}嗎？",
                     positiveCallback = {
-                        searchDataset.removeSearchMark(it.id)
+                        searchRepo.removeSearchMark(it.id)
                         deFocusSearchMark(doModifyBindingStyle = false)
                         refreshSearchMarkWrapper()
                     }
@@ -145,7 +147,7 @@ class SearchMarkFragment: Fragment() {
         super.onResume()
         binding.searchEditText.text.clear()
 
-        searchDataset.getSearchMarkListUpdateTime().let {
+        searchRepo.getSearchMarkListUpdateTime().let {
             if (it != searchMarkListLastUpdate) {
                 refreshSearchMarkWrapper()
                 searchMarkListLastUpdate = it
@@ -157,7 +159,7 @@ class SearchMarkFragment: Fragment() {
     private fun refreshSearchMarkWrapper () {
         binding.searchMarkWrapper.removeAllViews()
 
-        for ((id, searchMark) in getSearchMarkEntries()) {
+        for (searchMark in searchRepo.getAllSearchMarkInListOrder()) {
             val searchMarkBinding = SearchMarkBinding.inflate(layoutInflater, binding.searchMarkWrapper, true)
 
             searchMarkBinding.name.text = searchMark.name
@@ -171,11 +173,11 @@ class SearchMarkFragment: Fragment() {
                         }
                         context.startActivity(
                             Intent(context, SearchActivity::class.java).apply {
-                                putExtra("searchMarkId", id)
+                                putExtra("searchMarkId", searchMark.id)
                             }
                         )
-                    } else if (focusedSearchMark!!.id != id) {
-                        changeFocusSearchMark(id, searchMark, searchMarkBinding)
+                    } else if (focusedSearchMark!!.id != searchMark.id) {
+                        changeFocusSearchMark(searchMark.id, searchMark, searchMarkBinding)
                     } else {
                         deFocusSearchMark()
                     }
@@ -183,14 +185,14 @@ class SearchMarkFragment: Fragment() {
 
                 setOnLongClickListener { v ->
                     if (focusedSearchMark == null) {
-                        focusSearchMark(id, searchMark, searchMarkBinding)
-                    } else if (focusedSearchMark!!.id != id) {
-                        changeFocusSearchMark(id, searchMark, searchMarkBinding)
+                        focusSearchMark(searchMark.id, searchMark, searchMarkBinding)
+                    } else if (focusedSearchMark!!.id != searchMark.id) {
+                        changeFocusSearchMark(searchMark.id, searchMark, searchMarkBinding)
                     } else {
                         val dragData = ClipData(
                             "drag search mark",
                             arrayOf(ClipDescription.MIMETYPE_TEXT_PLAIN),
-                            ClipData.Item(id.toString())
+                            ClipData.Item(searchMark.id.toString())
                         )
                         v.startDragAndDrop(
                             dragData,
@@ -205,9 +207,9 @@ class SearchMarkFragment: Fragment() {
                 setOnDragListener { _, event ->
                     when (event.action) {
                         DragEvent.ACTION_DROP -> {
-                            val dragId = event.clipData.getItemAt(0).text.toString().toInt()
-                            if (dragId != id) {
-                                searchDataset.moveSearchMarkPosition(dragId, id)
+                            val dragId = event.clipData.getItemAt(0).text.toString().toLong()
+                            if (dragId != searchMark.id) {
+                                searchRepo.moveSearchMarkPosition(dragId, searchMark.id)
                                 deFocusSearchMark(doModifyBindingStyle = false)
                                 refreshSearchMarkWrapper()
                             }
@@ -219,7 +221,7 @@ class SearchMarkFragment: Fragment() {
         }
     }
 
-    private fun focusSearchMark (id: Int, searchMark: SearchMark, searchMarkBinding: SearchMarkBinding) {
+    private fun focusSearchMark (id: Long, searchMark: SearchMark, searchMarkBinding: SearchMarkBinding) {
         binding.notFocusedToolBarWrapper.visibility = View.GONE
         binding.focusedToolBarWrapper.visibility = View.VISIBLE
         searchMarkBinding.name.setTextColor(parent.context.getColor(R.color.black))
@@ -239,7 +241,7 @@ class SearchMarkFragment: Fragment() {
         focusedSearchMark = null
     }
 
-    private fun changeFocusSearchMark (id: Int, searchMark: SearchMark, searchMarkBinding: SearchMarkBinding) {
+    private fun changeFocusSearchMark (id: Long, searchMark: SearchMark, searchMarkBinding: SearchMarkBinding) {
         focusedSearchMark!!.binding.let {
             it.name.setTextColor(parent.context.getColor(R.color.white))
             it.root.backgroundTintList = ColorStateList.valueOf(parent.context.getColor(R.color.dark_grey))
@@ -249,11 +251,9 @@ class SearchMarkFragment: Fragment() {
         focusedSearchMark = SearchMarkEntry(id, searchMark, searchMarkBinding)
     }
 
-    /**
-     * @return list of pair, first of pair is id, second is search mark instance
-     */
-    private fun getSearchMarkEntries (): List<Pair<Int, SearchMark>> =
-       searchDataset.getAllSearchMarkIds().map { id ->
-           Pair(id, searchDataset.getSearchMark(id))
-       }
+    data class SearchMarkEntry (
+        val id: Long,
+        val searchMark: SearchMark,
+        val binding: SearchMarkBinding
+    )
 }

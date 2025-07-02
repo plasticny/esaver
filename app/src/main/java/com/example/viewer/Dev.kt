@@ -1,13 +1,15 @@
 package com.example.viewer
 
 import android.content.Context
+import com.example.viewer.database.SearchPreference
 
 /**
  * for development usage and backup code
  */
 class Dev {
     companion object {
-        fun run (context: Context) {
+        suspend fun run (context: Context) {
+//            SearchPreference.getInstance(context).syncToRoom(context)
         }
     }
 
