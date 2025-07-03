@@ -85,9 +85,6 @@ class BookRepository (private val context: Context) {
         source: BookSource,
         uploader: String?
     ) = runBlocking {
-        if (pageNum < 1) {
-            throw Exception("Invalid pageNum $pageNum")
-        }
         val gson = Gson()
         bookDao.insert(
             Book(
@@ -111,6 +108,8 @@ class BookRepository (private val context: Context) {
             )
         )
     }
+
+    fun addBook (book: Book) = runBlocking { bookDao.insert(book) }
 
     fun getBook (id: String): Book =
         if (id == "-1") { Book.getTmpBook() } else runBlocking { bookDao.queryById(id) }

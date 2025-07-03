@@ -23,6 +23,7 @@ import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.data.repository.ExcludeTagRepository
 import com.example.viewer.data.repository.GroupRepository
 import com.example.viewer.data.struct.Book
+import com.example.viewer.data.struct.Group
 import com.example.viewer.databinding.BookProfileActivityBinding
 import com.example.viewer.databinding.BookProfileTagBinding
 import com.example.viewer.databinding.DialogBookInfoBinding
@@ -64,6 +65,7 @@ class BookProfileActivity: AppCompatActivity() {
     private lateinit var book: Book
     private lateinit var rootBinding: BookProfileActivityBinding
     private lateinit var bookRepo: BookRepository
+    private lateinit var groupRepo: GroupRepository
     private lateinit var excludedTags: Map<String, Set<String>>
 
     private var isBookStored: Boolean = false
@@ -72,6 +74,7 @@ class BookProfileActivity: AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         bookRepo = BookRepository(baseContext)
+        groupRepo = GroupRepository(baseContext)
 
         book = bookRepo.getBook(intent.getStringExtra("bookId")!!)
 
@@ -180,6 +183,14 @@ class BookProfileActivity: AppCompatActivity() {
             showInfoDialog()
         }
 
+        rootBinding.saveAsButton.setOnClickListener {
+            ConfirmDialog(this@BookProfileActivity, layoutInflater)
+                .show(
+                    message = "另存這本書？",
+                    positiveCallback = { saveAsBook() }
+                )
+        }
+
         rootBinding.deleteButton.apply {
             setOnClickListener {
                 if (!isBookStored) {
@@ -214,7 +225,7 @@ class BookProfileActivity: AppCompatActivity() {
 
         setContentView(rootBinding.root)
 
-        refreshActionBar()
+        refreshButtons()
     }
 
     override fun onResume() {
@@ -317,17 +328,19 @@ class BookProfileActivity: AppCompatActivity() {
         }
 
     /**
-     * modify buttons in action bar based on the current book stored state
+     * modify buttons based on the current book stored state
      */
-    private fun refreshActionBar () {
+    private fun refreshButtons () {
         if (isBookStored) {
             rootBinding.saveButton.visibility = View.GONE
             rootBinding.localSettingButton.visibility = View.VISIBLE
             rootBinding.deleteButton.visibility = View.VISIBLE
+            rootBinding.saveAsButton.visibility = View.VISIBLE
         } else {
             rootBinding.saveButton.visibility = View.VISIBLE
             rootBinding.localSettingButton.visibility = View.GONE
             rootBinding.deleteButton.visibility = View.GONE
+            rootBinding.saveAsButton.visibility = View.GONE
         }
     }
 
@@ -391,7 +404,7 @@ class BookProfileActivity: AppCompatActivity() {
             }
         }
 
-        BookRepository(baseContext).addBook(
+        bookRepo.addBook(
             id = book.id,
             url = book.url,
             category = book.getCategory(),
@@ -402,15 +415,62 @@ class BookProfileActivity: AppCompatActivity() {
             source = BookSource.E,
             uploader = book.uploader
         )
-        GroupRepository(baseContext).addBookIdToGroup(GroupRepository.DEFAULT_GROUP_ID, book.id)
+        groupRepo.addBookIdToGroup(GroupRepository.DEFAULT_GROUP_ID, book.id)
 
         // update ui
         toggleProgressBar(false)
         isBookStored = true
-        book = BookRepository(baseContext).getBook(book.id)
-        refreshActionBar()
+        book = bookRepo.getBook(book.id)
+        refreshButtons()
         ConfirmDialog(this, layoutInflater).show(
             "已加入到書庫，返回書庫？",
+            positiveCallback = {
+                startActivity(
+                    Intent(baseContext, MainActivity::class.java).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                    }
+                )
+            }
+        )
+    }
+
+    @Transaction
+    private fun saveAsBook () {
+        val newBook = Book(
+            id = "${book.id}_${System.currentTimeMillis()}",
+            url = book.url,
+            title = book.title,
+            subTitle = book.subTitle,
+            pageNum = book.pageNum,
+            categoryOrdinal = book.categoryOrdinal,
+            uploader = book.uploader,
+            tagsJson = book.tagsJson,
+            sourceOrdinal = book.sourceOrdinal,
+            coverPage = book.coverPage,
+            skipPagesJson = book.skipPagesJson,
+            lastViewTime = -1L,
+            bookMarksJson = book.bookMarksJson,
+            pageUrlsJson = book.pageUrlsJson,
+            p = book.p
+        )
+
+        File(getExternalFilesDir(null), newBook.id).also { newFolder ->
+            if (!newFolder.exists()) {
+                newFolder.mkdirs()
+            }
+            val originFolder = File(getExternalFilesDir(null), book.id)
+            for (originFile in originFolder.listFiles()!!) {
+                val newFile = File(newFolder, originFile.name)
+                originFile.copyTo(newFile)
+            }
+        }
+
+        bookRepo.addBook(newBook)
+        groupRepo.addBookIdToGroup(GroupRepository.DEFAULT_GROUP_ID, newBook.id)
+
+        book = bookRepo.getBook(newBook.id)
+        ConfirmDialog(this, layoutInflater).show(
+            "已另存，返回書庫？",
             positiveCallback = {
                 startActivity(
                     Intent(baseContext, MainActivity::class.java).apply {

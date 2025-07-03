@@ -72,6 +72,12 @@ data class Book (
         }
     }
 
+    init {
+        if (pageNum < 1) {
+            throw IllegalArgumentException("Invalid pageNum $pageNum")
+        }
+    }
+
     fun getTags (): Map<String, List<String>> = Util.readMapFromJson(tagsJson)
 
     fun getCategory () = Util.categoryFromOrdinal(categoryOrdinal)
