@@ -15,8 +15,8 @@ import java.io.File
 data class Book (
     @PrimaryKey val id: String,
     val url: String,
-    val title: String,
-    val subTitle: String,
+    val title: String, // origin title
+    val subTitle: String, // origin sub-title
     val pageNum: Int,
     val categoryOrdinal: Int,
     val uploader: String?,
@@ -27,6 +27,7 @@ data class Book (
     var skipPagesJson: String,
     var lastViewTime: Long,
     var bookMarksJson: String,
+    var customTitle: String?, // title set by user, it has higher display priority if it is not null
     // for e book only
     var pageUrlsJson: String?,
     var p: Int?
@@ -60,6 +61,7 @@ data class Book (
                 skipPagesJson = "[]",
                 lastViewTime = 0L,
                 bookMarksJson = "[]",
+                customTitle = null,
                 pageUrlsJson = pageUrlsJson,
                 p = null
             )

@@ -44,6 +44,13 @@ interface BookDao {
     @Query("SELECT lastViewTime FROM Books WHERE id = :id")
     suspend fun getLastViewTime (id: String): Long
 
+    @Query("" +
+        "UPDATE Books " +
+        "SET customTitle = (CASE WHEN :value = '' THEN NULL ELSE :value END) " +
+        "WHERE id = :id" +
+    "")
+    suspend fun updateCustomTitle (id: String, value: String)
+
     @Query("DELETE FROM Books WHERE id = :id")
     suspend fun deleteById (id: String)
 }

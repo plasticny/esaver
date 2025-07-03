@@ -23,13 +23,17 @@ class LocalReadSettingDialog (
 
     fun show (
         book: Book,
-        onApplied: (coverPageUpdated: Boolean) -> Unit
+        onApplied: () -> Unit
     ) {
         val skipPages = bookRepo.getBookSkipPages(book.id)
         val groupId = bookRepo.getGroupId(book.id)
 
         dialogBinding.groupNameEditText.setText(
             groupRepo.getGroupName(groupId)
+        )
+
+        dialogBinding.customTitleEditText.setText(
+            book.customTitle ?: ""
         )
 
         dialogBinding.profileDialogCoverPageEditText.setText(
@@ -45,8 +49,7 @@ class LocalReadSettingDialog (
         }
 
         dialogBinding.profileDialogApplyButton.setOnClickListener {
-            var coverPageUpdated = false
-
+            // group
             val groupName = dialogBinding.groupNameEditText.text.toString().trim()
             val selectedGroupId = groupName.let {
                 if (it.isEmpty()) {
@@ -64,6 +67,12 @@ class LocalReadSettingDialog (
                 groupRepo.changeGroup(book.id, groupId, selectedGroupId)
             }
 
+            // custom title
+            dialogBinding.customTitleEditText.text.toString().let {
+                bookRepo.updateCustomTitle(book.id, it.trim())
+            }
+
+            // cover page
             val coverPage = dialogBinding.profileDialogCoverPageEditText.text.toString().trim().let {
                 if (it.isEmpty()) {
                     Toast.makeText(context, "封面頁不能為空", Toast.LENGTH_SHORT).show()
@@ -76,20 +85,16 @@ class LocalReadSettingDialog (
                     return@setOnClickListener
                 }
             }
-            if (coverPage != bookRepo.getBookCoverPage(book.id) + 1) {
-                runBlocking {
-                    bookRepo.setBookCoverPage(book.id, coverPage - 1)
-                }
-                coverPageUpdated = true
-            }
+            bookRepo.setBookCoverPage(book.id, coverPage - 1)
 
+            // skip page
             updateSkipPages(
                 book.id,
                 dialogBinding.profileDialogSkipPagesEditText.text.toString().trim(),
                 skipPages
             )
 
-            onApplied(coverPageUpdated)
+            onApplied()
 
             dialog.dismiss()
         }

@@ -59,6 +59,7 @@ class BookRepository (private val context: Context) {
                     skipPagesJson = gson.toJson(skipPages).toString(),
                     lastViewTime = lastViewTime,
                     bookMarksJson = gson.toJson(bookMarks).toString(),
+                    customTitle = null,
                     pageUrlsJson = pageUrls?.let {
                         gson.toJson(it).toString()
                     },
@@ -101,6 +102,7 @@ class BookRepository (private val context: Context) {
                 skipPagesJson = gson.toJson(listOf<Int>()).toString(),
                 lastViewTime = -1L,
                 bookMarksJson = gson.toJson(listOf<Int>()).toString(),
+                customTitle = null,
                 pageUrlsJson = if (source == BookSource.E) {
                     gson.toJson(listOf<String>()).toString()
                 } else null,
@@ -229,6 +231,10 @@ class BookRepository (private val context: Context) {
     }
 
     fun getGroupId (id: String): Int = runBlocking { bookWithGroupDao.queryGroupId(id) }
+
+    fun updateCustomTitle (id: String, value: String) = runBlocking {
+        bookDao.updateCustomTitle(id, value)
+    }
 
     private fun queryBook (id: String) = runBlocking { bookDao.queryById(id) }
 }

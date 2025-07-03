@@ -123,7 +123,7 @@ class BookProfileActivity: AppCompatActivity() {
             }
         }
 
-        rootBinding.titleTextView.text = book.title
+        rootBinding.titleTextView.text = book.customTitle ?: book.title
 
         rootBinding.warningContainer.apply {
             // only check warning if book is not stored
@@ -168,11 +168,10 @@ class BookProfileActivity: AppCompatActivity() {
                 if (isBookStored) {
                     LocalReadSettingDialog(this@BookProfileActivity, layoutInflater).show(
                         book,
-                        onApplied = { coverPageUpdated ->
+                        onApplied = {
                             book = BookRepository(baseContext).getBook(book.id)
-                            if (coverPageUpdated) {
-                                refreshCoverPage()
-                            }
+                            refreshCoverPage()
+                            rootBinding.titleTextView.text = book.customTitle ?: book.title
                         }
                     )
                 }
@@ -294,6 +293,8 @@ class BookProfileActivity: AppCompatActivity() {
         dialogViewBinding.uploaderTextView.text = book.uploader ?: getString(R.string.noName)
 
         dialogViewBinding.urlTextView.text = book.url
+
+        dialogViewBinding.title.text = book.title
 
         if (book.subTitle.isEmpty()) {
             dialogViewBinding.subtitle.visibility = View.GONE
@@ -450,6 +451,7 @@ class BookProfileActivity: AppCompatActivity() {
             skipPagesJson = book.skipPagesJson,
             lastViewTime = -1L,
             bookMarksJson = book.bookMarksJson,
+            customTitle = book.customTitle,
             pageUrlsJson = book.pageUrlsJson,
             p = book.p
         )

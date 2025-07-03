@@ -76,7 +76,9 @@
     <string name="n_percent">%1$d%%</string>
     <string name="cancel">取消</string>
     <string name="save">保存</string>
+    <string name="title">標題</string>
     <string name="subtitle">副標題</string>
+    <string name="custom_title">自訂標題</string>
     <string name="noGroup">無分組</string>
     <string name="group">分組</string>
     <string name="uploader">上傳者</string>
