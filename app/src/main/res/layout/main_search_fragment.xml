@@ -93,7 +93,7 @@
 
             <Button
                 android:id="@+id/tool_bar_filter_out_button"
-                style="@style/SearchFragmentToolBarItemStyle"
+                style="@style/ToolBarButtonStyle"
                 android:text="@string/fa_filter_circle_xmark"
                 android:textColor="@color/white" />
 
@@ -110,20 +110,20 @@
 
             <Button
                 android:id="@+id/tool_bar_close_button"
-                style="@style/SearchFragmentToolBarItemStyle"
+                style="@style/ToolBarButtonStyle"
                 android:text="@string/fa_xmark"
                 android:textColor="@color/grey" />
 
             <Button
                 android:id="@+id/tool_bar_edit_button"
-                style="@style/SearchFragmentToolBarItemStyle"
+                style="@style/ToolBarButtonStyle"
                 android:layout_marginStart="16dp"
                 android:text="@string/fa_pen_to_square"
                 android:textColor="@color/white" />
 
             <Button
                 android:id="@+id/tool_bar_delete_button"
-                style="@style/SearchFragmentToolBarItemStyle"
+                style="@style/ToolBarButtonStyle"
                 android:layout_marginStart="8dp"
                 android:text="@string/fa_trash"
                 android:textColor="@color/white" />

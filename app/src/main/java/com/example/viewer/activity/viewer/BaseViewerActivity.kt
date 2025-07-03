@@ -10,6 +10,7 @@ import android.graphics.Rect
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.text.InputType
+import android.util.Log
 import android.view.GestureDetector
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -23,6 +24,7 @@ import com.example.viewer.databinding.ViewerActivityBinding
 import com.example.viewer.dialog.SimpleEditTextDialog
 import kotlinx.coroutines.launch
 import java.io.File
+import java.io.IOException
 import kotlin.math.abs
 
 abstract class BaseViewerActivity: AppCompatActivity() {
@@ -211,6 +213,10 @@ abstract class BaseViewerActivity: AppCompatActivity() {
             viewerActivityBinding.photoView.setImageDrawable(drawable)
             onPictureReady?.invoke()
         } catch (e: DecodeException) {
+            Log.w("${this::class.simpleName}.${this::showPicture}", "decode exception")
+            onFailed?.invoke()
+        } catch (e: IOException) {
+            Log.w("${this::class.simpleName}.${this::showPicture}", "io exception")
             onFailed?.invoke()
         }
         onFinished?.invoke()

@@ -60,6 +60,10 @@ class GroupRepository (context: Context) {
         }
     }
 
+    fun changeGroupName (id: Int, name: String) = runBlocking {
+        groupDao.updateName(id, name)
+    }
+
     fun addBookIdToGroup (groupId: Int, bookId: String) = runBlocking {
         bookWithGroupDao.insert(BookWithGroup(bookId, groupId))
         latestUpdateTime = System.currentTimeMillis()

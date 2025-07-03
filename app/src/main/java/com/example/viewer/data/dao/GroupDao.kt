@@ -47,6 +47,9 @@ interface GroupDao {
     @Query("UPDATE BookGroups SET itemOrder = :itemOrder WHERE id = :id")
     suspend fun updateItemOrder (id: Int, itemOrder: Int)
 
+    @Query("UPDATE BookGroups SET name = :name WHERE id = :id")
+    suspend fun updateName (id: Int, name: String)
+
     @Query("SELECT max(id) + 1 FROM BookGroups")
     suspend fun getNextId (): Int
 

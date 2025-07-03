@@ -2,6 +2,9 @@ package com.example.viewer
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.ImageDecoder
+import android.graphics.ImageDecoder.DecodeException
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -11,6 +14,7 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import com.bumptech.glide.signature.MediaStoreSignature
 import com.example.viewer.activity.BookProfileActivity
 import com.example.viewer.data.database.BookDatabase
 import com.example.viewer.data.repository.BookRepository
@@ -113,11 +117,6 @@ class BookGallery (
                 text = if (id == GroupRepository.DEFAULT_GROUP_ID) {
                     ContextCompat.getString(context, R.string.noGroup)
                 } else groupRepo.getGroupName(id)
-//                setOnClickListener {
-//                    SelectGroupDialog(context, layoutInflater).show {
-//                        id, _ -> scrollToGroup(id)
-//                    }
-//                }
             }
 
             holder.binding.galleryAuthorBookRecyclerView.apply {
@@ -202,17 +201,22 @@ class BookGallery (
             val coverPage = bookRepo.getBookCoverPage(id)
             val coverPageFile = File(bookFolder, coverPage.toString())
 
-            if(!coverPageFile.exists()) {
-                CoroutineScope(Dispatchers.Main).launch {
+            CoroutineScope(Dispatchers.Main).launch {
+                if (!coverPageFile.exists()) {
                     withContext(Dispatchers.IO) {
                         val source = bookRepo.getBookSource(id)
                         val fetcher = if (source == BookSource.E) EPictureFetcher(context, id) else HiPictureFetcher(context, id)
-                        fetcher.savePicture(coverPage)
+                        try {
+                            fetcher.savePicture(coverPage)
+                        } catch (e: HiPictureFetcher.HiPictureFetcherException) {
+                            Log.e("${this::class.simpleName}.BindViewHolder", e.stackTraceToString())
+                        }
                     }
-                    Glide.with(context).load(coverPageFile).into(holder.imageView)
                 }
-            } else {
-                Glide.with(context).load(coverPageFile).into(holder.imageView)
+                Glide.with(context)
+                    .load(coverPageFile)
+                    .signature(MediaStoreSignature("", coverPageFile.lastModified(), 0))
+                    .into(holder.imageView)
             }
 
             holder.imageView.setOnClickListener {

@@ -13,6 +13,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.room.Transaction
 import com.bumptech.glide.Glide
+import com.bumptech.glide.signature.MediaStoreSignature
 import com.example.viewer.R
 import com.example.viewer.Util
 import com.example.viewer.activity.main.MainActivity
@@ -38,6 +39,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import org.jsoup.Jsoup
 import java.io.File
 import kotlin.math.floor
 import kotlin.math.min
@@ -62,6 +64,7 @@ class BookProfileActivity: AppCompatActivity() {
     private lateinit var book: Book
     private lateinit var rootBinding: BookProfileActivityBinding
     private lateinit var bookRepo: BookRepository
+    private lateinit var excludedTags: Map<String, Set<String>>
 
     private var isBookStored: Boolean = false
 
@@ -69,10 +72,13 @@ class BookProfileActivity: AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         bookRepo = BookRepository(baseContext)
+
         book = bookRepo.getBook(intent.getStringExtra("bookId")!!)
 
         val bookRepo = BookRepository(baseContext)
         isBookStored = runBlocking { bookRepo.isBookStored(book.id) }
+
+        excludedTags = ExcludeTagRepository(baseContext).findExcludedTags(book)
 
         //
         // init ui
@@ -90,10 +96,10 @@ class BookProfileActivity: AppCompatActivity() {
         }
 
         rootBinding.coverImageView.let {
-            val coverUrl = book.getCoverUrl(baseContext)
             if(isBookStored) {
                 CoroutineScope(Dispatchers.Main).launch {
-                    if (!File(coverUrl).exists()) {
+                    val coverFile = File(book.getCoverUrl(baseContext))
+                    if (!coverFile.exists()) {
                         withContext(Dispatchers.IO) {
                             val id = book.id
                             val source = bookRepo.getBookSource(id)
@@ -104,7 +110,10 @@ class BookProfileActivity: AppCompatActivity() {
                             fetcher.savePicture(bookRepo.getBookCoverPage(book.id))
                         }
                     }
-                    Glide.with(baseContext).load(coverUrl).into(it)
+                    Glide.with(baseContext)
+                        .load(coverFile)
+                        .signature(MediaStoreSignature("", coverFile.lastModified(), 0))
+                        .into(it)
                 }
             } else {
                 Glide.with(baseContext).load(book.getPageUrls()!![0]).into(it)
@@ -116,7 +125,11 @@ class BookProfileActivity: AppCompatActivity() {
         rootBinding.warningContainer.apply {
             // only check warning if book is not stored
             lifecycleScope.launch {
-                if (!isBookStored && EPictureFetcher.isBookWarning(book.url)) {
+                val isBookWarning = withContext(Dispatchers.IO) {
+                    Jsoup.connect(book.url).get()
+                }.html().contains("<h1>Content Warning</h1>")
+
+                if (!isBookStored && isBookWarning) {
                     visibility = View.VISIBLE
                 }
             }
@@ -225,7 +238,12 @@ class BookProfileActivity: AppCompatActivity() {
                     text = value
                     backgroundTintList = ColorStateList.valueOf(baseContext.getColor(R.color.dark_grey))
                     isAllCaps = false
-                    setTextColor(baseContext.getColor(R.color.grey))
+                    setTextColor(getColor(
+                        if (excludedTags[tagCat]?.contains(value) == true) {
+                            R.color.grey2
+                        } else R.color.grey
+                    ))
+
                     setOnClickListener { showTagDialog(tagCat, value) }
                 }.also { tagValueWrapper.addView(it) }
             }
@@ -339,20 +357,25 @@ class BookProfileActivity: AppCompatActivity() {
         rootBinding.progress.textView.text = getString(R.string.n_percent, 0)
         toggleProgressBar(true)
 
-        // download cover image file to tmp
-        val coverFile = withContext(Dispatchers.IO) {
-            EPictureFetcher(baseContext, 1, book.url).savePicture(0) { total, downloaded ->
-                CoroutineScope(Dispatchers.Main).launch {
-                    rootBinding.progress.textView.text = getString(
-                        R.string.n_percent, floor(downloaded.toDouble() / total * 100).toInt()
-                    )
+        val fetcher = EPictureFetcher(baseContext, 1, book.url, book.id)
+
+        // download cover page if not exist
+        if (!File(fetcher.bookFolder, "0").exists()) {
+            val success = withContext(Dispatchers.IO) {
+                val file = fetcher.savePicture(0) { total, downloaded ->
+                    CoroutineScope(Dispatchers.Main).launch {
+                        rootBinding.progress.textView.text = getString(
+                            R.string.n_percent, floor(downloaded.toDouble() / total * 100).toInt()
+                        )
+                    }
                 }
+                file != null
             }
-        }
-        if (coverFile == null) {
-            Toast.makeText(baseContext, "儲存失敗，再試一次", Toast.LENGTH_SHORT).show()
-            toggleProgressBar(false)
-            return
+            if (!success) {
+                Toast.makeText(baseContext, "儲存失敗，再試一次", Toast.LENGTH_SHORT).show()
+                toggleProgressBar(false)
+                return
+            }
         }
 
         // create book folder
@@ -360,10 +383,12 @@ class BookProfileActivity: AppCompatActivity() {
             if (!it.exists()) {
                 it.mkdirs()
             }
-            // move cover picture
-            val file = File(it, coverFile.name)
-            coverFile.copyTo(file)
-            coverFile.delete()
+            // move picture from tmp folder to book folder
+            for (tmpFile in fetcher.bookFolder.listFiles()!!) {
+                if (tmpFile.extension != "txt") {
+                    tmpFile.copyTo(File(it, tmpFile.name))
+                }
+            }
         }
 
         BookRepository(baseContext).addBook(

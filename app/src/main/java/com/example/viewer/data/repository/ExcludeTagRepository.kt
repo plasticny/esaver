@@ -3,8 +3,10 @@ package com.example.viewer.data.repository
 import android.content.Context
 import androidx.compose.ui.util.fastMap
 import androidx.compose.ui.util.fastMinByOrNull
+import androidx.sqlite.db.SimpleSQLiteQuery
 import com.example.viewer.data.dao.ExcludeTagDao
 import com.example.viewer.data.database.SearchDatabase
+import com.example.viewer.data.struct.Book
 import com.example.viewer.data.struct.ExcludeTag
 import com.example.viewer.struct.Category
 import com.google.gson.Gson
@@ -21,7 +23,7 @@ class ExcludeTagRepository (context: Context) {
         private val excludedTagValues = mutableSetOf<String>()
 
         private const val CACHE_SIZE = 10
-        private val excludeTagCache = mutableListOf<CacheRecord>()
+        private val excludeTagCache = arrayOfNulls<CacheRecord?>(CACHE_SIZE)
     }
 
     private val excludeTagDao: ExcludeTagDao
@@ -47,14 +49,27 @@ class ExcludeTagRepository (context: Context) {
                     excludedTagValues.add(tagValue)
                 }
             }
-            println(excludedBookCategories)
-            println(excludedTagCategories)
-            println(excludedTagValues)
             initialized = true
         }
     }
 
     fun getAllExcludeTag (): List<ExcludeTag> = runBlocking { excludeTagDao.queryAll() }
+
+    private fun getAllExcludeTag (categories: List<Category>) = runBlocking {
+        if (categories.isEmpty()) {
+            return@runBlocking excludeTagDao.queryAll()
+        }
+
+        val queries = mutableListOf("SELECT * FROM ExcludeTags WHERE")
+        for (category in categories) {
+            queries.add("categoryOrdinalsJson LIKE '%${category.ordinal}%' AND")
+        }
+        queries.add("1 = 1")
+
+        return@runBlocking excludeTagDao.rawQueryExcludeTag(
+            SimpleSQLiteQuery(queries.joinToString(separator = " "))
+        )
+    }
 
     fun getExcludeTag (id: Int) = runBlocking { excludeTagDao.queryById(id) }
 
@@ -109,6 +124,9 @@ class ExcludeTagRepository (context: Context) {
         // check cache
         val checkedIds = mutableSetOf<Int>()
         for (cacheRecord in excludeTagCache) {
+            if (cacheRecord == null) {
+                continue
+            }
             if (!cacheRecord.categories.containsAll(categoryNames)) {
                 continue
             }
@@ -127,13 +145,8 @@ class ExcludeTagRepository (context: Context) {
         }
 
         // check database
-        for (excludeTag in runBlocking { excludeTagDao.queryAll() }) {
+        for (excludeTag in getAllExcludeTag(categories)) {
             if (checkedIds.contains(excludeTag.id)) {
-                continue
-            }
-
-            val excludeCategories = excludeTag.getCategories().fastMap { it.name }.toSet()
-            if (!excludeCategories.containsAll(categoryNames)) {
                 continue
             }
 
@@ -143,14 +156,16 @@ class ExcludeTagRepository (context: Context) {
                     excludeTags.containsKey(k) &&
                     v.containsAll(excludeTags.getValue(k))
                 ) {
-                    if (excludeTagCache.size < CACHE_SIZE) {
-                        excludeTagCache.add(CacheRecord(
+                    val excludeCategories = excludeTag.getCategories().fastMap { it.name }.toSet()
+                    val nullIdx = excludeTagCache.indexOfFirst { it == null }
+                    if (nullIdx != -1) {
+                        excludeTagCache[nullIdx] = CacheRecord(
                             id = excludeTag.id,
                             categories = excludeCategories,
                             tags = excludeTags
-                        ))
+                        )
                     } else {
-                        excludeTagCache.fastMinByOrNull { it.count }!!.apply {
+                        excludeTagCache.minByOrNull { it!!.count }!!.apply {
                             this.id = excludeTag.id
                             this.categories = excludeCategories
                             this.tags = excludeTags
@@ -163,6 +178,28 @@ class ExcludeTagRepository (context: Context) {
         }
 
         return false
+    }
+
+    fun findExcludedTags (book: Book): Map<String, Set<String>> {
+        val res = mutableMapOf<String, MutableSet<String>>()
+
+        val bookTags = book.getTags()
+        for (excludeTag in getAllExcludeTag(listOf(book.getCategory()))) {
+            for ((c, t) in excludeTag.getTags()) {
+                if (!bookTags.containsKey(c)) {
+                    continue
+                }
+                if (!bookTags.getValue(c).toSet().containsAll(t)) {
+                    continue
+                }
+                if (!res.containsKey(c)) {
+                    res[c] = mutableSetOf()
+                }
+                res.getValue(c).addAll(t)
+            }
+        }
+
+        return res
     }
 
     private fun<T> intersectAny (a: Set<T>, b: Set<T>): Boolean {

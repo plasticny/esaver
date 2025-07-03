@@ -3,7 +3,9 @@ package com.example.viewer.data.dao
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.RawQuery
 import androidx.room.Update
+import androidx.sqlite.db.SupportSQLiteQuery
 import com.example.viewer.data.struct.ExcludeTag
 
 @Dao
@@ -22,4 +24,7 @@ interface ExcludeTagDao {
 
     @Query("SELECT count(*) + 1 FROM ExcludeTags")
     suspend fun getNextId (): Int
+
+    @RawQuery
+    suspend fun rawQueryExcludeTag (query: SupportSQLiteQuery): List<ExcludeTag>
 }

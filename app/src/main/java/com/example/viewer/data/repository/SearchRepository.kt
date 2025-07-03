@@ -9,6 +9,8 @@ import com.example.viewer.data.struct.ExcludeTag
 import com.example.viewer.data.struct.SearchMark
 import com.example.viewer.struct.Category
 import com.example.viewer.R
+import com.example.viewer.data.dao.SearchHistoryDao
+import com.example.viewer.data.struct.SearchHistory
 import com.google.gson.Gson
 import kotlinx.coroutines.runBlocking
 
@@ -18,10 +20,12 @@ class SearchRepository (context: Context) {
     }
 
     private val searchMarkDao: SearchMarkDao
+    private val searchHistoryDao: SearchHistoryDao
 
     init {
         SearchDatabase.getInstance(context).run {
             searchMarkDao = this.searchMarkDao()
+            searchHistoryDao = this.searchHistoryDao()
         }
     }
 
@@ -64,6 +68,7 @@ class SearchRepository (context: Context) {
                 itemOrder = searchMarkDao.getNextItemOrder()
             )
         )
+        searchHistoryDao.insert(SearchHistory(id, null))
 
         searchMarkListLastUpdateTime = System.currentTimeMillis()
 
@@ -125,4 +130,16 @@ class SearchRepository (context: Context) {
     }
 
     fun getSearchMarkListUpdateTime () = searchMarkListLastUpdateTime
+
+    fun getLastNext (id: Long) = runBlocking {
+        searchHistoryDao.queryLastNext(id)
+    }
+
+    fun storeLastNext (searchMarkId: Long, next: String?) = runBlocking {
+        if (next == null) {
+            searchHistoryDao.clearLastNext(searchMarkId)
+        } else {
+            searchHistoryDao.updateLastNext(searchMarkId, next)
+        }
+    }
 }

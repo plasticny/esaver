@@ -92,7 +92,7 @@ class HiPictureFetcher: BasePictureFetcher {
             println("[HiPictureFetcher] get data for constructing url")
 
             if (!Util.isInternetAvailable(context)) {
-                throw Exception("[HiPictureFetcher.updateToken] internet not available")
+                throw HiPictureFetcherException("[HiPictureFetcher.updateToken] internet not available")
             }
             pictureInfos = getPictureInfos()
             gg = GG()
@@ -130,9 +130,9 @@ class HiPictureFetcher: BasePictureFetcher {
 
     override suspend fun fetchPictureUrl (page: Int): String {
         val pictureInfo = pictureInfos!![page]
-        if (pictureInfo.haswebp == 0) {
-            throw Exception("no webp")
-        }
+//        if (pictureInfo.haswebp == 0) {
+//            throw HiPictureFetcherException("no webp")
+//        }
         val thirdDomain = findThirdDomain(pictureInfo.hash)
         return "https://$thirdDomain.gold-usergeneratedcontent.net/${gg!!.b}${gg!!.h(pictureInfo.hash)}/${pictureInfo.hash}.webp"
     }
@@ -175,4 +175,6 @@ class HiPictureFetcher: BasePictureFetcher {
         return "w${1 + m}"
 //        return (97 + gg!!.m(g)).toChar() + base!!
     }
+
+    class HiPictureFetcherException (msg: String): Exception(msg)
 }
