@@ -1,6 +1,7 @@
 package com.example.viewer.data.repository
 
 import android.content.Context
+import android.database.sqlite.SQLiteConstraintException
 import androidx.room.Transaction
 import com.example.viewer.R
 import com.example.viewer.data.dao.BookWithGroupDao
@@ -31,7 +32,7 @@ class GroupRepository (context: Context) {
         id: Int, name: String
     ) {
         if (id == 0) {
-            throw Exception("do not insert group 0")
+            throw IllegalArgumentException("do not insert group 0")
         }
         runBlocking {
             groupDao.insert(id, name)
@@ -80,26 +81,41 @@ class GroupRepository (context: Context) {
         return id
     }
 
-    @Transaction
-    fun moveGroup (id: Int, toId: Int) = runBlocking {
-        if (id == toId) {
+    fun moveGroupBefore (id: Int, toId: Int) = runBlocking {
+        moveGroup(groupDao.queryItemOrder(id), groupDao.queryItemOrder(toId))
+    }
+
+    fun moveGroupAfter (id: Int, toId: Int) = runBlocking {
+        val from = groupDao.queryItemOrder(id)
+        val to = groupDao.queryItemOrder(toId)
+        if (from == to) {
             return@runBlocking
         }
+        moveGroup(from, to)
+    }
 
-        val fromOrder = groupDao.queryItemOrder(id)
-        val toOrder = groupDao.queryItemOrder(toId)
-
+    @Transaction
+    private suspend fun moveGroup (fromOrder: Int, toOrder: Int) {
         if (fromOrder == toOrder) {
-            throw Exception("fromOrder == toOrder, something went wrong")
+            throw IllegalArgumentException("fromOrder == toOrder, something went wrong")
         }
 
-        if (fromOrder < toOrder) {
-            groupDao.decreaseItemOrder(fromOrder + 1, toOrder - 1)
-            groupDao.updateItemOrder(id, toOrder - 1)
-        } else {
-            groupDao.increaseItemOrder(toOrder, fromOrder - 1)
-            groupDao.updateItemOrder(id, toOrder)
+        groupDao.updateItemOrderByOrder(fromOrder, -1)
+        try {
+            if (fromOrder < toOrder) {
+                for (order in fromOrder + 1 .. toOrder) {
+                    groupDao.updateItemOrderByOrder(order, order - 1)
+                }
+            } else {
+                for (order in (toOrder until fromOrder).reversed()) {
+                    groupDao.updateItemOrderByOrder(order, order + 1)
+                }
+            }
+        } catch (e: SQLiteConstraintException) {
+            groupDao.updateItemOrderByOrder(-1, fromOrder)
+            throw e
         }
+        groupDao.updateItemOrderByOrder(-1, toOrder)
 
         latestUpdateTime = System.currentTimeMillis()
     }
@@ -107,14 +123,17 @@ class GroupRepository (context: Context) {
     @Transaction
     private fun removeGroup (id: Int) {
         if (id == 0) {
-            throw Exception("cannot remove default group")
+            throw IllegalArgumentException("cannot remove default group")
         }
         runBlocking {
             if (bookWithGroupDao.countByGroupId(id) != 0) {
-                throw Exception("Cannot delete group if some book in the group")
+                throw IllegalStateException("Cannot delete group if some book in the group")
             }
-            groupDao.decreaseItemOrder(groupDao.queryItemOrder(id) + 1)
+            val deletedOrder = groupDao.queryItemOrder(id)
             groupDao.delete(id)
+            for (order in deletedOrder + 1 .. groupDao.getMaxItemOrder()) {
+                groupDao.decreaseItemOrder(order)
+            }
         }
         latestUpdateTime = System.currentTimeMillis()
     }

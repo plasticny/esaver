@@ -1,6 +1,7 @@
 package com.example.viewer
 
 import android.content.Context
+import com.example.viewer.data.repository.GroupRepository
 import com.example.viewer.database.SearchPreference
 
 /**
@@ -9,7 +10,6 @@ import com.example.viewer.database.SearchPreference
 class Dev {
     companion object {
         suspend fun run (context: Context) {
-//            SearchPreference.getInstance(context).syncToRoom(context)
         }
     }
 

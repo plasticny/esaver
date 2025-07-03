@@ -44,6 +44,9 @@ interface SearchMarkDao {
     @Query("UPDATE SearchMarks SET itemOrder = :itemOrder WHERE id = :id")
     suspend fun updateItemOrder (id: Long, itemOrder: Int)
 
+    @Query("UPDATE SearchMarks SET itemOrder = :newOrder WHERE itemOrder = :oldOrder")
+    suspend fun updateItemOrderByOrder (oldOrder: Int, newOrder: Int)
+
     @Query("DELETE FROM SearchMarks WHERE id = :id")
     suspend fun deleteById (id: Long)
 }

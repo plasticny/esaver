@@ -6,7 +6,10 @@ import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "BookGroups",
-    indices = [Index(value = ["id"])]
+    indices = [
+        Index(value = ["id"]),
+        Index(value = ["itemOrder"], unique = true)
+    ]
 )
 data class Group (
     @PrimaryKey
