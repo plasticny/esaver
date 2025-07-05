@@ -129,7 +129,7 @@ class LocalReadSettingDialog (
         }
 
         runBlocking {
-            bookRepo.setBookSkipPages(bookId, updatedSkipPages)
+            bookRepo.setBookSkipPages(bookId, updatedSkipPages.sorted())
         }
     }
 
