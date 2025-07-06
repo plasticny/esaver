@@ -15,6 +15,7 @@ class GroupRepository (context: Context) {
     companion object {
         const val DEFAULT_GROUP_ID = 0
         private var latestUpdateTime = 0L
+        fun getLastUpdateTime (): Long = latestUpdateTime
     }
 
     private val groupDao: GroupDao

@@ -14,6 +14,11 @@ import com.google.gson.Gson
 import kotlinx.coroutines.runBlocking
 
 class BookRepository (private val context: Context) {
+    companion object {
+        private var listLastUpdateTime = 0L
+        fun getListLastUpdateTime () = listLastUpdateTime
+    }
+
     private val bookDao: BookDao
     private val bookWithGroupDao: BookWithGroupDao
 
@@ -109,6 +114,7 @@ class BookRepository (private val context: Context) {
                 p = if (source == BookSource.E) 0 else null
             )
         )
+        listLastUpdateTime = System.currentTimeMillis()
     }
 
     fun addBook (book: Book) = runBlocking { bookDao.insert(book) }
@@ -129,6 +135,8 @@ class BookRepository (private val context: Context) {
         if(!bookFolder.delete()) {
             throw Exception("delete book folder failed")
         }
+
+        listLastUpdateTime = System.currentTimeMillis()
 
         return true
     }
@@ -210,6 +218,7 @@ class BookRepository (private val context: Context) {
         val book = queryBook(id)
         book.coverPage = v
         runBlocking { dao.update(book) }
+        listLastUpdateTime = System.currentTimeMillis()
     }
 
     fun getBookSkipPages (id: String): List<Int> = Util.readListFromJson(
@@ -230,6 +239,10 @@ class BookRepository (private val context: Context) {
         runBlocking { dao.update(book) }
     }
 
+    /**
+     * get group id of a book
+     * @param id book id
+     */
     fun getGroupId (id: String): Int = runBlocking { bookWithGroupDao.queryGroupId(id) }
 
     fun updateCustomTitle (id: String, value: String) = runBlocking {
