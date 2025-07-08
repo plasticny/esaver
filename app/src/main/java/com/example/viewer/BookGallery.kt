@@ -47,7 +47,7 @@ class BookGallery (
     private val groupNameTextViewHeight = Util.sp2px(context, 18F)
     private val coverImageViewWidth =
         (context.resources.displayMetrics.widthPixels - Util.dp2px(context, 48F)) / 2
-    private val coverImageViewHeight = (coverImageViewWidth * 1.5).toInt()
+    private val coverImageViewHeight = (coverImageViewWidth * 1.4125).toInt()
     private val bookMarginWidth = Util.dp2px(context, 8F)
 
     private val groupRecyclerViewAdapter: GroupRecyclerViewAdapter

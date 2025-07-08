@@ -62,7 +62,7 @@ class BookProfileActivity: AppCompatActivity() {
         private fun getCoverMetrics (context: Context): Pair<Int, Int> {
             return coverMetrics ?: context.resources.displayMetrics.let { displayMetrics ->
                 val width = min(Util.dp2px(context, 160F), displayMetrics.widthPixels)
-                val height = (width * 1.5).toInt()
+                val height = (width * 1.4125).toInt()
                 Log.i("BookProfileActivity", "cover metrics: ($width, $height)")
                 Pair(width, height).also { coverMetrics = it }
             }
