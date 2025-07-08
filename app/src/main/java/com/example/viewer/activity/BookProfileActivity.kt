@@ -7,6 +7,7 @@ import android.content.res.ColorStateList
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import android.view.LayoutInflater
 import android.view.View
 import android.widget.Button
 import android.widget.ProgressBar
@@ -34,10 +35,11 @@ import com.example.viewer.data.struct.Group
 import com.example.viewer.databinding.BookProfileActivityBinding
 import com.example.viewer.databinding.BookProfileTagBinding
 import com.example.viewer.databinding.DialogBookInfoBinding
+import com.example.viewer.databinding.DialogLocalReadSettingBinding
 import com.example.viewer.databinding.DialogTagBinding
 import com.example.viewer.dialog.ConfirmDialog
 import com.example.viewer.dialog.EditExcludeTagDialog
-import com.example.viewer.dialog.LocalReadSettingDialog
+import com.example.viewer.dialog.SelectGroupDialog
 import com.example.viewer.fetcher.EPictureFetcher
 import com.example.viewer.fetcher.HiPictureFetcher
 import com.example.viewer.struct.BookSource
@@ -77,7 +79,11 @@ class BookProfileActivity: AppCompatActivity() {
 
     private var isBookStored: Boolean = false
 
-    private val cropLauncher = registerForActivityResult(CropContract()) {}
+    private val cropLauncher = registerForActivityResult(CropContract()) {
+        it?.let { (offsetX, offsetY) ->
+            println("$offsetX $offsetY")
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -130,7 +136,6 @@ class BookProfileActivity: AppCompatActivity() {
             } else {
                 Glide.with(baseContext).load(book.getPageUrls()!![0]).into(it)
             }
-            println("${it.width} ${it.height}")
         }
 
         rootBinding.titleTextView.text = book.customTitle ?: book.title
@@ -176,14 +181,7 @@ class BookProfileActivity: AppCompatActivity() {
         rootBinding.localSettingButton.apply {
             setOnClickListener {
                 if (isBookStored) {
-                    LocalReadSettingDialog(this@BookProfileActivity, layoutInflater).apply {
-                        onApplied = {
-                            book = BookRepository(baseContext).getBook(book.id)
-                            refreshCoverPage()
-                            rootBinding.titleTextView.text = book.customTitle ?: book.title
-                        }
-                        onCoverCropClicked = { coverUri -> cropLauncher.launch(coverUri) }
-                    }.show(book)
+                    LocalReadSettingDialog().show(book)
                 }
             }
         }
@@ -509,5 +507,212 @@ class BookProfileActivity: AppCompatActivity() {
                 )
             }
         }
+    }
+
+    /**
+     * this dialog should place in this class because it is using the cropLauncher
+     */
+    private inner class LocalReadSettingDialog {
+        private val context = this@BookProfileActivity
+        private val dialogBinding = DialogLocalReadSettingBinding.inflate(layoutInflater)
+        private val dialog = AlertDialog.Builder(context).setView(dialogBinding.root).create()
+
+        fun show (book: Book) {
+            val skipPages = bookRepo.getBookSkipPages(book.id)
+            val groupId = bookRepo.getGroupId(book.id)
+            val coverPage = bookRepo.getBookCoverPage(book.id)
+
+            dialogBinding.groupNameEditText.setText(
+                groupRepo.getGroupName(groupId)
+            )
+
+            dialogBinding.customTitleEditText.setText(
+                book.customTitle ?: ""
+            )
+
+            dialogBinding.profileDialogCoverPageEditText.setText(
+                (coverPage + 1).toString()
+            )
+
+            dialogBinding.profileDialogSkipPagesEditText.setText(skipPagesListToString(skipPages))
+
+            dialogBinding.searchButton.setOnClickListener {
+                SelectGroupDialog(context, layoutInflater).show {
+                        _, name -> dialogBinding.groupNameEditText.setText(name)
+                }
+            }
+
+            dialogBinding.profileDialogApplyButton.setOnClickListener {
+                // group
+                val groupName = dialogBinding.groupNameEditText.text.toString().trim()
+                val selectedGroupId = groupName.let {
+                    if (it.isEmpty()) {
+                        return@let 0
+                    }
+
+                    val id = groupRepo.getGroupIdFromName(it)
+                    if (id != null) {
+                        return@let id
+                    }
+
+                    return@let groupRepo.createGroup(groupName)
+                }
+                if (selectedGroupId != groupId) {
+                    groupRepo.changeGroup(book.id, groupId, selectedGroupId)
+                }
+
+                // custom title
+                dialogBinding.customTitleEditText.text.toString().let {
+                    bookRepo.updateCustomTitle(book.id, it.trim())
+                }
+
+                // cover page
+                bookRepo.setBookCoverPage(
+                    book.id,
+                    dialogBinding.profileDialogCoverPageEditText.text.toString().trim().let {
+                        if (it.isEmpty()) {
+                            Toast.makeText(context, "封面頁不能為空", Toast.LENGTH_SHORT).show()
+                            return@setOnClickListener
+                        }
+                        try {
+                            it.toInt()
+                        } catch (e: NumberFormatException) {
+                            Toast.makeText(context, "封面頁輸入格式錯誤", Toast.LENGTH_SHORT).show()
+                            return@setOnClickListener
+                        }
+                    } - 1
+                )
+
+                // skip page
+                updateSkipPages(
+                    book.id,
+                    dialogBinding.profileDialogSkipPagesEditText.text.toString().trim(),
+                    skipPages
+                )
+
+                this@BookProfileActivity.book = BookRepository(baseContext).getBook(book.id)
+                refreshCoverPage()
+                rootBinding.titleTextView.text = book.customTitle ?: book.title
+
+                dialog.dismiss()
+            }
+
+            dialogBinding.cropCoverButton.setOnClickListener {
+                cropLauncher.launch(
+                    File(book.getBookFolder(context), coverPage.toString()).toUri()
+                )
+            }
+
+            dialog.show()
+        }
+
+        /**
+         * @param text text of the skip page editText
+         */
+        private fun updateSkipPages (bookId: String, text: String, originSkipPages: List<Int>) {
+            val coverPage = bookRepo.getBookCoverPage(bookId)
+            val updatedSkipPages = skipPageStringToList(text)
+
+            if (updatedSkipPages == originSkipPages) {
+                return
+            }
+
+            val newSkipPages = updatedSkipPages.minus(originSkipPages.toSet())
+            if (newSkipPages.isNotEmpty()) {
+                val bookFolder = File(context.getExternalFilesDir(null), bookId)
+                for (p in newSkipPages) {
+                    if (p == coverPage) {
+                        continue
+                    }
+                    File(bookFolder, p.toString()).let {
+                        if (it.exists()) {
+                            it.delete()
+                        }
+                    }
+                }
+            }
+
+            runBlocking {
+                bookRepo.setBookSkipPages(bookId, updatedSkipPages.sorted())
+            }
+        }
+
+        private fun skipPagesListToString (skipPages: List<Int>): String {
+            val tokens = mutableListOf<String>()
+
+            var s = -1
+            var p = -1
+            for (page in skipPages) {
+                // first page of segment
+                if (s == -1) {
+                    s = page
+                    p = page
+                    continue
+                }
+
+                // extend segment
+                if (p == page - 1) {
+                    p = page
+                    continue
+                }
+
+                // segment end, store and start new
+                if (s == p) {
+                    tokens.add((s + 1).toString())
+                } else {
+                    tokens.add("${s + 1}-${p + 1}")
+                }
+                s = page
+                p = page
+            }
+
+            if (s != -1) {
+                // store last segment
+                if (s == p) {
+                    tokens.add((s + 1).toString())
+                } else {
+                    tokens.add("${s + 1}-${p + 1}")
+                }
+            }
+
+            return tokens.joinToString(",")
+        }
+
+        private fun skipPageStringToList (text: String): List<Int> {
+            val res = mutableSetOf<Int>()
+            for (token in text.split(',')) {
+                if (token.contains("-")) {
+                    // x-y
+                    val dashToken = token.split("-")
+                    if (dashToken.size != 2) {
+                        println("[${this::class.simpleName}.${this::skipPageStringToList.name}] '$token' unexpected dash format")
+                        continue
+                    }
+
+                    val x = pageStringToPageIndex(dashToken[0].trim())
+                    val y = pageStringToPageIndex(dashToken[1].trim())
+                    if (x == null || y == null || x >= y) {
+                        println("[${this::class.simpleName}.${this::skipPageStringToList.name}] invalid range ${dashToken[0]}-${dashToken[1]}")
+                        continue
+                    }
+
+                    for (p in x..y) {
+                        res.add(p)
+                    }
+                } else {
+                    // other
+                    pageStringToPageIndex(token.trim())?.let { res.add(it) }
+                }
+            }
+            return res.sorted()
+        }
+
+        private fun pageStringToPageIndex (s: String): Int? =
+            try {
+                (s.toInt() - 1).let { if (it >= 0) it else null }
+            } catch (e: NumberFormatException) {
+                println("[${this::class.simpleName}.${this::skipPageStringToList.name}] '$s' cannot convert into int")
+                null
+            }
     }
 }
