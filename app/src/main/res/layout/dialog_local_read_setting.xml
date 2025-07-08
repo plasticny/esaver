@@ -32,16 +32,6 @@
                 android:textColor="@color/grey"
                 android:textSize="20sp" />
 
-            <TextView
-                android:id="@+id/search_button"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:fontFamily="@font/font_awesome"
-                android:text="@string/fa_magnifying_glass"
-                android:textSize="20sp"
-                android:textColor="@color/white"
-                android:layout_marginStart="8dp"/>
-
             <EditText
                 android:id="@+id/group_name_editText"
                 android:layout_width="0dp"
@@ -52,6 +42,16 @@
                 android:backgroundTint="@color/grey"
                 android:autofillHints="Author name"
                 android:inputType="text" />
+
+            <TextView
+                android:id="@+id/search_button"
+                android:layout_width="40dp"
+                android:layout_height="match_parent"
+                android:fontFamily="@font/font_awesome"
+                android:gravity="center"
+                android:text="@string/fa_magnifying_glass"
+                android:textSize="20sp"
+                android:textColor="@color/white"/>
 
         </LinearLayout>
 
@@ -107,6 +107,16 @@
                 android:inputType="number"
                 android:textColor="@color/white"
                 android:backgroundTint="@color/grey" />
+
+            <TextView
+                android:id="@+id/crop_cover_button"
+                android:layout_width="40dp"
+                android:layout_height="match_parent"
+                android:fontFamily="@font/font_awesome"
+                android:gravity="center"
+                android:text="@string/fa_crop"
+                android:textSize="20sp"
+                android:textColor="@color/white"/>
 
         </LinearLayout>
 

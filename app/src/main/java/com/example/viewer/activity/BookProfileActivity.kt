@@ -1,20 +1,27 @@
 package com.example.viewer.activity
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
+import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContract
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
 import androidx.room.Transaction
 import com.bumptech.glide.Glide
 import com.bumptech.glide.signature.MediaStoreSignature
 import com.example.viewer.R
+import com.example.viewer.RectangleCrop
 import com.example.viewer.Util
 import com.example.viewer.activity.main.MainActivity
 import com.example.viewer.activity.viewer.LocalViewerActivity
@@ -56,7 +63,7 @@ class BookProfileActivity: AppCompatActivity() {
             return coverMetrics ?: context.resources.displayMetrics.let { displayMetrics ->
                 val width = min(Util.dp2px(context, 160F), displayMetrics.widthPixels)
                 val height = (width * 1.5).toInt()
-                println("[${this::class.simpleName}] cover metrics: ($width, $height)")
+                Log.i("BookProfileActivity", "cover metrics: ($width, $height)")
                 Pair(width, height).also { coverMetrics = it }
             }
         }
@@ -69,6 +76,8 @@ class BookProfileActivity: AppCompatActivity() {
     private lateinit var excludedTags: Map<String, Set<String>>
 
     private var isBookStored: Boolean = false
+
+    private val cropLauncher = registerForActivityResult(CropContract()) {}
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -121,6 +130,7 @@ class BookProfileActivity: AppCompatActivity() {
             } else {
                 Glide.with(baseContext).load(book.getPageUrls()!![0]).into(it)
             }
+            println("${it.width} ${it.height}")
         }
 
         rootBinding.titleTextView.text = book.customTitle ?: book.title
@@ -166,14 +176,14 @@ class BookProfileActivity: AppCompatActivity() {
         rootBinding.localSettingButton.apply {
             setOnClickListener {
                 if (isBookStored) {
-                    LocalReadSettingDialog(this@BookProfileActivity, layoutInflater).show(
-                        book,
+                    LocalReadSettingDialog(this@BookProfileActivity, layoutInflater).apply {
                         onApplied = {
                             book = BookRepository(baseContext).getBook(book.id)
                             refreshCoverPage()
                             rootBinding.titleTextView.text = book.customTitle ?: book.title
                         }
-                    )
+                        onCoverCropClicked = { coverUri -> cropLauncher.launch(coverUri) }
+                    }.show(book)
                 }
             }
         }
@@ -481,5 +491,23 @@ class BookProfileActivity: AppCompatActivity() {
                 )
             }
         )
+    }
+
+    private class CropContract: ActivityResultContract<Uri, Pair<Int, Int>?>() {
+        override fun createIntent(context: Context, input: Uri): Intent {
+            return Intent(context, CropActivity::class.java).
+            putExtra(CropActivity.EXTRA_IMAGE_URI, input)
+        }
+        override fun parseResult(resultCode: Int, intent: Intent?): Pair<Int, Int>? {
+            if (resultCode != Activity.RESULT_OK) {
+                return null
+            }
+            return intent?.let {
+                Pair(
+                    it.getIntExtra(CropActivity.RESULT_OFFSET_X, -1),
+                    it.getIntExtra(CropActivity.RESULT_OFFSET_Y, -1)
+                )
+            }
+        }
     }
 }

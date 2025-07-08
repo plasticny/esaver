@@ -25,6 +25,7 @@
     <string name="fa_up_down_left_right">\uf0b2</string>
     <string name="fa_list">\uf03a</string>
     <string name="fa_share_from_square">\uf14d</string>
+    <string name="fa_crop">\uf125</string>
 <!--  strings  -->
     <string name="app_name">eSaver</string>
     <string name="enter_url">輸入URL</string>

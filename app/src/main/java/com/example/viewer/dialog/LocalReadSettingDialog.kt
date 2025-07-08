@@ -1,9 +1,11 @@
 package com.example.viewer.dialog
 
 import android.content.Context
+import android.net.Uri
 import android.view.LayoutInflater
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.core.net.toUri
 import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.data.repository.GroupRepository
 import com.example.viewer.data.struct.Book
@@ -21,12 +23,13 @@ class LocalReadSettingDialog (
     private val bookRepo = BookRepository(context)
     private val groupRepo = GroupRepository(context)
 
-    fun show (
-        book: Book,
-        onApplied: () -> Unit
-    ) {
+    var onApplied: (() -> Unit)? = null
+    var onCoverCropClicked: ((coverUri: Uri) -> Unit)? = null
+
+    fun show (book: Book) {
         val skipPages = bookRepo.getBookSkipPages(book.id)
         val groupId = bookRepo.getGroupId(book.id)
+        val coverPage = bookRepo.getBookCoverPage(book.id)
 
         dialogBinding.groupNameEditText.setText(
             groupRepo.getGroupName(groupId)
@@ -37,7 +40,7 @@ class LocalReadSettingDialog (
         )
 
         dialogBinding.profileDialogCoverPageEditText.setText(
-            (bookRepo.getBookCoverPage(book.id) + 1).toString()
+            (coverPage + 1).toString()
         )
 
         dialogBinding.profileDialogSkipPagesEditText.setText(skipPagesListToString(skipPages))
@@ -94,9 +97,15 @@ class LocalReadSettingDialog (
                 skipPages
             )
 
-            onApplied()
+            onApplied?.invoke()
 
             dialog.dismiss()
+        }
+
+        dialogBinding.cropCoverButton.setOnClickListener {
+            onCoverCropClicked?.invoke(
+                File(book.getBookFolder(context), coverPage.toString()).toUri()
+            )
         }
 
         dialog.show()

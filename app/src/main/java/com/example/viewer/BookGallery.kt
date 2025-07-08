@@ -14,6 +14,7 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.resource.bitmap.CenterCrop
 import com.bumptech.glide.signature.MediaStoreSignature
 import com.example.viewer.activity.BookProfileActivity
 import com.example.viewer.data.database.BookDatabase
@@ -53,6 +54,7 @@ class BookGallery (
         get() = recyclerView.adapter as GroupRecyclerViewAdapter
 
     init {
+        Log.i("BookGallery", "cover image: width $coverImageViewWidth, height $coverImageViewHeight")
         recyclerView.layoutManager = GridLayoutManager(context, 1)
         recyclerView.adapter = GroupRecyclerViewAdapter()
     }
