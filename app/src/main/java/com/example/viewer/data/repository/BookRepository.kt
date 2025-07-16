@@ -178,14 +178,24 @@ class BookRepository (private val context: Context) {
 
     fun getBookUrl (id: String) = runBlocking { bookDao.getUrl(id) }
 
-    fun getBookPageUrls (id: String): List<String> {
+    fun getBookPageUrls (id: String): Array<String?> {
         val book = queryBook(id)
         if (book.sourceOrdinal == BookSource.Hi.ordinal) {
             throw Exception("Page urls are not stored for this book source")
         }
-        return Util.readListFromJson(book.pageUrlsJson!!)
+
+        val stored = Util.readArrayFromJson<String?>(book.pageUrlsJson!!)
+        if (stored.size == book.pageNum) {
+            return stored
+        }
+
+        return arrayOfNulls<String>(book.pageNum).apply {
+            for ((i, v) in stored.withIndex()) {
+                this[i] = v
+            }
+        }
     }
-    fun setBookPageUrls (id: String, urls: List<String>) {
+    fun setBookPageUrls (id: String, urls: Array<String?>) {
         val dao = bookDao
         val book = queryBook(id)
         book.pageUrlsJson = Gson().toJson(urls).toString()
