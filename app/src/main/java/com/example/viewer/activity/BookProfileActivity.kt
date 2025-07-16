@@ -590,9 +590,9 @@ class BookProfileActivity: AppCompatActivity() {
                     skipPages
                 )
 
-                this@BookProfileActivity.book = BookRepository(baseContext).getBook(book.id)
+                this@BookProfileActivity.book = bookRepo.getBook(book.id)
                 refreshCoverPage()
-                rootBinding.titleTextView.text = book.customTitle ?: book.title
+                rootBinding.titleTextView.text = this@BookProfileActivity.book.run { customTitle ?: title }
 
                 dialog.dismiss()
             }
