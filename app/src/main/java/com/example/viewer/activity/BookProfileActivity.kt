@@ -379,7 +379,7 @@ class BookProfileActivity: AppCompatActivity() {
         rootBinding.progress.textView.text = getString(R.string.n_percent, 0)
         toggleProgressBar(true)
 
-        val fetcher = EPictureFetcher(baseContext, 1, book.url, book.id)
+        val fetcher = EPictureFetcher(baseContext, book.pageNum, book.url, book.id)
 
         // download cover page if not exist
         if (!File(fetcher.bookFolder, "0").exists()) {
