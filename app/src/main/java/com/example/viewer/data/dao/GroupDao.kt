@@ -12,7 +12,7 @@ interface GroupDao {
 
     @Query(
         "INSERT INTO BookGroups (id, name, itemOrder) VALUES (" +
-            ":id, :name, IFNULL((SELECT MAX(itemOrder) FROM BookGroups), 0)" +
+            ":id, :name, IFNULL((SELECT MAX(itemOrder) + 1 FROM BookGroups), 0)" +
         ")"
     )
     suspend fun insert (id: Int, name: String)
@@ -35,23 +35,23 @@ interface GroupDao {
     @Query("SELECT count(id) FROM BookGroups WHERE id = :id")
     suspend fun countId (id: Int): Int
 
-    @Query("UPDATE BookGroups SET itemOrder = itemOrder - 1 WHERE itemOrder >= :fromOrder")
-    suspend fun decreaseItemOrder (fromOrder: Int)
-
-    @Query("UPDATE BookGroups SET itemOrder = itemOrder - 1 WHERE itemOrder >= :fromOrder AND itemOrder <= :toOrder")
-    suspend fun decreaseItemOrder (fromOrder: Int, toOrder: Int)
-
-    @Query("UPDATE BookGroups SET itemOrder = itemOrder + 1 WHERE itemOrder >= :fromOrder AND itemOrder <= :toOrder")
-    suspend fun increaseItemOrder (fromOrder: Int, toOrder: Int)
+    @Query("UPDATE BookGroups SET itemOrder = :itemOrder - 1 WHERE itemOrder = :itemOrder")
+    suspend fun decreaseItemOrder (itemOrder: Int)
 
     @Query("UPDATE BookGroups SET itemOrder = :itemOrder WHERE id = :id")
     suspend fun updateItemOrder (id: Int, itemOrder: Int)
+
+    @Query("UPDATE BookGroups SET itemOrder = :newOrder WHERE itemOrder = :oldOrder")
+    suspend fun updateItemOrderByOrder (oldOrder: Int, newOrder: Int)
 
     @Query("UPDATE BookGroups SET name = :name WHERE id = :id")
     suspend fun updateName (id: Int, name: String)
 
     @Query("SELECT max(id) + 1 FROM BookGroups")
     suspend fun getNextId (): Int
+
+    @Query("SELECT max(itemOrder) FROM BookGroups")
+    suspend fun getMaxItemOrder (): Int
 
     @Query("DELETE FROM BookGroups WHERE id = :id")
     suspend fun delete (id: Int)

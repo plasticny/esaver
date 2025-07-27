@@ -1,16 +1,21 @@
 package com.example.viewer.activity.main
 
+import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipDescription
+import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Point
 import android.os.Bundle
 import android.view.DragEvent
+import android.view.GestureDetector
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.core.os.bundleOf
+import androidx.core.view.ContentInfoCompat.Flags
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.setFragmentResult
 import androidx.navigation.fragment.findNavController
@@ -29,8 +34,10 @@ class GroupListFragment: Fragment() {
 
     private lateinit var rootBinding: FragmentMainSortGroupBinding
     private lateinit var groupRepo: GroupRepository
+    private lateinit var gestureDetector: GestureDetector
 
     private var droppingItem: ComponentListItemWithButtonBinding? = null
+    private var lastLongClickedX = 0f
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -38,6 +45,16 @@ class GroupListFragment: Fragment() {
         savedInstanceState: Bundle?
     ): View {
         groupRepo = GroupRepository(requireContext())
+
+        gestureDetector = GestureDetector(
+            requireContext(),
+            object: GestureDetector.SimpleOnGestureListener() {
+                override fun onLongPress(e: MotionEvent) {
+                    super.onLongPress(e)
+                    lastLongClickedX = e.x
+                }
+            }
+        )
 
         rootBinding = FragmentMainSortGroupBinding.inflate(layoutInflater, container, false)
 
@@ -57,6 +74,7 @@ class GroupListFragment: Fragment() {
         }
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     private fun buildItem (group: Group): ComponentListItemWithButtonBinding {
         val binding = ComponentListItemWithButtonBinding.inflate(layoutInflater, rootBinding.groupContainer, false)
 
@@ -103,6 +121,11 @@ class GroupListFragment: Fragment() {
         }
 
         binding.root.apply {
+            setOnTouchListener { _, motionEvent ->
+                gestureDetector.onTouchEvent(motionEvent)
+                false
+            }
+
             setOnLongClickListener { _ ->
                 val dragData = ClipData(
                     "drag group",
@@ -124,14 +147,18 @@ class GroupListFragment: Fragment() {
                 droppingItem = binding
                 true
             }
-            setOnDragListener { _, event ->
+
+            setOnDragListener { v, event ->
                 if (event.action == DragEvent.ACTION_DROP) {
                     val dragId = event.clipData.getItemAt(0).text.toString().toInt()
                     if (dragId != group.id) {
-                        GroupRepository(requireContext()).moveGroup(dragId, group.id)
+                        if (event.y <= v.height / 2.0) {
+                            groupRepo.moveGroupBefore(dragId, group.id)
+                        } else {
+                            groupRepo.moveGroupAfter(dragId, group.id)
+                        }
                         refresh()
                     }
-
                     droppingItem!!.name.setTextColor(context.getColor(R.color.white))
                     backgroundTintList = ColorStateList.valueOf(context.getColor(R.color.dark_grey))
                 }
@@ -142,10 +169,12 @@ class GroupListFragment: Fragment() {
         return binding
     }
 
-    private class DragShadowBuilder (v: View) : View.DragShadowBuilder(v) {
+    private inner class DragShadowBuilder (v: View) : View.DragShadowBuilder(v) {
+        private val x = v.x
+
         override fun onProvideShadowMetrics(outShadowSize: Point, outShadowTouchPoint: Point) {
             outShadowSize.set(view.width, view.height)
-            outShadowTouchPoint.set(0, outShadowSize.y / 2)
+            outShadowTouchPoint.set((lastLongClickedX - x).toInt(), outShadowSize.y / 2)
         }
     }
 }

@@ -8,8 +8,10 @@ import android.content.res.ColorStateList
 import android.graphics.Point
 import android.os.Bundle
 import android.view.DragEvent
+import android.view.GestureDetector
 import android.view.KeyEvent
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
@@ -30,9 +32,11 @@ class SearchMarkFragment: Fragment() {
     private lateinit var parent: ViewGroup
     private lateinit var binding: MainSearchFragmentBinding
     private lateinit var searchRepo: SearchRepository
+    private lateinit var gestureDetector: GestureDetector
 
     private var focusedSearchMark: SearchMarkEntry? = null
     private var searchMarkListLastUpdate = 0L
+    private var lastLongPressX = 0f
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -42,6 +46,16 @@ class SearchMarkFragment: Fragment() {
         parent = container!!
         searchRepo = SearchRepository(parent.context)
         binding = MainSearchFragmentBinding.inflate(layoutInflater, parent, false)
+
+        gestureDetector = GestureDetector(
+            requireContext(),
+            object: GestureDetector.SimpleOnGestureListener() {
+                override fun onLongPress(e: MotionEvent) {
+                    super.onLongPress(e)
+                    lastLongPressX = e.x
+                }
+            }
+        )
 
         searchMarkListLastUpdate = searchRepo.getSearchMarkListUpdateTime()
 
@@ -166,6 +180,11 @@ class SearchMarkFragment: Fragment() {
             searchMarkBinding.name.text = searchMark.name
 
             searchMarkBinding.root.apply {
+                setOnTouchListener { _, motionEvent ->
+                    gestureDetector.onTouchEvent(motionEvent)
+                    false
+                }
+
                 setOnClickListener {
                     if (focusedSearchMark == null) {
                         if (!Util.isInternetAvailable(context)) {
@@ -205,12 +224,16 @@ class SearchMarkFragment: Fragment() {
                     true
                 }
 
-                setOnDragListener { _, event ->
+                setOnDragListener { v, event ->
                     when (event.action) {
                         DragEvent.ACTION_DROP -> {
                             val dragId = event.clipData.getItemAt(0).text.toString().toLong()
                             if (dragId != searchMark.id) {
-                                searchRepo.moveSearchMarkPosition(dragId, searchMark.id)
+                                if (event.y <= v.height / 2.0) {
+                                    searchRepo.moveSearchMarkBefore(dragId, searchMark.id)
+                                } else {
+                                    searchRepo.moveSearchMarkAfter(dragId, searchMark.id)
+                                }
                                 deFocusSearchMark(doModifyBindingStyle = false)
                                 refreshSearchMarkWrapper()
                             }
@@ -258,10 +281,11 @@ class SearchMarkFragment: Fragment() {
         val binding: ComponentListItemBinding
     )
 
-    private class DragShadowBuilder (v: View) : View.DragShadowBuilder(v) {
+    private inner class DragShadowBuilder (v: View) : View.DragShadowBuilder(v) {
+        private val x = v.x
         override fun onProvideShadowMetrics(outShadowSize: Point, outShadowTouchPoint: Point) {
             outShadowSize.set(view.width, view.height)
-            outShadowTouchPoint.set(0, outShadowSize.y / 2)
+            outShadowTouchPoint.set((lastLongPressX - x).toInt(), outShadowSize.y / 2)
         }
     }
 }

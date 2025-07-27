@@ -1,6 +1,7 @@
 package com.example.viewer.data.repository
 
 import android.content.Context
+import android.database.sqlite.SQLiteConstraintException
 import androidx.room.Transaction
 import com.example.viewer.data.dao.ExcludeTagDao
 import com.example.viewer.data.dao.SearchMarkDao
@@ -97,36 +98,48 @@ class SearchRepository (context: Context) {
         )
     }
 
-    /**
-     * move the search mark with id to the front of toId
-     */
-    @Transaction
-    fun moveSearchMarkPosition (id: Long, toId: Long) {
-        println("[${this::class.simpleName}.${this::moveSearchMarkPosition.name}]")
+    fun moveSearchMarkBefore (id: Long, toId: Long) = runBlocking {
+        moveSearchMark(
+            searchMarkDao.queryItemOrder(id)!!,
+            searchMarkDao.queryItemOrder(toId)!!
+        )
+    }
 
-        runBlocking {
-            if (id == toId) {
-                return@runBlocking
-            }
-
-            val fromOrder = searchMarkDao.queryItemOrder(id)!!
-            val toOrder = searchMarkDao.queryItemOrder(toId)!!
-
-            if (fromOrder == toOrder) {
-                throw Exception("fromOrder == toOrder, something went wrong")
-            }
-
-            if (fromOrder < toOrder) {
-                searchMarkDao.decreaseItemOrder(fromOrder + 1, toOrder - 1)
-                searchMarkDao.updateItemOrder(id, toOrder - 1)
-            }
-            else {
-                searchMarkDao.increaseItemOrder(toOrder, fromOrder - 1)
-                searchMarkDao.updateItemOrder(id, toOrder)
-            }
-
-            searchMarkListLastUpdateTime = System.currentTimeMillis()
+    fun moveSearchMarkAfter (id: Long, toId: Long) = runBlocking {
+        val from = searchMarkDao.queryItemOrder(id)!!
+        val to = searchMarkDao.queryItemOrder(toId)!!
+        if (from == to) {
+            return@runBlocking
         }
+        moveSearchMark(from, to)
+    }
+
+    @Transaction
+    private suspend fun moveSearchMark (fromOrder: Int, toOrder: Int) {
+        println("[${this::class.simpleName}.${this::moveSearchMark.name}]")
+
+        if (fromOrder == toOrder) {
+            throw IllegalArgumentException("fromOrder == toOrder, something went wrong")
+        }
+
+        searchMarkDao.updateItemOrderByOrder(fromOrder, -1)
+        try {
+            if (fromOrder < toOrder) {
+                for (order in fromOrder + 1 .. toOrder) {
+                    searchMarkDao.updateItemOrderByOrder(order, order - 1)
+                }
+            } else {
+                for (order in (toOrder until fromOrder).reversed()) {
+                    searchMarkDao.updateItemOrderByOrder(order, order + 1)
+                }
+            }
+        } catch (e: SQLiteConstraintException) {
+            searchMarkDao.updateItemOrderByOrder(-1, fromOrder)
+            throw e
+        }
+        searchMarkDao.updateItemOrderByOrder(-1, toOrder)
+
+        searchMarkListLastUpdateTime = System.currentTimeMillis()
     }
 
     fun getSearchMarkListUpdateTime () = searchMarkListLastUpdateTime
