@@ -1,6 +1,8 @@
 package com.example.viewer.data.repository
 
 import android.content.Context
+import android.graphics.Point
+import android.graphics.PointF
 import androidx.room.Transaction
 import com.example.viewer.Util
 import com.example.viewer.data.dao.BookDao
@@ -65,6 +67,7 @@ class BookRepository (private val context: Context) {
                     lastViewTime = lastViewTime,
                     bookMarksJson = gson.toJson(bookMarks).toString(),
                     customTitle = null,
+                    coverCropPositionString = null,
                     pageUrlsJson = pageUrls?.let {
                         gson.toJson(it).toString()
                     },
@@ -108,6 +111,7 @@ class BookRepository (private val context: Context) {
                 lastViewTime = -1L,
                 bookMarksJson = gson.toJson(listOf<Int>()).toString(),
                 customTitle = null,
+                coverCropPositionString = null,
                 pageUrlsJson = if (source == BookSource.E) {
                     gson.toJson(listOf<String>()).toString()
                 } else null,
@@ -257,6 +261,22 @@ class BookRepository (private val context: Context) {
 
     fun updateCustomTitle (id: String, value: String) = runBlocking {
         bookDao.updateCustomTitle(id, value)
+    }
+
+    fun getCoverCropPosition (id: String): PointF? = runBlocking {
+        bookDao.getCoverCropPositionString(id)?.let {
+            Book.coverCropPositionStringToPoint(it)
+        }
+    }
+
+    /**
+     * @param position this should be in normalized coordinates
+     */
+    fun updateCoverCropPosition (id: String, position: PointF) = runBlocking {
+        if (position.x < 0 || position.x > 1 || position.y < 0 || position.y > 1) {
+            throw IllegalArgumentException("the position seems not a valid normalized coordinates")
+        }
+        bookDao.updateCoverCropPositionString(id, "${position.x},${position.y}")
     }
 
     private fun queryBook (id: String) = runBlocking { bookDao.queryById(id) }

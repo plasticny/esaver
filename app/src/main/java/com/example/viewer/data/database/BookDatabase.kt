@@ -15,7 +15,7 @@ import com.example.viewer.data.struct.Group
 
 @Database (
     entities = [Book::class, BookWithGroup::class, Group::class],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 abstract class BookDatabase: RoomDatabase() {
@@ -29,6 +29,7 @@ abstract class BookDatabase: RoomDatabase() {
                 ).addMigrations(migration_5_6)
                     .addMigrations(migration_6_7)
                     .addMigrations(migration_7_8)
+                    .addMigrations(migration_8_9)
                     .build().also { instance = it }
             }
 
@@ -86,6 +87,12 @@ abstract class BookDatabase: RoomDatabase() {
         private val migration_7_8 = object: Migration(7, 8) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE Books ADD COLUMN customTitle TEXT")
+            }
+        }
+
+        private val migration_8_9 = object: Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE Books ADD COLUMN coverCropPositionString TEXT DEFAULT NULL")
             }
         }
     }

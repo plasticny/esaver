@@ -4,10 +4,11 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
+import android.graphics.Point
+import android.graphics.PointF
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
-import android.view.LayoutInflater
 import android.view.View
 import android.widget.Button
 import android.widget.ProgressBar
@@ -15,14 +16,13 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
 import androidx.room.Transaction
 import com.bumptech.glide.Glide
 import com.bumptech.glide.signature.MediaStoreSignature
+import com.example.viewer.CoverCrop
 import com.example.viewer.R
-import com.example.viewer.RectangleCrop
 import com.example.viewer.Util
 import com.example.viewer.activity.main.MainActivity
 import com.example.viewer.activity.viewer.LocalViewerActivity
@@ -74,26 +74,23 @@ class BookProfileActivity: AppCompatActivity() {
     private lateinit var book: Book
     private lateinit var rootBinding: BookProfileActivityBinding
     private lateinit var bookRepo: BookRepository
-    private lateinit var groupRepo: GroupRepository
     private lateinit var excludedTags: Map<String, Set<String>>
 
     private var isBookStored: Boolean = false
 
     private val cropLauncher = registerForActivityResult(CropContract()) {
-        it?.let { (offsetX, offsetY) ->
-            println("$offsetX $offsetY")
-        }
+        it?.let { bookRepo.updateCoverCropPosition(book.id, it) }
+    }
+    private val groupRepo: GroupRepository by lazy {
+        GroupRepository(baseContext)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         bookRepo = BookRepository(baseContext)
-        groupRepo = GroupRepository(baseContext)
 
         book = bookRepo.getBook(intent.getStringExtra("bookId")!!)
-
-        val bookRepo = BookRepository(baseContext)
         isBookStored = runBlocking { bookRepo.isBookStored(book.id) }
 
         excludedTags = ExcludeTagRepository(baseContext).findExcludedTags(book)
@@ -131,7 +128,10 @@ class BookProfileActivity: AppCompatActivity() {
                     Glide.with(baseContext)
                         .load(coverFile)
                         .signature(MediaStoreSignature("", coverFile.lastModified(), 0))
-                        .into(it)
+                        .run {
+                            book.getCoverCropPosition()?.let { p -> transform(CoverCrop(p)) }
+                            into(it)
+                        }
                 }
             } else {
                 Glide.with(baseContext).load(book.getPageUrls()!![0]).into(it)
@@ -360,15 +360,17 @@ class BookProfileActivity: AppCompatActivity() {
         if (isBookStored) {
             val file = File(
                 "${getExternalFilesDir(null)}/${book.id}",
-                BookRepository(baseContext).getBookCoverPage(book.id).toString()
+                bookRepo.getBookCoverPage(book.id).toString()
             )
             Glide.with(baseContext)
                 .load(file)
+                .signature(MediaStoreSignature("", file.lastModified(), 0))
+                .run { book.getCoverCropPosition()?.let { transform(CoverCrop(it)) } ?: this }
                 .into(rootBinding.coverImageView)
         }
     }
 
-    private fun deleteBook (book: Book): Boolean = BookRepository(baseContext).removeBook(book)
+    private fun deleteBook (book: Book): Boolean = bookRepo.removeBook(book)
 
     @Transaction
     private suspend fun saveBook () {
@@ -460,6 +462,7 @@ class BookProfileActivity: AppCompatActivity() {
             lastViewTime = -1L,
             bookMarksJson = book.bookMarksJson,
             customTitle = book.customTitle,
+            coverCropPositionString = null,
             pageUrlsJson = book.pageUrlsJson,
             p = book.p
         )
@@ -491,20 +494,20 @@ class BookProfileActivity: AppCompatActivity() {
         )
     }
 
-    private class CropContract: ActivityResultContract<Uri, Pair<Int, Int>?>() {
+    private class CropContract: ActivityResultContract<Uri, PointF?>() {
         override fun createIntent(context: Context, input: Uri): Intent {
             return Intent(context, CropActivity::class.java).
             putExtra(CropActivity.EXTRA_IMAGE_URI, input)
         }
-        override fun parseResult(resultCode: Int, intent: Intent?): Pair<Int, Int>? {
+        override fun parseResult(resultCode: Int, intent: Intent?): PointF? {
             if (resultCode != Activity.RESULT_OK) {
                 return null
             }
             return intent?.let {
-                Pair(
-                    it.getIntExtra(CropActivity.RESULT_OFFSET_X, -1),
-                    it.getIntExtra(CropActivity.RESULT_OFFSET_Y, -1)
-                )
+                val x = it.getFloatExtra(CropActivity.RESULT_OFFSET_X, -1f)
+                val y = it.getFloatExtra(CropActivity.RESULT_OFFSET_Y, -1f)
+                assert(x != -1f && y != -1f)
+                PointF(x, y)
             }
         }
     }
@@ -562,9 +565,10 @@ class BookProfileActivity: AppCompatActivity() {
                 }
 
                 // custom title
-                dialogBinding.customTitleEditText.text.toString().let {
-                    bookRepo.updateCustomTitle(book.id, it.trim())
-                }
+                bookRepo.updateCustomTitle(
+                    book.id,
+                    dialogBinding.customTitleEditText.text.toString().trim()
+                )
 
                 // cover page
                 bookRepo.setBookCoverPage(
@@ -679,6 +683,10 @@ class BookProfileActivity: AppCompatActivity() {
         }
 
         private fun skipPageStringToList (text: String): List<Int> {
+            if (text.trim().isEmpty()) {
+                return listOf()
+            }
+
             val res = mutableSetOf<Int>()
             for (token in text.split(',')) {
                 if (token.contains("-")) {
@@ -711,7 +719,7 @@ class BookProfileActivity: AppCompatActivity() {
             try {
                 (s.toInt() - 1).let { if (it >= 0) it else null }
             } catch (e: NumberFormatException) {
-                println("[${this::class.simpleName}.${this::skipPageStringToList.name}] '$s' cannot convert into int")
+                println("[${this::class.simpleName}.${this::pageStringToPageIndex.name}] '$s' cannot convert into int")
                 null
             }
     }

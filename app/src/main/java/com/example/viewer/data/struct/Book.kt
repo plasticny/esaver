@@ -1,6 +1,8 @@
 package com.example.viewer.data.struct
 
 import android.content.Context
+import android.graphics.Point
+import android.graphics.PointF
 import androidx.room.Entity
 import androidx.room.Ignore
 import androidx.room.Index
@@ -28,6 +30,10 @@ data class Book (
     var lastViewTime: Long,
     var bookMarksJson: String,
     var customTitle: String?, // title set by user, it has higher display priority if it is not null
+    // a string in the format: x,y.
+    // Represent of the top left point of the cover position
+    // Stored in normalized coordinates, i.e. x and y are >= 0 and <= 1
+    var coverCropPositionString: String?,
     // for e book only
     var pageUrlsJson: String?,
     var p: Int?
@@ -62,6 +68,7 @@ data class Book (
                 lastViewTime = 0L,
                 bookMarksJson = "[]",
                 customTitle = null,
+                coverCropPositionString = null,
                 pageUrlsJson = pageUrlsJson,
                 p = null
             )
@@ -71,6 +78,14 @@ data class Book (
 
         fun clearTmpBook () {
             tmpBook = null
+        }
+
+        fun coverCropPositionStringToPoint (string: String): PointF {
+            val tokens = string.split(',')
+            if (tokens.size != 2) {
+                throw IllegalStateException("tokens size error")
+            }
+            return PointF(tokens[0].toFloat(), tokens[1].toFloat())
         }
     }
 
@@ -102,6 +117,13 @@ data class Book (
             context.getExternalFilesDir(null),
             if (isTmpBook()) "tmp" else id
         )
+
+    fun getCoverCropPosition (): PointF? {
+        if (coverCropPositionString == null) {
+            return null
+        }
+        return coverCropPositionStringToPoint(coverCropPositionString!!)
+    }
 
     private fun isTmpBook () = tmpBook?.id == id
 }

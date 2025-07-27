@@ -22,10 +22,11 @@ import androidx.appcompat.app.AppCompatActivity
 import com.example.viewer.R
 import com.example.viewer.databinding.ActivityCropBinding
 import kotlin.math.abs
-import kotlin.math.ceil
+import kotlin.math.round
 
 /**
- * ParcelableExtra (Uri): image_uri
+ * Pass in EXTRA_IMAGE_URI (Uri);
+ * Result RESULT_OFFSET_X (float) and RESULT_OFFSET_Y (float)
  */
 class CropActivity: AppCompatActivity() {
     companion object {
@@ -119,6 +120,7 @@ class CropActivity: AppCompatActivity() {
             )
             scaleImage(minScale)
 
+            // move to crop position if set
             rootBinding.imageView.translationX = if (offsetX == -1f) { 0f } else {
                 (width * minScale - rootBinding.highlightAreaDummy.width) / 2 - (offsetX / fileWidth * width * minScale)
             }
@@ -127,24 +129,14 @@ class CropActivity: AppCompatActivity() {
             }
         }
 
-        rootBinding.cropButton.setOnClickListener {
-            val (x,y) = estimateOffset()
-            setResult(
-                Activity.RESULT_OK,
-                Intent().apply {
-                    putExtra(RESULT_OFFSET_X, x)
-                    putExtra(RESULT_OFFSET_Y, y)
-                }
-            )
-            finish()
-        }
+        rootBinding.cropButton.setOnClickListener { onCropClicked() }
 
         rootBinding.cancelButton.setOnClickListener {
             setResult(Activity.RESULT_CANCELED)
             finish()
         }
 
-        rootBinding.root.addView(HighLightView())
+        rootBinding.imageWrapper.addView(HighLightView())
     }
 
     private fun getImageBounds () =
@@ -169,14 +161,29 @@ class CropActivity: AppCompatActivity() {
 
     /**
      * estimate the offset on the scale of original image
-     * @return offset of upper left point
+     * @return offset of upper left point, normalized to the original image
      */
-    private fun estimateOffset (): Pair<Int, Int> {
+    private fun estimateNormalizedOffset (): Pair<Float, Float> {
         val lx = (originBounds.width() * minScale - rootBinding.highlightAreaDummy.width) / 2 - rootBinding.imageView.translationX
-        val x = (lx * fileWidth) / (originBounds.width() * minScale)
         val ly = (originBounds.height() * minScale - rootBinding.highlightAreaDummy.height) / 2 - rootBinding.imageView.translationY
-        val y = (ly * fileHeight) / (originBounds.height() * minScale)
-        return Pair(ceil(x).toInt(), ceil(y).toInt())
+//        x and y without normalize
+//        val x = (lx * fileWidth) / (originBounds.width() * minScale)
+//        val y = (ly * fileHeight) / (originBounds.height() * minScale)
+        val x = lx / (originBounds.width() * minScale)
+        val y = ly / (originBounds.height() * minScale)
+        return Pair(round(x * 100) / 100, round(y * 100) / 100)
+    }
+
+    private fun onCropClicked () {
+        val (x,y) = estimateNormalizedOffset()
+        setResult(
+            Activity.RESULT_OK,
+            Intent().apply {
+                putExtra(RESULT_OFFSET_X, x)
+                putExtra(RESULT_OFFSET_Y, y)
+            }
+        )
+        finish()
     }
 
     private inner class ScaleListener: ScaleGestureDetector.SimpleOnScaleGestureListener() {

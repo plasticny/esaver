@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.ImageDecoder
 import android.graphics.ImageDecoder.DecodeException
+import android.graphics.Point
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -201,6 +202,7 @@ class BookGallery (
             val bookFolder = File(context.getExternalFilesDir(null), id)
 
             val coverPage = bookRepo.getBookCoverPage(id)
+            val cropPosition = bookRepo.getCoverCropPosition(id)
             val coverPageFile = File(bookFolder, coverPage.toString())
 
             CoroutineScope(Dispatchers.Main).launch {
@@ -218,6 +220,7 @@ class BookGallery (
                 Glide.with(context)
                     .load(coverPageFile)
                     .signature(MediaStoreSignature("", coverPageFile.lastModified(), 0))
+                    .run { cropPosition?.let { transform(CoverCrop(it)) } ?: this }
                     .into(holder.imageView)
             }
 
