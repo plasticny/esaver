@@ -101,11 +101,11 @@ class EPictureFetcher: BasePictureFetcher {
     }
 
     private suspend fun getPageUrl (page: Int): String {
-        if (pageUrls[page] != null) {
-            return pageUrls[page]!!
-        }
-
         getPageUrlMutex.withLock {
+            if (pageUrls[page] != null) {
+                return pageUrls[page]!!
+            }
+
             val logTag = "${this::class.simpleName}.${this::getPageUrl.name}"
 
             var firstNullIdx = pageUrls.indexOfFirst { it == null }.also {
