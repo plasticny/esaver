@@ -26,6 +26,7 @@ import com.example.viewer.databinding.ActivitySearchBookBinding
 import com.example.viewer.databinding.DialogSearchInfoBinding
 import com.example.viewer.dialog.SearchMarkDialog
 import com.example.viewer.dialog.SimpleEditTextDialog
+import com.example.viewer.fetcher.EPictureFetcher
 import com.example.viewer.struct.BookSource
 import com.example.viewer.struct.Category
 import com.google.gson.Gson
@@ -34,6 +35,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import org.jsoup.HttpStatusException
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import kotlin.reflect.jvm.internal.impl.serialization.deserialization.EnumEntriesDeserializationSupport
@@ -543,12 +545,17 @@ class SearchActivity: AppCompatActivity() {
             }
         }
 
-    private suspend fun storeTmpBook (searchBookData: SearchBookData) {
-        withContext(Dispatchers.Main) { rootBinding.screenProgressBarWrapper.visibility = View.VISIBLE }
-        val doc = withContext(Dispatchers.IO) {
-            Jsoup.connect(searchBookData.url).cookies(mapOf("nw" to "1")).get()
+    /**
+     * @return do the store success
+     */
+    private suspend fun storeTmpBook (searchBookData: SearchBookData): Boolean {
+        rootBinding.screenProgressBarWrapper.visibility = View.VISIBLE
+        val doc = try {
+            EPictureFetcher.fetchWebpage(searchBookData.url, true)
+        } catch (_: HttpStatusException) {
+            return false
         }
-        withContext(Dispatchers.Main) { rootBinding.screenProgressBarWrapper.visibility = View.GONE }
+        rootBinding.screenProgressBarWrapper.visibility = View.GONE
 
         val gson = Gson()
 
@@ -572,6 +579,7 @@ class SearchActivity: AppCompatActivity() {
             sourceOrdinal = BookSource.E.ordinal,
             pageUrlsJson = gson.toJson(listOf(searchBookData.coverUrl))
         )
+        return true
     }
 
     private fun showInfoDialog () {
@@ -729,8 +737,12 @@ class SearchActivity: AppCompatActivity() {
                             if (bookDb.isBookStored(bookRecord.id)) {
                                 bookRecord.id
                             } else {
-                                withContext(Dispatchers.IO) {
-                                    storeTmpBook(bookRecord)
+                                storeTmpBook(bookRecord).let {
+                                    if (!it) {
+                                        // store failed
+                                        Toast.makeText(baseContext, "這本書出現錯誤，無法打開", Toast.LENGTH_SHORT).show()
+                                        return@launch
+                                    }
                                 }
                                 "-1"
                             }

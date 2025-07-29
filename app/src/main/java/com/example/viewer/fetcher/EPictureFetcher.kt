@@ -11,9 +11,33 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.jsoup.HttpStatusException
 import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
 import java.io.File
+import kotlin.math.log
 
 class EPictureFetcher: BasePictureFetcher {
+    companion object {
+        /**
+         * with context io wrapped
+         */
+        @JvmStatic
+        suspend fun fetchWebpage (url: String, nw: Boolean = false): Document {
+            return try {
+                withContext(Dispatchers.IO) {
+                    Jsoup.connect(url).run {
+                        if (nw) {
+                            cookies(mapOf("nw" to "1"))
+                        }
+                        this
+                    }.get()
+                }
+            } catch (e: HttpStatusException) {
+                assert(e.statusCode == 404 || e.statusCode == 408)
+                throw e
+            }
+        }
+    }
+
     private val bookDataset = BookRepository(context)
     private val bookUrl: String
 
@@ -85,12 +109,10 @@ class EPictureFetcher: BasePictureFetcher {
         println("[${this::class.simpleName}.${this::fetchPictureUrl.name}] $page")
 
         fetchingPictureUrl.add(page)
-        val res = withContext(Dispatchers.IO) {
-            try {
-                Jsoup.connect(getPageUrl(page)).get()
-            } catch (e: HttpStatusException) {
-                null
-            }
+        val res = try {
+            fetchWebpage(getPageUrl(page))
+        } catch (e: HttpStatusException) {
+            null
         }?.selectFirst("#i3 #img")?.attr("src")
         if (res != null) {
             pictureUrlMap[page] = res
@@ -116,11 +138,21 @@ class EPictureFetcher: BasePictureFetcher {
 
             while (pageUrls[page] == null) {
                 Log.i(logTag, "load next p $p")
-                withContext(Dispatchers.IO) {
-                    Jsoup.connect(
-                        "${bookUrl}?p=$p".also { Log.i(logTag, it) }
-                    ).cookies(mapOf("nw" to "1")).get()
-                }.select("#gdt a").map { it.attr("href") }.let { pageUrlSegment ->
+                val pageDoc = try {
+                    fetchWebpage("${bookUrl}?p=$p".also { Log.i(logTag, it) }, true)
+                } catch (e: HttpStatusException) {
+                    if (e.statusCode == 404) {
+                        Log.e(logTag, "404 on fetching book p")
+                        throw e
+                    }
+                    null
+                }
+
+                if (pageDoc == null) {
+                    continue
+                }
+
+                pageDoc.select("#gdt a").map { it.attr("href") }.let { pageUrlSegment ->
                     if (pageUrlSegment.isEmpty()) {
                         throw Exception("[${this@EPictureFetcher::class.simpleName}.${this@EPictureFetcher::getPageUrl.name}] no page url fetched")
                     }

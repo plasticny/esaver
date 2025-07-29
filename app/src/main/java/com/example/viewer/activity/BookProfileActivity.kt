@@ -49,6 +49,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import org.jsoup.HttpStatusException
 import org.jsoup.Jsoup
 import java.io.File
 import kotlin.math.floor
@@ -141,18 +142,24 @@ class BookProfileActivity: AppCompatActivity() {
         rootBinding.titleTextView.text = book.customTitle ?: book.title
 
         rootBinding.warningContainer.apply {
-            if (isBookStored) {
+            if (!Util.isInternetAvailable(baseContext)) {
                 return@apply
             }
 
             // only check warning if book is not stored
             lifecycleScope.launch {
-                val isBookWarning = withContext(Dispatchers.IO) {
-                    Jsoup.connect(book.url).get()
-                }.html().contains("<h1>Content Warning</h1>")
-
-                if (isBookWarning) {
+                val doc = try {
+                    EPictureFetcher.fetchWebpage(book.url)
+                } catch (_: HttpStatusException) {
                     visibility = View.VISIBLE
+                    rootBinding.warningText.text = getString(R.string.book_seems_deleted)
+                    return@launch
+                }
+
+                // check is book has content warning, only for non stored book
+                if (!isBookStored && doc.html().contains("<h1>Content Warning</h1>")) {
+                    visibility = View.VISIBLE
+                    rootBinding.warningText.text = getString(R.string.contain_offensive_context)
                 }
             }
         }
