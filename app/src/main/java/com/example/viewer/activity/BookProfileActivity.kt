@@ -141,13 +141,17 @@ class BookProfileActivity: AppCompatActivity() {
         rootBinding.titleTextView.text = book.customTitle ?: book.title
 
         rootBinding.warningContainer.apply {
+            if (isBookStored) {
+                return@apply
+            }
+            
             // only check warning if book is not stored
             lifecycleScope.launch {
                 val isBookWarning = withContext(Dispatchers.IO) {
                     Jsoup.connect(book.url).get()
                 }.html().contains("<h1>Content Warning</h1>")
 
-                if (!isBookStored && isBookWarning) {
+                if (isBookWarning) {
                     visibility = View.VISIBLE
                 }
             }
