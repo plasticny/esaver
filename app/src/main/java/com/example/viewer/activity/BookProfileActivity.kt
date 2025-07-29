@@ -162,7 +162,7 @@ class BookProfileActivity: AppCompatActivity() {
         rootBinding.categoryTextView.apply {
             val name = book.getCategory().name
             text = name
-            setTextColor(context.getColor(Util.categoryFromName(name).color))
+            setTextColor(context.getColor(Category.fromName(name).color))
         }
 
         rootBinding.readButton.setOnClickListener {

@@ -320,7 +320,7 @@ class SearchActivity: AppCompatActivity() {
             name = searchMark.name,
             keyword = searchMark.keyword,
             categories = Util.readListFromJson<Int>(searchMark.categoryOrdinalsJson)
-                .map { Util.categoryFromOrdinal(it) },
+                .map { Category.fromOrdinal(it) },
             tags = Util.readMapFromJson(searchMark.tagsJson),
             uploader = searchMark.uploader,
             doExclude = searchMark.doExclude
@@ -536,7 +536,7 @@ class SearchActivity: AppCompatActivity() {
 
     private fun excludeTagFilter (books: List<SearchBookData>): List<SearchBookData> =
         books.filterNot {
-            excludeTagRepo.doExclude(listOf(Util.categoryFromName(it.cat)), it.tags).also { excluded ->
+            excludeTagRepo.doExclude(listOf(Category.fromName(it.cat)), it.tags).also { excluded ->
                 if (excluded) {
                     println("[${this::class.simpleName}.${this::excludeTagFilter.name}] ${it.id} is excluded")
                 }
@@ -566,7 +566,7 @@ class SearchActivity: AppCompatActivity() {
             title = doc.selectFirst("#gj")!!.text().trim().ifEmpty { searchBookData.title },
             subTitle = searchBookData.title,
             pageNum = searchBookData.pageNum,
-            categoryOrdinal = Util.categoryFromName(searchBookData.cat).ordinal,
+            categoryOrdinal = Category.fromName(searchBookData.cat).ordinal,
             uploader = doc.selectFirst("#gdn a")?.text(),
             tagsJson = gson.toJson(tags),
             sourceOrdinal = BookSource.E.ordinal,
@@ -716,7 +716,7 @@ class SearchActivity: AppCompatActivity() {
 
             binding.searchBookCatTextView.apply {
                 text = bookRecord.cat
-                setTextColor(context.getColor(Util.categoryFromName(bookRecord.cat).color))
+                setTextColor(context.getColor(Category.fromName(bookRecord.cat).color))
             }
 
             binding.root.apply {

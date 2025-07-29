@@ -22,4 +22,20 @@ enum class Category {
 
     abstract val color: Int
     abstract val value: Int
+
+    companion object {
+        @JvmStatic
+        fun fromOrdinal (ordinal: Int) = entries[ordinal]
+
+        @JvmStatic
+        fun fromName (name: String) = when (name) {
+            Doujinshi.name -> Doujinshi
+            Manga.name -> Manga
+            ArtistCG.name -> ArtistCG
+            "Artist CG" -> ArtistCG
+            NonH.name -> NonH
+            "Non-H" -> NonH
+            else -> throw Exception("unexpected string $name")
+        }
+    }
 }

@@ -23,5 +23,5 @@ data class ExcludeTag (
 
     fun getCategories (): List<Category> =
         Util.readListFromJson<Int>(categoryOrdinalsJson)
-            .map { Util.categoryFromOrdinal(it) }
+            .map { Category.fromOrdinal(it) }
 }
