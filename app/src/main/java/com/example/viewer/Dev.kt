@@ -1,8 +1,6 @@
 package com.example.viewer
 
 import android.content.Context
-import com.example.viewer.data.repository.GroupRepository
-import com.example.viewer.database.SearchPreference
 
 /**
  * for development usage and backup code

@@ -144,7 +144,7 @@ class BookProfileActivity: AppCompatActivity() {
             if (isBookStored) {
                 return@apply
             }
-            
+
             // only check warning if book is not stored
             lifecycleScope.launch {
                 val isBookWarning = withContext(Dispatchers.IO) {

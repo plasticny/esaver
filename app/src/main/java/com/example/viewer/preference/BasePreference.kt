@@ -1,4 +1,4 @@
-package com.example.viewer.database
+package com.example.viewer.preference
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -12,7 +12,7 @@ import java.io.ByteArrayOutputStream
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 
-abstract class BaseDatabase protected constructor () {
+abstract class BasePreference protected constructor () {
     protected class CustomPreferencesKey<T> (name: String) {
         val key = byteArrayPreferencesKey(name)
     }
