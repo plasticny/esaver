@@ -123,7 +123,11 @@ class BookProfileActivity: AppCompatActivity() {
                                 baseContext,
                                 id
                             ) else HiPictureFetcher(baseContext, id)
-                            fetcher.savePicture(bookRepo.getBookCoverPage(book.id))
+                            try {
+                                fetcher.savePicture(bookRepo.getBookCoverPage(book.id))
+                            } catch (e: Exception) {
+                                println(e.stackTraceToString())
+                            }
                         }
                     }
                     Glide.with(baseContext)
@@ -397,14 +401,19 @@ class BookProfileActivity: AppCompatActivity() {
         // download cover page if not exist
         if (!File(fetcher.bookFolder, "0").exists()) {
             val success = withContext(Dispatchers.IO) {
-                val file = fetcher.savePicture(0) { total, downloaded ->
-                    CoroutineScope(Dispatchers.Main).launch {
-                        rootBinding.progress.textView.text = getString(
-                            R.string.n_percent, floor(downloaded.toDouble() / total * 100).toInt()
-                        )
+                try {
+                    fetcher.savePicture(0) { total, downloaded ->
+                        CoroutineScope(Dispatchers.Main).launch {
+                            rootBinding.progress.textView.text = getString(
+                                R.string.n_percent, floor(downloaded.toDouble() / total * 100).toInt()
+                            )
+                        }
                     }
+                    true
+                } catch (e: Exception) {
+                    println(e.stackTraceToString())
+                    false
                 }
-                file != null
             }
             if (!success) {
                 Toast.makeText(baseContext, "儲存失敗，再試一次", Toast.LENGTH_SHORT).show()

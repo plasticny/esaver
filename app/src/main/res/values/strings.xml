@@ -68,7 +68,8 @@
     <string name="local_setting">本地設定</string>
     <string name="exclude_tag">濾除標籤</string>
     <string name="search_tag">搜尋標籤</string>
-    <string name="load_image_failed_retry">圖片讀取失敗\n點擊重試</string>
+    <string name="fail_to_load_picture">圖片讀取失敗</string>
+    <string name="check_to_retry">點擊重試</string>
     <string name="there_is_no_more">沒有更多了</string>
     <string name="contain_offensive_context">含有令人不適的內容</string>
     <string name="book_seems_deleted">這本書可能被刪除了</string>

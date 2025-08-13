@@ -21,8 +21,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import org.jsoup.HttpStatusException
 import java.io.File
 import java.io.FileOutputStream
+import java.net.ConnectException
+import java.net.SocketTimeoutException
 import kotlin.math.floor
 
 /**
@@ -105,7 +108,18 @@ class LocalViewerActivity: BaseViewerActivity() {
         // download the picture again
         CoroutineScope(Dispatchers.IO).launch {
             fetcher.deletePicture(page)
-            fetcher.savePicture(page)
+            try {
+                fetcher.savePicture(page)
+            } catch (e: HttpStatusException) {
+                toggleLoadingUi(false)
+                toggleLoadFailedScreen(true, "圖片下載失敗")
+            } catch (e: SocketTimeoutException) {
+                toggleLoadingUi(false)
+                toggleLoadFailedScreen(true, "圖片下載超時")
+            } catch (e: ConnectException) {
+                toggleLoadingUi(false)
+                toggleLoadFailedScreen(true, "連接失敗")
+            }
             if (myPage != page) {
                 return@launch
             }
