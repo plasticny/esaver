@@ -87,9 +87,11 @@ class Util {
 
         inline fun<reified T> readListFromJson (json: String): List<T> =
             ObjectMapper().registerKotlinModule()
-                .readerFor(T::class.java)
-                .readValues<T>(json)
-                .readAll()
+                .readerForListOf(T::class.java)
+                .readValue(json)
+
+        inline fun<reified T> readArrayFromJson (json: String): Array<T> =
+            readListFromJson<T>(json).toTypedArray()
 
         fun<T> readMapFromJson (json: String): Map<String, T> =
             ObjectMapper().registerKotlinModule()

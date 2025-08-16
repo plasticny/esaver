@@ -1,19 +1,27 @@
 package com.example.viewer.activity
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
+import android.graphics.Point
+import android.graphics.PointF
+import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContract
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
 import androidx.room.Transaction
 import com.bumptech.glide.Glide
 import com.bumptech.glide.signature.MediaStoreSignature
+import com.example.viewer.CoverCrop
 import com.example.viewer.R
 import com.example.viewer.Util
 import com.example.viewer.activity.main.MainActivity
@@ -23,13 +31,15 @@ import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.data.repository.ExcludeTagRepository
 import com.example.viewer.data.repository.GroupRepository
 import com.example.viewer.data.struct.Book
+import com.example.viewer.data.struct.Group
 import com.example.viewer.databinding.BookProfileActivityBinding
 import com.example.viewer.databinding.BookProfileTagBinding
 import com.example.viewer.databinding.DialogBookInfoBinding
+import com.example.viewer.databinding.DialogLocalReadSettingBinding
 import com.example.viewer.databinding.DialogTagBinding
 import com.example.viewer.dialog.ConfirmDialog
 import com.example.viewer.dialog.EditExcludeTagDialog
-import com.example.viewer.dialog.LocalReadSettingDialog
+import com.example.viewer.dialog.SelectGroupDialog
 import com.example.viewer.fetcher.EPictureFetcher
 import com.example.viewer.fetcher.HiPictureFetcher
 import com.example.viewer.struct.BookSource
@@ -54,8 +64,8 @@ class BookProfileActivity: AppCompatActivity() {
         private fun getCoverMetrics (context: Context): Pair<Int, Int> {
             return coverMetrics ?: context.resources.displayMetrics.let { displayMetrics ->
                 val width = min(Util.dp2px(context, 160F), displayMetrics.widthPixels)
-                val height = (width * 1.5).toInt()
-                println("[${this::class.simpleName}] cover metrics: ($width, $height)")
+                val height = (width * 1.4125).toInt()
+                Log.i("BookProfileActivity", "cover metrics: ($width, $height)")
                 Pair(width, height).also { coverMetrics = it }
             }
         }
@@ -68,14 +78,19 @@ class BookProfileActivity: AppCompatActivity() {
 
     private var isBookStored: Boolean = false
 
+    private val cropLauncher = registerForActivityResult(CropContract()) {
+        it?.let { bookRepo.updateCoverCropPosition(book.id, it) }
+    }
+    private val groupRepo: GroupRepository by lazy {
+        GroupRepository(baseContext)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         bookRepo = BookRepository(baseContext)
 
         book = bookRepo.getBook(intent.getStringExtra("bookId")!!)
-
-        val bookRepo = BookRepository(baseContext)
         isBookStored = runBlocking { bookRepo.isBookStored(book.id) }
 
         excludedTags = ExcludeTagRepository(baseContext).findExcludedTags(book)
@@ -113,14 +128,17 @@ class BookProfileActivity: AppCompatActivity() {
                     Glide.with(baseContext)
                         .load(coverFile)
                         .signature(MediaStoreSignature("", coverFile.lastModified(), 0))
-                        .into(it)
+                        .run {
+                            book.getCoverCropPosition()?.let { p -> transform(CoverCrop(p)) }
+                            into(it)
+                        }
                 }
             } else {
                 Glide.with(baseContext).load(book.getPageUrls()!![0]).into(it)
             }
         }
 
-        rootBinding.titleTextView.text = book.title
+        rootBinding.titleTextView.text = book.customTitle ?: book.title
 
         rootBinding.warningContainer.apply {
             // only check warning if book is not stored
@@ -163,21 +181,21 @@ class BookProfileActivity: AppCompatActivity() {
         rootBinding.localSettingButton.apply {
             setOnClickListener {
                 if (isBookStored) {
-                    LocalReadSettingDialog(this@BookProfileActivity, layoutInflater).show(
-                        book,
-                        onApplied = { coverPageUpdated ->
-                            book = BookRepository(baseContext).getBook(book.id)
-                            if (coverPageUpdated) {
-                                refreshCoverPage()
-                            }
-                        }
-                    )
+                    LocalReadSettingDialog().show(book)
                 }
             }
         }
 
         rootBinding.infoButton.setOnClickListener {
             showInfoDialog()
+        }
+
+        rootBinding.saveAsButton.setOnClickListener {
+            ConfirmDialog(this@BookProfileActivity, layoutInflater)
+                .show(
+                    message = "另存這本書？",
+                    positiveCallback = { saveAsBook() }
+                )
         }
 
         rootBinding.deleteButton.apply {
@@ -214,7 +232,7 @@ class BookProfileActivity: AppCompatActivity() {
 
         setContentView(rootBinding.root)
 
-        refreshActionBar()
+        refreshButtons()
     }
 
     override fun onResume() {
@@ -284,6 +302,8 @@ class BookProfileActivity: AppCompatActivity() {
 
         dialogViewBinding.urlTextView.text = book.url
 
+        dialogViewBinding.title.text = book.title
+
         if (book.subTitle.isEmpty()) {
             dialogViewBinding.subtitle.visibility = View.GONE
         } else {
@@ -317,17 +337,19 @@ class BookProfileActivity: AppCompatActivity() {
         }
 
     /**
-     * modify buttons in action bar based on the current book stored state
+     * modify buttons based on the current book stored state
      */
-    private fun refreshActionBar () {
+    private fun refreshButtons () {
         if (isBookStored) {
             rootBinding.saveButton.visibility = View.GONE
             rootBinding.localSettingButton.visibility = View.VISIBLE
             rootBinding.deleteButton.visibility = View.VISIBLE
+            rootBinding.saveAsButton.visibility = View.VISIBLE
         } else {
             rootBinding.saveButton.visibility = View.VISIBLE
             rootBinding.localSettingButton.visibility = View.GONE
             rootBinding.deleteButton.visibility = View.GONE
+            rootBinding.saveAsButton.visibility = View.GONE
         }
     }
 
@@ -338,15 +360,17 @@ class BookProfileActivity: AppCompatActivity() {
         if (isBookStored) {
             val file = File(
                 "${getExternalFilesDir(null)}/${book.id}",
-                BookRepository(baseContext).getBookCoverPage(book.id).toString()
+                bookRepo.getBookCoverPage(book.id).toString()
             )
             Glide.with(baseContext)
                 .load(file)
+                .signature(MediaStoreSignature("", file.lastModified(), 0))
+                .run { book.getCoverCropPosition()?.let { transform(CoverCrop(it)) } ?: this }
                 .into(rootBinding.coverImageView)
         }
     }
 
-    private fun deleteBook (book: Book): Boolean = BookRepository(baseContext).removeBook(book)
+    private fun deleteBook (book: Book): Boolean = bookRepo.removeBook(book)
 
     @Transaction
     private suspend fun saveBook () {
@@ -357,7 +381,7 @@ class BookProfileActivity: AppCompatActivity() {
         rootBinding.progress.textView.text = getString(R.string.n_percent, 0)
         toggleProgressBar(true)
 
-        val fetcher = EPictureFetcher(baseContext, 1, book.url, book.id)
+        val fetcher = EPictureFetcher(baseContext, book.pageNum, book.url, book.id)
 
         // download cover page if not exist
         if (!File(fetcher.bookFolder, "0").exists()) {
@@ -391,7 +415,7 @@ class BookProfileActivity: AppCompatActivity() {
             }
         }
 
-        BookRepository(baseContext).addBook(
+        bookRepo.addBook(
             id = book.id,
             url = book.url,
             category = book.getCategory(),
@@ -402,13 +426,13 @@ class BookProfileActivity: AppCompatActivity() {
             source = BookSource.E,
             uploader = book.uploader
         )
-        GroupRepository(baseContext).addBookIdToGroup(GroupRepository.DEFAULT_GROUP_ID, book.id)
+        groupRepo.addBookIdToGroup(GroupRepository.DEFAULT_GROUP_ID, book.id)
 
         // update ui
         toggleProgressBar(false)
         isBookStored = true
-        book = BookRepository(baseContext).getBook(book.id)
-        refreshActionBar()
+        book = bookRepo.getBook(book.id)
+        refreshButtons()
         ConfirmDialog(this, layoutInflater).show(
             "已加入到書庫，返回書庫？",
             positiveCallback = {
@@ -419,5 +443,284 @@ class BookProfileActivity: AppCompatActivity() {
                 )
             }
         )
+    }
+
+    @Transaction
+    private fun saveAsBook () {
+        val newBook = Book(
+            id = "${book.id}_${System.currentTimeMillis()}",
+            url = book.url,
+            title = book.title,
+            subTitle = book.subTitle,
+            pageNum = book.pageNum,
+            categoryOrdinal = book.categoryOrdinal,
+            uploader = book.uploader,
+            tagsJson = book.tagsJson,
+            sourceOrdinal = book.sourceOrdinal,
+            coverPage = book.coverPage,
+            skipPagesJson = book.skipPagesJson,
+            lastViewTime = -1L,
+            bookMarksJson = book.bookMarksJson,
+            customTitle = book.customTitle,
+            coverCropPositionString = null,
+            pageUrlsJson = book.pageUrlsJson,
+            p = book.p
+        )
+
+        File(getExternalFilesDir(null), newBook.id).also { newFolder ->
+            if (!newFolder.exists()) {
+                newFolder.mkdirs()
+            }
+            val originFolder = File(getExternalFilesDir(null), book.id)
+            for (originFile in originFolder.listFiles()!!) {
+                val newFile = File(newFolder, originFile.name)
+                originFile.copyTo(newFile)
+            }
+        }
+
+        bookRepo.addBook(newBook)
+        groupRepo.addBookIdToGroup(GroupRepository.DEFAULT_GROUP_ID, newBook.id)
+
+        book = bookRepo.getBook(newBook.id)
+        ConfirmDialog(this, layoutInflater).show(
+            "已另存，返回書庫？",
+            positiveCallback = {
+                startActivity(
+                    Intent(baseContext, MainActivity::class.java).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                    }
+                )
+            }
+        )
+    }
+
+    private class CropContract: ActivityResultContract<Uri, PointF?>() {
+        override fun createIntent(context: Context, input: Uri): Intent {
+            return Intent(context, CropActivity::class.java).
+            putExtra(CropActivity.EXTRA_IMAGE_URI, input)
+        }
+        override fun parseResult(resultCode: Int, intent: Intent?): PointF? {
+            if (resultCode != Activity.RESULT_OK) {
+                return null
+            }
+            return intent?.let {
+                val x = it.getFloatExtra(CropActivity.RESULT_OFFSET_X, -1f)
+                val y = it.getFloatExtra(CropActivity.RESULT_OFFSET_Y, -1f)
+                assert(x != -1f && y != -1f)
+                PointF(x, y)
+            }
+        }
+    }
+
+    /**
+     * this dialog should place in this class because it is using the cropLauncher
+     */
+    private inner class LocalReadSettingDialog {
+        private val context = this@BookProfileActivity
+        private val dialogBinding = DialogLocalReadSettingBinding.inflate(layoutInflater)
+        private val dialog = AlertDialog.Builder(context).setView(dialogBinding.root).create()
+
+        fun show (book: Book) {
+            val skipPages = bookRepo.getBookSkipPages(book.id)
+            val groupId = bookRepo.getGroupId(book.id)
+            val coverPage = bookRepo.getBookCoverPage(book.id)
+
+            dialogBinding.groupNameEditText.setText(
+                groupRepo.getGroupName(groupId)
+            )
+
+            dialogBinding.customTitleEditText.setText(
+                book.customTitle ?: ""
+            )
+
+            dialogBinding.profileDialogCoverPageEditText.setText(
+                (coverPage + 1).toString()
+            )
+
+            dialogBinding.profileDialogSkipPagesEditText.setText(skipPagesListToString(skipPages))
+
+            dialogBinding.searchButton.setOnClickListener {
+                SelectGroupDialog(context, layoutInflater).show {
+                        _, name -> dialogBinding.groupNameEditText.setText(name)
+                }
+            }
+
+            dialogBinding.profileDialogApplyButton.setOnClickListener {
+                // group
+                val groupName = dialogBinding.groupNameEditText.text.toString().trim()
+                val selectedGroupId = groupName.let {
+                    if (it.isEmpty()) {
+                        return@let 0
+                    }
+
+                    val id = groupRepo.getGroupIdFromName(it)
+                    if (id != null) {
+                        return@let id
+                    }
+
+                    return@let groupRepo.createGroup(groupName)
+                }
+                if (selectedGroupId != groupId) {
+                    groupRepo.changeGroup(book.id, groupId, selectedGroupId)
+                }
+
+                // custom title
+                bookRepo.updateCustomTitle(
+                    book.id,
+                    dialogBinding.customTitleEditText.text.toString().trim()
+                )
+
+                // cover page
+                bookRepo.setBookCoverPage(
+                    book.id,
+                    dialogBinding.profileDialogCoverPageEditText.text.toString().trim().let {
+                        if (it.isEmpty()) {
+                            Toast.makeText(context, "封面頁不能為空", Toast.LENGTH_SHORT).show()
+                            return@setOnClickListener
+                        }
+                        try {
+                            it.toInt()
+                        } catch (e: NumberFormatException) {
+                            Toast.makeText(context, "封面頁輸入格式錯誤", Toast.LENGTH_SHORT).show()
+                            return@setOnClickListener
+                        }
+                    } - 1
+                )
+
+                // skip page
+                updateSkipPages(
+                    book.id,
+                    dialogBinding.profileDialogSkipPagesEditText.text.toString().trim(),
+                    skipPages
+                )
+
+                this@BookProfileActivity.book = bookRepo.getBook(book.id)
+                refreshCoverPage()
+                rootBinding.titleTextView.text = this@BookProfileActivity.book.run { customTitle ?: title }
+
+                dialog.dismiss()
+            }
+
+            dialogBinding.cropCoverButton.setOnClickListener {
+                cropLauncher.launch(
+                    File(book.getBookFolder(context), coverPage.toString()).toUri()
+                )
+            }
+
+            dialog.show()
+        }
+
+        /**
+         * @param text text of the skip page editText
+         */
+        private fun updateSkipPages (bookId: String, text: String, originSkipPages: List<Int>) {
+            val coverPage = bookRepo.getBookCoverPage(bookId)
+            val updatedSkipPages = skipPageStringToList(text)
+
+            if (updatedSkipPages == originSkipPages) {
+                return
+            }
+
+            val newSkipPages = updatedSkipPages.minus(originSkipPages.toSet())
+            if (newSkipPages.isNotEmpty()) {
+                val bookFolder = File(context.getExternalFilesDir(null), bookId)
+                for (p in newSkipPages) {
+                    if (p == coverPage) {
+                        continue
+                    }
+                    File(bookFolder, p.toString()).let {
+                        if (it.exists()) {
+                            it.delete()
+                        }
+                    }
+                }
+            }
+
+            runBlocking {
+                bookRepo.setBookSkipPages(bookId, updatedSkipPages.sorted())
+            }
+        }
+
+        private fun skipPagesListToString (skipPages: List<Int>): String {
+            val tokens = mutableListOf<String>()
+
+            var s = -1
+            var p = -1
+            for (page in skipPages) {
+                // first page of segment
+                if (s == -1) {
+                    s = page
+                    p = page
+                    continue
+                }
+
+                // extend segment
+                if (p == page - 1) {
+                    p = page
+                    continue
+                }
+
+                // segment end, store and start new
+                if (s == p) {
+                    tokens.add((s + 1).toString())
+                } else {
+                    tokens.add("${s + 1}-${p + 1}")
+                }
+                s = page
+                p = page
+            }
+
+            if (s != -1) {
+                // store last segment
+                if (s == p) {
+                    tokens.add((s + 1).toString())
+                } else {
+                    tokens.add("${s + 1}-${p + 1}")
+                }
+            }
+
+            return tokens.joinToString(",")
+        }
+
+        private fun skipPageStringToList (text: String): List<Int> {
+            if (text.trim().isEmpty()) {
+                return listOf()
+            }
+
+            val res = mutableSetOf<Int>()
+            for (token in text.split(',')) {
+                if (token.contains("-")) {
+                    // x-y
+                    val dashToken = token.split("-")
+                    if (dashToken.size != 2) {
+                        println("[${this::class.simpleName}.${this::skipPageStringToList.name}] '$token' unexpected dash format")
+                        continue
+                    }
+
+                    val x = pageStringToPageIndex(dashToken[0].trim())
+                    val y = pageStringToPageIndex(dashToken[1].trim())
+                    if (x == null || y == null || x >= y) {
+                        println("[${this::class.simpleName}.${this::skipPageStringToList.name}] invalid range ${dashToken[0]}-${dashToken[1]}")
+                        continue
+                    }
+
+                    for (p in x..y) {
+                        res.add(p)
+                    }
+                } else {
+                    // other
+                    pageStringToPageIndex(token.trim())?.let { res.add(it) }
+                }
+            }
+            return res.sorted()
+        }
+
+        private fun pageStringToPageIndex (s: String): Int? =
+            try {
+                (s.toInt() - 1).let { if (it >= 0) it else null }
+            } catch (e: NumberFormatException) {
+                println("[${this::class.simpleName}.${this::pageStringToPageIndex.name}] '$s' cannot convert into int")
+                null
+            }
     }
 }

@@ -1,10 +1,13 @@
 package com.example.viewer.fetcher
 
 import android.content.Context
+import android.util.Log
 import android.widget.Toast
 import com.example.viewer.Util
 import com.example.viewer.data.repository.BookRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.jsoup.HttpStatusException
 import org.jsoup.Jsoup
@@ -19,10 +22,9 @@ class EPictureFetcher: BasePictureFetcher {
      * map page and its picture url
      */
     private val pictureUrlMap = mutableMapOf<Int, String>()
+    private val getPageUrlMutex = Mutex()
 
-    @Volatile
-    private var gettingPageUrl = false
-    private var pageUrls: MutableList<String>
+    private var pageUrls: Array<String?>
     private var p: Int
 
     /**
@@ -31,7 +33,7 @@ class EPictureFetcher: BasePictureFetcher {
     constructor (context: Context, bookId: String): super(context, bookId) {
         p = bookDataset.getBookP(bookId)
         bookUrl = bookDataset.getBookUrl(bookId)
-        pageUrls = bookDataset.getBookPageUrls(bookId).toMutableList()
+        pageUrls = bookDataset.getBookPageUrls(bookId)
     }
 
     /**
@@ -45,7 +47,7 @@ class EPictureFetcher: BasePictureFetcher {
     ): super(context, pageNum, bookId) {
         p = 0
         this.bookUrl = bookUrl
-        pageUrls = mutableListOf()
+        pageUrls = arrayOfNulls(pageNum)
     }
 
     override suspend fun savePicture(
@@ -99,38 +101,45 @@ class EPictureFetcher: BasePictureFetcher {
     }
 
     private suspend fun getPageUrl (page: Int): String {
-        while (gettingPageUrl) {
-            withContext(Dispatchers.IO) {
-                Thread.sleep(100)
+        getPageUrlMutex.withLock {
+            if (pageUrls[page] != null) {
+                return pageUrls[page]!!
+            }
+
+            val logTag = "${this::class.simpleName}.${this::getPageUrl.name}"
+
+            var firstNullIdx = pageUrls.indexOfFirst { it == null }.also {
+                if (it == -1) {
+                    throw IllegalStateException("[$logTag] all page urls should be fetched, something went wrong")
+                }
+            }
+
+            while (pageUrls[page] == null) {
+                Log.i(logTag, "load next p $p")
+                withContext(Dispatchers.IO) {
+                    Jsoup.connect(
+                        "${bookUrl}?p=$p".also { Log.i(logTag, it) }
+                    ).cookies(mapOf("nw" to "1")).get()
+                }.select("#gdt a").map { it.attr("href") }.let { pageUrlSegment ->
+                    if (pageUrlSegment.isEmpty()) {
+                        throw Exception("[${this@EPictureFetcher::class.simpleName}.${this@EPictureFetcher::getPageUrl.name}] no page url fetched")
+                    }
+                    for (url in pageUrlSegment) {
+                        pageUrls[firstNullIdx++] = url
+                    }
+                }
+
+                if (isLocal) {
+                    // save progress if local fetcher
+                    bookId!!.let {
+                        p = bookDataset.increaseBookP(bookId)
+                        bookDataset.setBookPageUrls(bookId, pageUrls)
+                    }
+                } else {
+                    p++
+                }
             }
         }
-
-        while (page > pageUrls.lastIndex) {
-            gettingPageUrl = true
-
-            println("[${this::class.simpleName}.${this::getPageUrl.name}] load next p $p")
-
-            withContext(Dispatchers.IO) {
-                Jsoup.connect("${bookUrl}?p=$p").cookies(mapOf("nw" to "1")).get()
-            }.select("#gdt a").map { it.attr("href") }.let { pageUrlSegment ->
-                if (pageUrlSegment.isEmpty()) {
-                    throw Exception("[${this@EPictureFetcher::class.simpleName}.${this@EPictureFetcher::getPageUrl.name}] no page url fetched")
-                }
-                pageUrls.addAll(pageUrlSegment)
-            }
-
-            if (isLocal) {
-                // save progress if local fetcher
-                bookId!!.let {
-                    p = bookDataset.increaseBookP(bookId)
-                    bookDataset.setBookPageUrls(bookId, pageUrls)
-                }
-            } else {
-                p++
-            }
-        }
-        gettingPageUrl = false
-
-        return pageUrls[page]
+        return pageUrls[page]!!
     }
 }

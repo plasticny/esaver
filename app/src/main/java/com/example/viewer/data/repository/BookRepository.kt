@@ -1,6 +1,8 @@
 package com.example.viewer.data.repository
 
 import android.content.Context
+import android.graphics.Point
+import android.graphics.PointF
 import androidx.room.Transaction
 import com.example.viewer.Util
 import com.example.viewer.data.dao.BookDao
@@ -14,6 +16,11 @@ import com.google.gson.Gson
 import kotlinx.coroutines.runBlocking
 
 class BookRepository (private val context: Context) {
+    companion object {
+        private var listLastUpdateTime = 0L
+        fun getListLastUpdateTime () = listLastUpdateTime
+    }
+
     private val bookDao: BookDao
     private val bookWithGroupDao: BookWithGroupDao
 
@@ -59,6 +66,8 @@ class BookRepository (private val context: Context) {
                     skipPagesJson = gson.toJson(skipPages).toString(),
                     lastViewTime = lastViewTime,
                     bookMarksJson = gson.toJson(bookMarks).toString(),
+                    customTitle = null,
+                    coverCropPositionString = null,
                     pageUrlsJson = pageUrls?.let {
                         gson.toJson(it).toString()
                     },
@@ -85,9 +94,6 @@ class BookRepository (private val context: Context) {
         source: BookSource,
         uploader: String?
     ) = runBlocking {
-        if (pageNum < 1) {
-            throw Exception("Invalid pageNum $pageNum")
-        }
         val gson = Gson()
         bookDao.insert(
             Book(
@@ -104,13 +110,18 @@ class BookRepository (private val context: Context) {
                 skipPagesJson = gson.toJson(listOf<Int>()).toString(),
                 lastViewTime = -1L,
                 bookMarksJson = gson.toJson(listOf<Int>()).toString(),
+                customTitle = null,
+                coverCropPositionString = null,
                 pageUrlsJson = if (source == BookSource.E) {
                     gson.toJson(listOf<String>()).toString()
                 } else null,
                 p = if (source == BookSource.E) 0 else null
             )
         )
+        listLastUpdateTime = System.currentTimeMillis()
     }
+
+    fun addBook (book: Book) = runBlocking { bookDao.insert(book) }
 
     fun getBook (id: String): Book =
         if (id == "-1") { Book.getTmpBook() } else runBlocking { bookDao.queryById(id) }
@@ -128,6 +139,8 @@ class BookRepository (private val context: Context) {
         if(!bookFolder.delete()) {
             throw Exception("delete book folder failed")
         }
+
+        listLastUpdateTime = System.currentTimeMillis()
 
         return true
     }
@@ -169,14 +182,24 @@ class BookRepository (private val context: Context) {
 
     fun getBookUrl (id: String) = runBlocking { bookDao.getUrl(id) }
 
-    fun getBookPageUrls (id: String): List<String> {
+    fun getBookPageUrls (id: String): Array<String?> {
         val book = queryBook(id)
         if (book.sourceOrdinal == BookSource.Hi.ordinal) {
             throw Exception("Page urls are not stored for this book source")
         }
-        return Util.readListFromJson(book.pageUrlsJson!!)
+
+        val stored = Util.readArrayFromJson<String?>(book.pageUrlsJson!!)
+        if (stored.size == book.pageNum) {
+            return stored
+        }
+
+        return arrayOfNulls<String>(book.pageNum).apply {
+            for ((i, v) in stored.withIndex()) {
+                this[i] = v
+            }
+        }
     }
-    fun setBookPageUrls (id: String, urls: List<String>) {
+    fun setBookPageUrls (id: String, urls: Array<String?>) {
         val dao = bookDao
         val book = queryBook(id)
         book.pageUrlsJson = Gson().toJson(urls).toString()
@@ -209,6 +232,7 @@ class BookRepository (private val context: Context) {
         val book = queryBook(id)
         book.coverPage = v
         runBlocking { dao.update(book) }
+        listLastUpdateTime = System.currentTimeMillis()
     }
 
     fun getBookSkipPages (id: String): List<Int> = Util.readListFromJson(
@@ -229,7 +253,31 @@ class BookRepository (private val context: Context) {
         runBlocking { dao.update(book) }
     }
 
+    /**
+     * get group id of a book
+     * @param id book id
+     */
     fun getGroupId (id: String): Int = runBlocking { bookWithGroupDao.queryGroupId(id) }
+
+    fun updateCustomTitle (id: String, value: String) = runBlocking {
+        bookDao.updateCustomTitle(id, value)
+    }
+
+    fun getCoverCropPosition (id: String): PointF? = runBlocking {
+        bookDao.getCoverCropPositionString(id)?.let {
+            Book.coverCropPositionStringToPoint(it)
+        }
+    }
+
+    /**
+     * @param position this should be in normalized coordinates
+     */
+    fun updateCoverCropPosition (id: String, position: PointF) = runBlocking {
+        if (position.x < 0 || position.x > 1 || position.y < 0 || position.y > 1) {
+            throw IllegalArgumentException("the position seems not a valid normalized coordinates")
+        }
+        bookDao.updateCoverCropPositionString(id, "${position.x},${position.y}")
+    }
 
     private fun queryBook (id: String) = runBlocking { bookDao.queryById(id) }
 }

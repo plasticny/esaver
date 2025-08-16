@@ -35,6 +35,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
+import kotlin.reflect.jvm.internal.impl.serialization.deserialization.EnumEntriesDeserializationSupport
 
 /**
  * intExtra: searchMarkId; -1 for temporary search mark
@@ -123,12 +125,32 @@ class SearchActivity: AppCompatActivity() {
             layoutManager = GridLayoutManager(context, 2)
             adapter = BookRecyclerViewAdapter()
             addOnScrollListener(object: RecyclerView.OnScrollListener() {
+                private val lm = layoutManager as GridLayoutManager
+                private var loadingTriggered = false
+
                 override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
                     super.onScrollStateChanged(recyclerView, newState)
-                    if (!loadingMore && newState == 1 && prev != ENDED) {
-                        val lm = layoutManager as GridLayoutManager
-                        if (lm.findFirstCompletelyVisibleItemPosition() == 0) {
-                            lifecycleScope.launch { loadPrevBooks() }
+
+                    if (loadingTriggered || loadingMore || newState != 1) {
+                        return
+                    }
+
+                    if (next != ENDED && lm.findLastCompletelyVisibleItemPosition() == recyclerViewAdapter.itemCount - 1) {
+                        CoroutineScope(Dispatchers.IO).launch {
+                            runBlocking {
+                                loadingTriggered = true
+                                loadNextBooks()
+                                loadingTriggered = false
+                            }
+                        }
+                    }
+                    else if (prev != ENDED && lm.findFirstCompletelyVisibleItemPosition() == 0) {
+                        CoroutineScope(Dispatchers.IO).launch {
+                            runBlocking {
+                                loadingTriggered = true
+                                loadPrevBooks()
+                                loadingTriggered = false
+                            }
                         }
                     }
                 }
@@ -136,22 +158,33 @@ class SearchActivity: AppCompatActivity() {
                 override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                     super.onScrolled(recyclerView, dx, dy)
 
-                    if (resetting || loadingMore) {
+                    if (loadingTriggered || resetting || loadingMore) {
                         return
                     }
 
-                    val lm = layoutManager as GridLayoutManager
                     if (
                         next != ENDED && dy > 0 &&
                         lm.findLastCompletelyVisibleItemPosition() == recyclerViewAdapter.itemCount - 1
                     ) {
-                        lifecycleScope.launch { loadNextBooks() }
+                        CoroutineScope(Dispatchers.IO).launch {
+                            runBlocking {
+                                loadingTriggered = true
+                                loadNextBooks()
+                                loadingTriggered = false
+                            }
+                        }
                     }
                     else if (
                         prev != ENDED && dy < 0 &&
                         lm.findFirstCompletelyVisibleItemPosition() == 0
                     ) {
-                        lifecycleScope.launch { loadPrevBooks() }
+                        CoroutineScope(Dispatchers.IO).launch {
+                            runBlocking {
+                                loadingTriggered = true
+                                loadPrevBooks()
+                                loadingTriggered = false
+                            }
+                        }
                     }
                 }
             })
@@ -322,7 +355,7 @@ class SearchActivity: AppCompatActivity() {
 
     private suspend fun loadNextBooks () {
         if (this.next == ENDED) {
-            throw Exception("next equal to ENDED")
+            throw IllegalStateException("next equal to ENDED")
         }
 
         val mySearchId = searchMarkData.id
@@ -337,31 +370,23 @@ class SearchActivity: AppCompatActivity() {
         }
 
         loadingMore = true
-
         withContext(Dispatchers.Main) {
             rootBinding.searchProgressBar.wrapper.visibility = ProgressBar.VISIBLE
         }
-        val fetchedBooks = fetchBooks(
-            next = if (this.next == NO_SET) null else this.next
-        ).also { totalBookLoaded += it.size }
-        val books = if (searchMarkData.doExclude) {
-            excludeTagFilter(fetchedBooks).also {
-                totalBookFiltered += (fetchedBooks.size - it.size)
-            }
-        } else fetchedBooks
+        val books = fetchNextBooks()
         withContext(Dispatchers.Main) {
             rootBinding.searchProgressBar.wrapper.visibility = ProgressBar.GONE
         }
+        loadingMore = false
 
         if (mySearchId == searchMarkData.id) {
             recyclerViewAdapter.addNextBooks(books)
         }
-        loadingMore = false
     }
 
     private suspend fun loadPrevBooks () {
         if (this.prev == ENDED) {
-            throw Exception("prev equal to ENDED")
+            throw IllegalStateException("prev equal to ENDED")
         }
 
         val mySearchId = searchMarkData.id
@@ -376,54 +401,88 @@ class SearchActivity: AppCompatActivity() {
         }
 
         loadingMore = true
-
         withContext(Dispatchers.Main) {
             rootBinding.searchProgressBar.wrapper.visibility = ProgressBar.VISIBLE
         }
-        val fetchedBooks = fetchBooks(prev = if (this.prev == NO_SET) null else this.prev).also { totalBookLoaded += it.size }
-        val books = if (searchMarkData.doExclude) {
-            excludeTagFilter(fetchedBooks).also {
-                totalBookFiltered += (fetchedBooks.size - it.size)
-            }
-        } else fetchedBooks
+        val books = fetchPrevBooks()
         withContext(Dispatchers.Main) {
             rootBinding.searchProgressBar.wrapper.visibility = ProgressBar.GONE
         }
+        loadingMore = false
 
         if (mySearchId == searchMarkData.id) {
             recyclerViewAdapter.addPrevBooks(books)
         }
-        loadingMore = false
     }
 
-    /**
-     * This method will access and change the private variable next
-     */
-    private suspend fun fetchBooks (
-        next: Int? = null,
-        prev: Int? = null
-    ): List<SearchBookData> {
-        val mySearchId = searchMarkData.id
+    private suspend fun fetchNextBooks (): List<SearchBookData> {
+        if (this.next == ENDED) {
+            return listOf()
+        }
 
-        val doc = withContext(Dispatchers.IO) {
-            if (prev != null) {
-                Jsoup.connect(
-                    searchMarkData.getSearchUrl(prev = prev.toString()).also { println("[SearchActivity.fetchBooks] fetch book from\n$it") }
-                ).get()
-            }
-            else {
-                searchRepo.storeLastNext(searchMarkData.id, next?.toString())
+        val mySearchId = searchMarkData.id
+        var books = listOf<SearchBookData>()
+
+        do {
+            val next = if (this.next == NO_SET) null else this.next
+
+            searchRepo.storeLastNext(searchMarkData.id, next?.toString())
+            val doc = withContext(Dispatchers.IO) {
                 Jsoup.connect(
                     searchMarkData.getSearchUrl(next = next?.toString()).also { println("[SearchActivity.fetchBooks] fetch book from\n$it") }
                 ).get()
             }
-        }
 
-        if (mySearchId != searchMarkData.id) {
-            println("[${this::class.simpleName}.${this::fetchBooks.name}] terminated")
+            if (mySearchId != searchMarkData.id) {
+                break
+            }
+
+            val fetchedBooks = processFetchedBooks(doc).also { totalBookLoaded += it.size }
+            books = if (searchMarkData.doExclude) {
+                excludeTagFilter(fetchedBooks).also {
+                    totalBookFiltered += (fetchedBooks.size - it.size)
+                }
+            } else fetchedBooks
+        } while (books.isEmpty() && this.next != ENDED && mySearchId == searchMarkData.id)
+
+        return books
+    }
+
+    private suspend fun fetchPrevBooks (): List<SearchBookData> {
+        if (this.prev == ENDED) {
             return listOf()
         }
 
+        val mySearchId = searchMarkData.id
+        var books = listOf<SearchBookData>()
+
+        do {
+            val prev = if (this.prev == NO_SET) null else this.prev
+            val doc = withContext(Dispatchers.IO) {
+                Jsoup.connect(
+                    searchMarkData.getSearchUrl(prev = prev.toString()).also { println("[SearchActivity.fetchBooks] fetch book from\n$it") }
+                ).get()
+            }
+
+            if (mySearchId != searchMarkData.id) {
+                break
+            }
+
+            val fetchedBooks = processFetchedBooks(doc).also { totalBookLoaded += it.size }
+            books = if (searchMarkData.doExclude) {
+                excludeTagFilter(fetchedBooks).also {
+                    totalBookFiltered += (fetchedBooks.size - it.size)
+                }
+            } else fetchedBooks
+        } while (books.isEmpty() && this.prev != ENDED && mySearchId == searchMarkData.id)
+
+        return books
+    }
+
+    /**
+     * This method will access and change the private variable next and prev
+     */
+    private fun processFetchedBooks (doc: Document): List<SearchBookData> {
         if (this.next != ENDED) {
             this.next = doc.selectFirst("#unext")?.attribute("href")?.let {
                 val n = it.value.split("next=").last().trim().toInt()

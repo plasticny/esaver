@@ -190,7 +190,7 @@ abstract class BasePictureFetcher {
 
     protected fun assertPageInRange (page: Int) {
         if (page < 0 || page >= pageNum) {
-            throw Exception("page out of range")
+            throw IllegalArgumentException("page $page out of range")
         }
     }
 

@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.ImageDecoder
 import android.graphics.ImageDecoder.DecodeException
+import android.graphics.Point
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -14,6 +15,7 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.resource.bitmap.CenterCrop
 import com.bumptech.glide.signature.MediaStoreSignature
 import com.example.viewer.activity.BookProfileActivity
 import com.example.viewer.data.database.BookDatabase
@@ -46,13 +48,14 @@ class BookGallery (
     private val groupNameTextViewHeight = Util.sp2px(context, 18F)
     private val coverImageViewWidth =
         (context.resources.displayMetrics.widthPixels - Util.dp2px(context, 48F)) / 2
-    private val coverImageViewHeight = (coverImageViewWidth * 1.5).toInt()
+    private val coverImageViewHeight = (coverImageViewWidth * 1.4125).toInt()
     private val bookMarginWidth = Util.dp2px(context, 8F)
 
     private val groupRecyclerViewAdapter: GroupRecyclerViewAdapter
         get() = recyclerView.adapter as GroupRecyclerViewAdapter
 
     init {
+        Log.i("BookGallery", "cover image: width $coverImageViewWidth, height $coverImageViewHeight")
         recyclerView.layoutManager = GridLayoutManager(context, 1)
         recyclerView.adapter = GroupRecyclerViewAdapter()
     }
@@ -199,6 +202,7 @@ class BookGallery (
             val bookFolder = File(context.getExternalFilesDir(null), id)
 
             val coverPage = bookRepo.getBookCoverPage(id)
+            val cropPosition = bookRepo.getCoverCropPosition(id)
             val coverPageFile = File(bookFolder, coverPage.toString())
 
             CoroutineScope(Dispatchers.Main).launch {
@@ -216,6 +220,7 @@ class BookGallery (
                 Glide.with(context)
                     .load(coverPageFile)
                     .signature(MediaStoreSignature("", coverPageFile.lastModified(), 0))
+                    .run { cropPosition?.let { transform(CoverCrop(it)) } ?: this }
                     .into(holder.imageView)
             }
 

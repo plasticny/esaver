@@ -24,6 +24,8 @@
     <string name="fa_up_down">\uf338</string>
     <string name="fa_up_down_left_right">\uf0b2</string>
     <string name="fa_list">\uf03a</string>
+    <string name="fa_share_from_square">\uf14d</string>
+    <string name="fa_crop">\uf125</string>
 <!--  strings  -->
     <string name="app_name">eSaver</string>
     <string name="enter_url">輸入URL</string>
@@ -75,7 +77,9 @@
     <string name="n_percent">%1$d%%</string>
     <string name="cancel">取消</string>
     <string name="save">保存</string>
+    <string name="title">標題</string>
     <string name="subtitle">副標題</string>
+    <string name="custom_title">自訂標題</string>
     <string name="noGroup">無分組</string>
     <string name="group">分組</string>
     <string name="uploader">上傳者</string>

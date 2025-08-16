@@ -189,7 +189,7 @@ class LocalViewerActivity: BaseViewerActivity() {
             setOnClickListener {
                 bookDataset.setBookSkipPages(
                     bookId,
-                    skipPageSet.toMutableList().also { it.add(page) }
+                    skipPageSet.toMutableList().also { it.add(page) }.sorted()
                 )
                 skipPageSet = bookDataset.getBookSkipPages(bookId).toSet()
 

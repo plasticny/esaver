@@ -10,7 +10,9 @@ import androidx.fragment.app.setFragmentResultListener
 import androidx.navigation.fragment.findNavController
 import com.example.viewer.BookGallery
 import com.example.viewer.R
+import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.data.repository.GroupRepository
+import com.example.viewer.data.struct.Book
 import com.example.viewer.databinding.FragmentMainGalleryBinding
 
 class GalleryFragment: Fragment() {
@@ -19,6 +21,7 @@ class GalleryFragment: Fragment() {
     private lateinit var bookGallery: BookGallery
 
     private var groupListLastUpdate = 0L
+    private var bookListLastUpdate = 0L
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -29,7 +32,8 @@ class GalleryFragment: Fragment() {
         binding = FragmentMainGalleryBinding.inflate(layoutInflater, container, false)
         bookGallery = BookGallery(ctx, layoutInflater, binding.recyclerView)
 
-        groupListLastUpdate = GroupRepository(ctx).getLastUpdateTime()
+        groupListLastUpdate = GroupRepository.getLastUpdateTime()
+        bookListLastUpdate = BookRepository.getListLastUpdateTime()
 
         binding.groupListButton.setOnClickListener {
             findNavController().navigate(R.id.main_nav_sort_group)
@@ -69,13 +73,18 @@ class GalleryFragment: Fragment() {
 
     override fun onResume() {
         super.onResume()
-        GroupRepository(ctx).getLastUpdateTime().let {
+        GroupRepository.getLastUpdateTime().let {
             if (it != groupListLastUpdate) {
                 println("[${this::class.simpleName}.${this::onResume.name}] group list updated, refresh")
                 bookGallery.refreshGroup()
                 groupListLastUpdate = it
             }
         }
-        bookGallery.refreshBooks()
+        BookRepository.getListLastUpdateTime().let {
+            if (it != bookListLastUpdate) {
+                bookGallery.refreshBooks()
+                bookListLastUpdate = it
+            }
+        }
     }
 }
