@@ -260,7 +260,7 @@ class BookProfileActivity: AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        Book.clearTmpBook()
+//        Book.clearTmpBook()
     }
 
     private fun createTagRow (tagCat: String, tagValues: List<String>) =

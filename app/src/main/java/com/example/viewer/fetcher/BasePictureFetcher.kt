@@ -155,46 +155,45 @@ abstract class BasePictureFetcher {
 
         val logTag = "${this@BasePictureFetcher::class.simpleName}.${this@BasePictureFetcher::downloadingPages.name}"
 
-        return try {
-            // build the download request
-            val downloadClient = progressListener?.let {
-                okHttpClient.newBuilder()
-                    .addInterceptor { chain ->
-                        chain.proceed(chain.request()).run {
-                            newBuilder().body(
-                                ProgressResponseBody(body!!, progressListener)
-                            ).build()
-                        }
-                    }.build()
-            } ?: okHttpClient
-            val request = Request.Builder().url(url).apply {
-                for (header in headers) {
-                    addHeader(header.key, header.value)
-                }
-            }.build()
-
-            withContext(Dispatchers.IO) {
-                Log.i(logTag, "start download $page\n$url")
-                downloadClient.newCall(request).execute().use { response ->
-                    if (!response.isSuccessful) {
-                        throw HttpStatusException("download failed", response.code, url)
+        // build the download request
+        val downloadClient = progressListener?.let {
+            okHttpClient.newBuilder()
+                .addInterceptor { chain ->
+                    chain.proceed(chain.request()).run {
+                        newBuilder().body(
+                            ProgressResponseBody(body!!, progressListener)
+                        ).build()
                     }
-
-                    file.outputStream().use { response.body!!.byteStream().copyTo(it) }
-
-                    // this line should be after the write-to-file statement
-                    // else a corrupted image might be read
-                    downloadingPages.remove(page)
-
-                    return@withContext file
-                }
+                }.build()
+        } ?: okHttpClient
+        val request = Request.Builder().url(url).apply {
+            for (header in headers) {
+                addHeader(header.key, header.value)
             }
-        } catch (e: SocketTimeoutException) {
-            Log.e(logTag, e.stackTraceToString())
-            throw e
-        } catch (e: ConnectException) {
-            Log.e(logTag, e.stackTraceToString())
-            throw e
+        }.build()
+
+        return withContext(Dispatchers.IO) {
+            Log.i(logTag, "start download $page\n$url")
+            downloadClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    throw HttpStatusException("download failed", response.code, url)
+                }
+
+                file.outputStream().use {
+                    try {
+                        response.body!!.byteStream().copyTo(it)
+                    } catch (e: SocketTimeoutException) {
+                        Log.e(logTag, e.stackTraceToString())
+                        throw e
+                    }
+                }
+
+                // this line should be after the write-to-file statement
+                // else a corrupted image might be read
+                downloadingPages.remove(page)
+
+                return@withContext file
+            }
         }
     }
 
