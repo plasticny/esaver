@@ -103,13 +103,8 @@ class HiPictureFetcher: BasePictureFetcher {
     override suspend fun savePicture(
         page: Int,
         progressListener: ((contentLength: Long, downloadLength: Long) -> Unit)?
-    ): File? {
+    ): File {
         assertPageInRange(page)
-
-        if (!Util.isInternetAvailable(context)) {
-            Toast.makeText(context, "沒有網絡，無法下載", Toast.LENGTH_SHORT).show()
-            return null
-        }
 
         return fetchPictureUrl(page).let { url ->
             val headers = mapOf(

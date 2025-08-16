@@ -56,7 +56,7 @@ data class SearchMark (
 
     fun getCategories (): List<Category> =
         Util.readListFromJson<Int>(categoryOrdinalsJson)
-            .map { Util.categoryFromOrdinal(it) }
+            .map { Category.fromOrdinal(it) }
 
     fun getTags (): Map<String, List<String>> = Util.readMapFromJson(tagsJson)
 }

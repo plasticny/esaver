@@ -49,6 +49,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import org.jsoup.HttpStatusException
 import org.jsoup.Jsoup
 import java.io.File
 import kotlin.math.floor
@@ -122,7 +123,11 @@ class BookProfileActivity: AppCompatActivity() {
                                 baseContext,
                                 id
                             ) else HiPictureFetcher(baseContext, id)
-                            fetcher.savePicture(bookRepo.getBookCoverPage(book.id))
+                            try {
+                                fetcher.savePicture(bookRepo.getBookCoverPage(book.id))
+                            } catch (e: Exception) {
+                                println(e.stackTraceToString())
+                            }
                         }
                     }
                     Glide.with(baseContext)
@@ -141,14 +146,24 @@ class BookProfileActivity: AppCompatActivity() {
         rootBinding.titleTextView.text = book.customTitle ?: book.title
 
         rootBinding.warningContainer.apply {
+            if (!Util.isInternetAvailable(baseContext)) {
+                return@apply
+            }
+
             // only check warning if book is not stored
             lifecycleScope.launch {
-                val isBookWarning = withContext(Dispatchers.IO) {
-                    Jsoup.connect(book.url).get()
-                }.html().contains("<h1>Content Warning</h1>")
-
-                if (!isBookStored && isBookWarning) {
+                val doc = try {
+                    EPictureFetcher.fetchWebpage(book.url)
+                } catch (_: HttpStatusException) {
                     visibility = View.VISIBLE
+                    rootBinding.warningText.text = getString(R.string.book_seems_deleted)
+                    return@launch
+                }
+
+                // check is book has content warning, only for non stored book
+                if (!isBookStored && doc.html().contains("<h1>Content Warning</h1>")) {
+                    visibility = View.VISIBLE
+                    rootBinding.warningText.text = getString(R.string.contain_offensive_context)
                 }
             }
         }
@@ -158,7 +173,7 @@ class BookProfileActivity: AppCompatActivity() {
         rootBinding.categoryTextView.apply {
             val name = book.getCategory().name
             text = name
-            setTextColor(context.getColor(Util.categoryFromName(name).color))
+            setTextColor(context.getColor(Category.fromName(name).color))
         }
 
         rootBinding.readButton.setOnClickListener {
@@ -245,7 +260,7 @@ class BookProfileActivity: AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        Book.clearTmpBook()
+//        Book.clearTmpBook()
     }
 
     private fun createTagRow (tagCat: String, tagValues: List<String>) =
@@ -386,14 +401,19 @@ class BookProfileActivity: AppCompatActivity() {
         // download cover page if not exist
         if (!File(fetcher.bookFolder, "0").exists()) {
             val success = withContext(Dispatchers.IO) {
-                val file = fetcher.savePicture(0) { total, downloaded ->
-                    CoroutineScope(Dispatchers.Main).launch {
-                        rootBinding.progress.textView.text = getString(
-                            R.string.n_percent, floor(downloaded.toDouble() / total * 100).toInt()
-                        )
+                try {
+                    fetcher.savePicture(0) { total, downloaded ->
+                        CoroutineScope(Dispatchers.Main).launch {
+                            rootBinding.progress.textView.text = getString(
+                                R.string.n_percent, floor(downloaded.toDouble() / total * 100).toInt()
+                            )
+                        }
                     }
+                    true
+                } catch (e: Exception) {
+                    println(e.stackTraceToString())
+                    false
                 }
-                file != null
             }
             if (!success) {
                 Toast.makeText(baseContext, "儲存失敗，再試一次", Toast.LENGTH_SHORT).show()

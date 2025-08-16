@@ -212,8 +212,8 @@ class BookGallery (
                         val fetcher = if (source == BookSource.E) EPictureFetcher(context, id) else HiPictureFetcher(context, id)
                         try {
                             fetcher.savePicture(coverPage)
-                        } catch (e: HiPictureFetcher.HiPictureFetcherException) {
-                            Log.e("${this::class.simpleName}.BindViewHolder", e.stackTraceToString())
+                        } catch (e: Exception) {
+                            println(e.stackTraceToString())
                         }
                     }
                 }

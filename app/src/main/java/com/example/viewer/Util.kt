@@ -27,7 +27,6 @@ class Util {
             "parody" to "原作",
             "temp" to "臨時"
         )
-        private val CATEGORY_ENTRIES = Category.entries
 
         fun dp2px (context: Context, dp: Float): Int {
             val displayMetrics = context.resources.displayMetrics
@@ -67,24 +66,6 @@ class Util {
             (header[3] == '8'.code.toByte() || header[3] == '7'.code.toByte()))
         }
 
-        fun categoryFromOrdinal (ordinal: Int) = CATEGORY_ENTRIES[ordinal]
-
-        fun categoryFromName (name: String) = when (name) {
-            Category.Doujinshi.name -> Category.Doujinshi
-            Category.Manga.name -> Category.Manga
-            Category.ArtistCG.name -> Category.ArtistCG
-            "Artist CG" -> Category.ArtistCG
-            Category.NonH.name -> Category.NonH
-            "Non-H" -> Category.NonH
-            else -> throw Exception("unexpected string $name")
-        }
-
-        fun getUrlSource (url: String): BookSource? = when {
-            Regex("(http(s?)://)?e-hentai.org/g/(\\d+)/([a-zA-Z0-9]+)(/?)$").matches(url) -> BookSource.E
-            Regex("(http(s?)://)?hitomi.la/reader/(\\d+).html(#(\\d+))?$").matches(url) -> BookSource.Hi
-            else -> null
-        }
-
         inline fun<reified T> readListFromJson (json: String): List<T> =
             ObjectMapper().registerKotlinModule()
                 .readerForListOf(T::class.java)
@@ -98,5 +79,13 @@ class Util {
                 .readerFor(Map::class.java)
                 .readValues<Map<String, T>>(json)
                 .let { if (it.hasNextValue()) it.next() else mapOf() }
+
+
+
+        fun getUrlSource (url: String): BookSource? = when {
+            Regex("(http(s?)://)?e-hentai.org/g/(\\d+)/([a-zA-Z0-9]+)(/?)$").matches(url) -> BookSource.E
+            Regex("(http(s?)://)?hitomi.la/reader/(\\d+).html(#(\\d+))?$").matches(url) -> BookSource.Hi
+            else -> null
+        }
     }
 }

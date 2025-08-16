@@ -14,7 +14,7 @@ data class ExcludeTagRecord (
         }
 
     fun excluded (bookRecord: BookRecordT): Boolean {
-        if (!categories.contains(Util.categoryFromName(bookRecord.cat))) {
+        if (!categories.contains(Category.fromName(bookRecord.cat))) {
             return false
         }
         // exclude the book's tag contain all exclude tag

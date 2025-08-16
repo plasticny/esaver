@@ -150,9 +150,10 @@ abstract class BaseViewerActivity: AppCompatActivity() {
         }
     }
 
-    protected fun toggleLoadFailedScreen (toggle: Boolean) {
+    protected fun toggleLoadFailedScreen (toggle: Boolean, msg: String = getString(R.string.fail_to_load_picture)) {
         viewerActivityBinding.let {
             if (toggle) {
+                it.reloadTextView.text = msg
                 it.loadFailedContainer.visibility = ProgressBar.VISIBLE
                 it.photoView.visibility = View.INVISIBLE
             } else {
@@ -187,16 +188,16 @@ abstract class BaseViewerActivity: AppCompatActivity() {
                 showPicture(
                     pictureUrl,
                     onPictureReady = { toggleLoadFailedScreen(false) },
-                    onFailed = {
+                    onFailed = { failMsg ->
                         viewerActivityBinding.photoView.setImageDrawable(null)
-                        toggleLoadFailedScreen(true)
+                        toggleLoadFailedScreen(true, failMsg)
                     },
                     onFinished = { toggleLoadingUi(false) }
                 )
             } else {
                 toggleLoadingUi(false)
                 viewerActivityBinding.photoView.setImageDrawable(null)
-                toggleLoadFailedScreen(true)
+                toggleLoadFailedScreen(true, "URL解析失敗")
             }
         }
     }
@@ -204,7 +205,7 @@ abstract class BaseViewerActivity: AppCompatActivity() {
     private fun showPicture (
         url: String,
         onPictureReady: (() -> Unit)? = null,
-        onFailed: (() -> Unit)? = null,
+        onFailed: ((failMsg: String) -> Unit)? = null,
         onFinished: (() -> Unit)? = null
     ) {
         val file = File(url)
@@ -214,10 +215,10 @@ abstract class BaseViewerActivity: AppCompatActivity() {
             onPictureReady?.invoke()
         } catch (e: DecodeException) {
             Log.w("${this::class.simpleName}.${this::showPicture}", "decode exception")
-            onFailed?.invoke()
+            onFailed?.invoke("${getString(R.string.fail_to_load_picture)} (decode)")
         } catch (e: IOException) {
             Log.w("${this::class.simpleName}.${this::showPicture}", "io exception")
-            onFailed?.invoke()
+            onFailed?.invoke("${getString(R.string.fail_to_load_picture)} (io)")
         }
         onFinished?.invoke()
     }
