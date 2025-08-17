@@ -529,7 +529,7 @@ class SearchActivity: AppCompatActivity() {
                 tags = mutableMapOf<String, List<String>>().apply {
                     book.select(".gl4e.glname table tr").forEach { tr ->
                         val cat = tr.selectFirst(".tc")!!.text().trim().dropLast(1)
-                        set(cat, tr.select(".gt,.gtl,.gtw").map { it.text().trim() })
+                        set(cat, tr.select(".gt,.gtl").map { it.text().trim() })
                     }
                 }
             )
@@ -546,6 +546,7 @@ class SearchActivity: AppCompatActivity() {
         }
 
     /**
+     * fetch detail information of the book, and store as tmp book
      * @return do the store success
      */
     private suspend fun storeTmpBook (searchBookData: SearchBookData): Boolean {
@@ -563,7 +564,7 @@ class SearchActivity: AppCompatActivity() {
             val tags = mutableMapOf<String, List<String>>()
             forEach { tr ->
                 val category = tr.selectFirst(".tc")!!.text().trim().dropLast(1)
-                tags[category] = tr.select(".gt,.gtl,.gtw").map { it.text().trim() }
+                tags[category] = tr.select(".gt,.gtl").map { it.text().trim() }
             }
             tags
         }

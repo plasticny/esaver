@@ -1,8 +1,8 @@
 package com.example.viewer.data.repository
 
 import android.content.Context
+import android.util.Log
 import androidx.compose.ui.util.fastMap
-import androidx.compose.ui.util.fastMinByOrNull
 import androidx.sqlite.db.SimpleSQLiteQuery
 import com.example.viewer.data.dao.ExcludeTagDao
 import com.example.viewer.data.database.SearchDatabase
@@ -111,7 +111,9 @@ class ExcludeTagRepository (context: Context) {
 
     fun lastExcludeTagUpdateTime () = listLastUpdateTime
 
-    fun doExclude (categories: List<Category>, tags: Map<String, List<String>>): Boolean {
+    fun doExclude (categories: List<Category>, tags: Map<String, List<String>>, verbose: Boolean = false): Boolean {
+        val logTag = "${this::class.simpleName}.${this::doExclude.name}"
+
         val categoryNames = categories.fastMap { it.name }.toSet()
         val setTags = tags.keys.associateWith { tags.getValue(it).toSet() }
 
@@ -119,7 +121,15 @@ class ExcludeTagRepository (context: Context) {
             !intersectAny(categoryNames, excludedBookCategories) ||
             !intersectAny(setTags.keys, excludedTagCategories) ||
             !intersectAny(tags.values.flatten().toSet(), excludedTagValues)
-        ) { return false }
+        ) {
+            if (verbose) {
+                Log.i(logTag, "not intersecting any")
+                Log.i(logTag, "intersect category: ${intersectAny(categoryNames, excludedBookCategories)}")
+                Log.i(logTag, "intersect tag key: ${intersectAny(setTags.keys, excludedTagCategories)}")
+                Log.i(logTag, "intersect tag value: ${intersectAny(tags.values.flatten().toSet(), excludedTagValues)}")
+            }
+            return false
+        }
 
         // check cache
         val checkedIds = mutableSetOf<Int>()
@@ -142,6 +152,10 @@ class ExcludeTagRepository (context: Context) {
                 }
             }
             checkedIds.add(cacheRecord.id)
+        }
+
+        if (verbose) {
+            Log.i(logTag, "not hit cache")
         }
 
         // check database
@@ -175,6 +189,10 @@ class ExcludeTagRepository (context: Context) {
                     return true
                 }
             }
+        }
+
+        if (verbose) {
+            Log.e(logTag, "not hit database")
         }
 
         return false
