@@ -1,6 +1,7 @@
 package com.example.viewer.activity.main
 
 import android.annotation.SuppressLint
+import android.app.AlertDialog
 import android.content.ClipData
 import android.content.ClipDescription
 import android.content.Intent
@@ -23,16 +24,24 @@ import com.example.viewer.activity.SearchActivity
 import com.example.viewer.data.repository.SearchRepository
 import com.example.viewer.data.struct.SearchMark
 import com.example.viewer.databinding.ComponentListItemBinding
-import com.example.viewer.databinding.MainSearchFragmentBinding
+import com.example.viewer.databinding.DialogListItemBinding
+import com.example.viewer.databinding.DialogSelectBookSourceBinding
+import com.example.viewer.databinding.FragmentMainSearchBinding
 import com.example.viewer.dialog.ConfirmDialog
 import com.example.viewer.dialog.FilterOutDialog
 import com.example.viewer.dialog.SearchMarkDialog
+import com.example.viewer.struct.BookSource
 
 class SearchMarkFragment: Fragment() {
     private lateinit var parent: ViewGroup
-    private lateinit var binding: MainSearchFragmentBinding
+    private lateinit var rootBinding: FragmentMainSearchBinding
     private lateinit var searchRepo: SearchRepository
     private lateinit var gestureDetector: GestureDetector
+
+    /**
+     * book source to search when activate tmp searching
+     */
+    private var searchBarSource: BookSource = BookSource.E
 
     private var focusedSearchMark: SearchMarkEntry? = null
     private var searchMarkListLastUpdate = 0L
@@ -45,7 +54,7 @@ class SearchMarkFragment: Fragment() {
     ): View {
         parent = container!!
         searchRepo = SearchRepository(parent.context)
-        binding = MainSearchFragmentBinding.inflate(layoutInflater, parent, false)
+        rootBinding = FragmentMainSearchBinding.inflate(layoutInflater, parent, false)
 
         gestureDetector = GestureDetector(
             requireContext(),
@@ -59,7 +68,13 @@ class SearchMarkFragment: Fragment() {
 
         searchMarkListLastUpdate = searchRepo.getSearchMarkListUpdateTime()
 
-        binding.searchEditText.apply {
+        rootBinding.searchSourceButton.apply {
+            setOnClickListener {
+                openBookSourceSelectDialog()
+            }
+        }
+
+        rootBinding.searchEditText.apply {
             setOnEditorActionListener { _, actionId, event ->
                 if (actionId == EditorInfo.IME_ACTION_SEARCH) {
                     if (event?.action == null || event.action == KeyEvent.ACTION_UP) {
@@ -72,7 +87,7 @@ class SearchMarkFragment: Fragment() {
             }
         }
 
-        binding.advanceSearchButton.apply {
+        rootBinding.advanceSearchButton.apply {
             setOnClickListener {
                 SearchMarkDialog(context, layoutInflater).apply {
                     title = "進階搜尋"
@@ -89,12 +104,12 @@ class SearchMarkFragment: Fragment() {
                         )
                     }
                 }.show(
-                    keyword = binding.searchEditText.text.toString().trim()
+                    keyword = rootBinding.searchEditText.text.toString().trim()
                 )
             }
         }
 
-        binding.addButton.setOnClickListener {
+        rootBinding.addButton.setOnClickListener {
             SearchMarkDialog(parent.context, layoutInflater).apply {
                 title = "新增搜尋標記"
                 showConfirmButton = true
@@ -112,13 +127,13 @@ class SearchMarkFragment: Fragment() {
             }.show()
         }
 
-        binding.toolBarFilterOutButton.setOnClickListener {
+        rootBinding.toolBarFilterOutButton.setOnClickListener {
             FilterOutDialog(parent.context, layoutInflater).show()
         }
 
-        binding.toolBarCloseButton.setOnClickListener { deFocusSearchMark() }
+        rootBinding.toolBarCloseButton.setOnClickListener { deFocusSearchMark() }
 
-        binding.toolBarEditButton.setOnClickListener {
+        rootBinding.toolBarEditButton.setOnClickListener {
             focusedSearchMark!!.let { entry ->
                 SearchMarkDialog(parent.context, layoutInflater).apply {
                     title = "編輯搜尋標記"
@@ -140,7 +155,7 @@ class SearchMarkFragment: Fragment() {
             }
         }
 
-        binding.toolBarDeleteButton.setOnClickListener {
+        rootBinding.toolBarDeleteButton.setOnClickListener {
             focusedSearchMark!!.let {
                 ConfirmDialog(parent.context, inflater).show(
                     "刪除${it.searchMark.name}嗎？",
@@ -155,12 +170,12 @@ class SearchMarkFragment: Fragment() {
 
         refreshSearchMarkWrapper()
 
-        return binding.root
+        return rootBinding.root
     }
 
     override fun onResume() {
         super.onResume()
-        binding.searchEditText.text.clear()
+        rootBinding.searchEditText.text.clear()
 
         searchRepo.getSearchMarkListUpdateTime().let {
             if (it != searchMarkListLastUpdate) {
@@ -172,10 +187,10 @@ class SearchMarkFragment: Fragment() {
 
     @SuppressLint("ClickableViewAccessibility")
     private fun refreshSearchMarkWrapper () {
-        binding.searchMarkWrapper.removeAllViews()
+        rootBinding.searchMarkWrapper.removeAllViews()
 
         for (searchMark in searchRepo.getAllSearchMarkInListOrder()) {
-            val searchMarkBinding = ComponentListItemBinding.inflate(layoutInflater, binding.searchMarkWrapper, true)
+            val searchMarkBinding = ComponentListItemBinding.inflate(layoutInflater, rootBinding.searchMarkWrapper, true)
 
             searchMarkBinding.name.text = searchMark.name
 
@@ -246,16 +261,16 @@ class SearchMarkFragment: Fragment() {
     }
 
     private fun focusSearchMark (id: Long, searchMark: SearchMark, searchMarkBinding: ComponentListItemBinding) {
-        binding.notFocusedToolBarWrapper.visibility = View.GONE
-        binding.focusedToolBarWrapper.visibility = View.VISIBLE
+        rootBinding.notFocusedToolBarWrapper.visibility = View.GONE
+        rootBinding.focusedToolBarWrapper.visibility = View.VISIBLE
         searchMarkBinding.name.setTextColor(parent.context.getColor(R.color.black))
         searchMarkBinding.root.backgroundTintList = ColorStateList.valueOf(parent.context.getColor(R.color.grey))
         focusedSearchMark = SearchMarkEntry(id, searchMark, searchMarkBinding)
     }
 
     private fun deFocusSearchMark (doModifyBindingStyle: Boolean = true) {
-        binding.notFocusedToolBarWrapper.visibility = View.VISIBLE
-        binding.focusedToolBarWrapper.visibility = View.GONE
+        rootBinding.notFocusedToolBarWrapper.visibility = View.VISIBLE
+        rootBinding.focusedToolBarWrapper.visibility = View.GONE
         if (doModifyBindingStyle) {
             focusedSearchMark!!.binding.let {
                 it.name.setTextColor(parent.context.getColor(R.color.white))
@@ -273,6 +288,31 @@ class SearchMarkFragment: Fragment() {
         searchMarkBinding.name.setTextColor(parent.context.getColor(R.color.black))
         searchMarkBinding.root.backgroundTintList = ColorStateList.valueOf(parent.context.getColor(R.color.grey))
         focusedSearchMark = SearchMarkEntry(id, searchMark, searchMarkBinding)
+    }
+
+    private fun openBookSourceSelectDialog () {
+        val dialogBinding = DialogSelectBookSourceBinding.inflate(layoutInflater)
+        val dialog = AlertDialog.Builder(requireContext()).setView(dialogBinding.root).create()
+
+        for (source in listOf(BookSource.E, BookSource.Wn)) {
+            val itemBinding = DialogListItemBinding.inflate(layoutInflater, dialogBinding.tagWrapper, false)
+
+            itemBinding.name.text = when (source) {
+                BookSource.E -> "eHentai"
+                BookSource.Wn -> "Wnacg"
+                else -> throw IllegalStateException()
+            }
+
+            itemBinding.root.setOnClickListener {
+                rootBinding.searchSourceText.text = source.name.first().uppercase()
+                searchBarSource = source
+                dialog.dismiss()
+            }
+
+            dialogBinding.tagWrapper.addView(itemBinding.root)
+        }
+
+        dialog.show()
     }
 
     data class SearchMarkEntry (

@@ -25,6 +25,7 @@ import com.example.viewer.dialog.SimpleEditTextDialog
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.IOException
+import java.net.SocketTimeoutException
 import kotlin.math.abs
 
 abstract class BaseViewerActivity: AppCompatActivity() {
@@ -179,7 +180,14 @@ abstract class BaseViewerActivity: AppCompatActivity() {
         toggleLoadFailedScreen(false)
 
         lifecycleScope.launch {
-            val pictureUrl = getPictureUrl(page)
+            val pictureUrl = try {
+                getPictureUrl(page)
+            } catch (e: SocketTimeoutException) {
+                viewerActivityBinding.photoView.setImageDrawable(null)
+                toggleLoadFailedScreen(true, "URL解析超時")
+                return@launch
+            }
+
             if (myPage != page) {
                 return@launch
             }

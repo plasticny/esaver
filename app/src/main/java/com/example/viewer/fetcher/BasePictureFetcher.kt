@@ -2,7 +2,6 @@ package com.example.viewer.fetcher
 
 import android.content.Context
 import android.util.Log
-import com.example.viewer.Util
 import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.struct.BookSource
 import kotlinx.coroutines.Dispatchers
@@ -31,6 +30,7 @@ abstract class BasePictureFetcher {
             return when (source) {
                 BookSource.E -> EPictureFetcher(context, bookId)
                 BookSource.Hi -> HiPictureFetcher(context, bookId)
+                else -> throw NotImplementedError(source.name)
             }
         }
     }

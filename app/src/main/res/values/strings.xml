@@ -91,4 +91,5 @@
     <string name="loaded">已讀取﹕</string>
     <string name="filtered_out">已濾去﹕</string>
     <string name="filtered_tag_is_disabled">(禁用了濾去標籤)</string>
+    <string name="select_book_source">選擇來源</string>
 </resources>
