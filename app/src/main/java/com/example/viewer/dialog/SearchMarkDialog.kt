@@ -7,9 +7,11 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import com.example.viewer.R
 import com.example.viewer.Util
+import com.example.viewer.data.struct.Book
 import com.example.viewer.data.struct.SearchMark
 import com.example.viewer.databinding.DialogSearchMarkBinding
 import com.example.viewer.databinding.DialogSearchMarkTagBinding
+import com.example.viewer.struct.BookSource
 import com.example.viewer.struct.Category
 
 open class SearchMarkDialog (
@@ -28,6 +30,7 @@ open class SearchMarkDialog (
 
     private var selectedCats: MutableSet<Category> = mutableSetOf()
     private var tagBindings: MutableList<DialogSearchMarkTagBinding> = mutableListOf()
+    private lateinit var bookSource: BookSource
 
     var title: String = ""
         set (value) {
@@ -90,6 +93,17 @@ open class SearchMarkDialog (
 
         dialogBinding.titleTextView.visibility = View.GONE
         dialogBinding.nameFieldContainer.visibility = View.VISIBLE
+
+        // book source edittext
+
+        dialogBinding.bookSourceEditText.apply {
+            setOnClickListener {
+                BookSourceSelectDialog(context, layoutInflater).show { source ->
+                    bookSource = source
+                    setText(source.keyString)
+                }
+            }
+        }
 
         // category buttons
         listOf(
@@ -161,6 +175,7 @@ open class SearchMarkDialog (
     fun show (searchMark: SearchMark) =
         show(
             name = searchMark.name,
+            sourceOrdinal = searchMark.sourceOrdinal,
             categories = searchMark.getCategories(),
             keyword = searchMark.keyword,
             tags = searchMark.getTags(),
@@ -170,6 +185,7 @@ open class SearchMarkDialog (
 
     fun show (
         name: String = "",
+        sourceOrdinal: Int,
         categories: List<Category> = listOf(),
         keyword: String = "",
         tags: Map<String, List<String>> = mapOf(),
@@ -181,6 +197,10 @@ open class SearchMarkDialog (
 
         // name field
         dialogBinding.nameEditText.setText(name)
+
+        // book source
+        bookSource = BookSource.entries[sourceOrdinal]
+        dialogBinding.bookSourceEditText.setText(bookSource.keyString)
 
         // keyword
         dialogBinding.keywordEditText.setText(keyword)
@@ -240,6 +260,7 @@ open class SearchMarkDialog (
 
     private fun buildDialogData () = DialogData (
         name = if (showNameField) dialogBinding.nameEditText.text.toString() else "",
+        sourceOrdinal = bookSource.ordinal,
         categories = selectedCats,
         keyword = dialogBinding.keywordEditText.text.toString(),
         tags = tagBindings.mapNotNull {
@@ -268,6 +289,7 @@ open class SearchMarkDialog (
 
     data class DialogData (
         val name: String,
+        val sourceOrdinal: Int,
         val categories: Set<Category>,
         val keyword: String,
         val tags: Map<String, List<String>>,

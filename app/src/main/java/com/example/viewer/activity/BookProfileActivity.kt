@@ -302,6 +302,7 @@ class BookProfileActivity: AppCompatActivity() {
         dialogViewBinding.searchButton.setOnClickListener {
             SearchActivity.startTmpSearch(
                 this@BookProfileActivity,
+                sourceOrdinal = book.sourceOrdinal,
                 tags = mapOf(Pair(category, listOf(value)))
             )
         }

@@ -50,6 +50,7 @@ class SearchActivity: AppCompatActivity() {
          */
         fun startTmpSearch (
             context: Context,
+            sourceOrdinal: Int,
             categories: List<Category> = Category.entries.toList(),
             keyword: String = "",
             tags: Map<String, List<String>> = mapOf(),
@@ -58,7 +59,7 @@ class SearchActivity: AppCompatActivity() {
         ) {
             SearchMark.setTmpSearchMark(
                 context,
-                categories, keyword, tags, uploader, doExclude
+                sourceOrdinal, categories, keyword, tags, uploader, doExclude
             )
             context.startActivity(
                 Intent(context, SearchActivity::class.java).apply {
@@ -208,6 +209,7 @@ class SearchActivity: AppCompatActivity() {
                             positiveCb = { name ->
                                 val id = searchRepo.addSearchMark(
                                     name = name,
+                                    sourceOrdinal = data.sourceOrdinal,
                                     categories = data.categories.toList(),
                                     keyword = data.keyword,
                                     tags = data.tags,
@@ -243,6 +245,7 @@ class SearchActivity: AppCompatActivity() {
                     searchMarkData = SearchMarkData(
                         id = searchMarkData.id,
                         name = if (isTemporarySearch) getString(R.string.search) else data.name,
+                        sourceOrdinal = data.sourceOrdinal,
                         keyword = data.keyword,
                         categories = data.categories.toList(),
                         tags = data.tags,
@@ -253,6 +256,7 @@ class SearchActivity: AppCompatActivity() {
                 }
             }.show(
                 name = searchMarkData.name,
+                sourceOrdinal = searchMarkData.sourceOrdinal,
                 categories = searchMarkData.categories,
                 keyword = searchMarkData.keyword,
                 tags = searchMarkData.tags,
@@ -320,6 +324,7 @@ class SearchActivity: AppCompatActivity() {
         SearchMarkData (
             id = searchMark.id,
             name = searchMark.name,
+            sourceOrdinal = searchMark.sourceOrdinal,
             keyword = searchMark.keyword,
             categories = Util.readListFromJson<Int>(searchMark.categoryOrdinalsJson)
                 .map { Category.fromOrdinal(it) },
@@ -630,6 +635,7 @@ class SearchActivity: AppCompatActivity() {
     private data class SearchMarkData (
         val id: Long,
         val name: String,
+        val sourceOrdinal: Int,
         val keyword: String,
         val categories: List<Category>,
         val tags: Map<String, List<String>>,

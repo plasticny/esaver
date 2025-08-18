@@ -1,16 +1,11 @@
 package com.example.viewer.data.struct
 
 import android.content.Context
-import androidx.room.ColumnInfo
 import androidx.room.Entity
-import androidx.room.ForeignKey
-import androidx.room.Ignore
-import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.example.viewer.R
 import com.example.viewer.Util
 import com.example.viewer.struct.Category
-import com.google.errorprone.annotations.CanIgnoreReturnValue
 import com.google.gson.Gson
 
 @Entity(
@@ -20,6 +15,7 @@ data class SearchMark (
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     var name: String,
+    var sourceOrdinal: Int,
     var categoryOrdinalsJson: String,
     var keyword: String,
     var tagsJson: String,
@@ -33,6 +29,7 @@ data class SearchMark (
 
         fun setTmpSearchMark (
             context: Context,
+            sourceOrdinal: Int,
             categories: List<Category> = listOf(),
             keyword: String,
             tags: Map<String, List<String>> = mapOf(),
@@ -43,6 +40,7 @@ data class SearchMark (
             tmpSearchMark = SearchMark(
                 id = -1L,
                 name = context.getString(R.string.search),
+                sourceOrdinal = sourceOrdinal,
                 categoryOrdinalsJson = gson.toJson(categories.map { it.ordinal }),
                 keyword = keyword,
                 tagsJson = gson.toJson(tags),

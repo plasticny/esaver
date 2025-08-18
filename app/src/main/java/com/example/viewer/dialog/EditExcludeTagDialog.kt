@@ -4,6 +4,7 @@ import android.content.Context
 import android.view.LayoutInflater
 import android.widget.Toast
 import com.example.viewer.data.struct.ExcludeTag
+import com.example.viewer.struct.BookSource
 import com.example.viewer.struct.Category
 import com.example.viewer.struct.ExcludeTagRecord
 import com.example.viewer.struct.SearchMark
@@ -43,6 +44,7 @@ class EditExcludeTagDialog (
         }
         super.show(
             name = "",
+            sourceOrdinal = BookSource.E.ordinal,
             categories = categories,
             keyword = "",
             tags = tags,

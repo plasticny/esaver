@@ -27,6 +27,7 @@ import com.example.viewer.databinding.ComponentListItemBinding
 import com.example.viewer.databinding.DialogListItemBinding
 import com.example.viewer.databinding.DialogSelectBookSourceBinding
 import com.example.viewer.databinding.FragmentMainSearchBinding
+import com.example.viewer.dialog.BookSourceSelectDialog
 import com.example.viewer.dialog.ConfirmDialog
 import com.example.viewer.dialog.FilterOutDialog
 import com.example.viewer.dialog.SearchMarkDialog
@@ -70,7 +71,10 @@ class SearchMarkFragment: Fragment() {
 
         rootBinding.searchSourceButton.apply {
             setOnClickListener {
-                openBookSourceSelectDialog()
+                BookSourceSelectDialog(requireContext(), layoutInflater).show { source ->
+                    rootBinding.searchSourceText.text = source.name.first().uppercase()
+                    searchBarSource = source
+                }
             }
         }
 
@@ -79,7 +83,9 @@ class SearchMarkFragment: Fragment() {
                 if (actionId == EditorInfo.IME_ACTION_SEARCH) {
                     if (event?.action == null || event.action == KeyEvent.ACTION_UP) {
                         SearchActivity.startTmpSearch(
-                            context, keyword = text.toString().trim()
+                            context,
+                            sourceOrdinal = searchBarSource.ordinal,
+                            keyword = text.toString().trim()
                         )
                     }
                 }
@@ -96,6 +102,7 @@ class SearchMarkFragment: Fragment() {
                     searchCb = { data ->
                         SearchActivity.startTmpSearch(
                             context,
+                            searchBarSource.ordinal,
                             data.categories.toList(),
                             data.keyword,
                             data.tags,
@@ -104,6 +111,7 @@ class SearchMarkFragment: Fragment() {
                         )
                     }
                 }.show(
+                    sourceOrdinal = searchBarSource.ordinal,
                     keyword = rootBinding.searchEditText.text.toString().trim()
                 )
             }
@@ -116,6 +124,7 @@ class SearchMarkFragment: Fragment() {
                 confirmCb = { data ->
                     searchRepo.addSearchMark(
                         name = data.name,
+                        sourceOrdinal = data.sourceOrdinal,
                         categories = data.categories.toList(),
                         keyword = data.keyword,
                         tags = data.tags,
@@ -124,7 +133,7 @@ class SearchMarkFragment: Fragment() {
                     )
                     refreshSearchMarkWrapper()
                 }
-            }.show()
+            }.show(sourceOrdinal = searchBarSource.ordinal)
         }
 
         rootBinding.toolBarFilterOutButton.setOnClickListener {
@@ -288,31 +297,6 @@ class SearchMarkFragment: Fragment() {
         searchMarkBinding.name.setTextColor(parent.context.getColor(R.color.black))
         searchMarkBinding.root.backgroundTintList = ColorStateList.valueOf(parent.context.getColor(R.color.grey))
         focusedSearchMark = SearchMarkEntry(id, searchMark, searchMarkBinding)
-    }
-
-    private fun openBookSourceSelectDialog () {
-        val dialogBinding = DialogSelectBookSourceBinding.inflate(layoutInflater)
-        val dialog = AlertDialog.Builder(requireContext()).setView(dialogBinding.root).create()
-
-        for (source in listOf(BookSource.E, BookSource.Wn)) {
-            val itemBinding = DialogListItemBinding.inflate(layoutInflater, dialogBinding.tagWrapper, false)
-
-            itemBinding.name.text = when (source) {
-                BookSource.E -> "eHentai"
-                BookSource.Wn -> "Wnacg"
-                else -> throw IllegalStateException()
-            }
-
-            itemBinding.root.setOnClickListener {
-                rootBinding.searchSourceText.text = source.name.first().uppercase()
-                searchBarSource = source
-                dialog.dismiss()
-            }
-
-            dialogBinding.tagWrapper.addView(itemBinding.root)
-        }
-
-        dialog.show()
     }
 
     data class SearchMarkEntry (
