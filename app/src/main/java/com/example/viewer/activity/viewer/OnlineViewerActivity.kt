@@ -1,6 +1,7 @@
 package com.example.viewer.activity.viewer
 
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
 import com.example.viewer.R
@@ -12,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.net.SocketTimeoutException
 import kotlin.math.floor
 
 class OnlineViewerActivity: BaseViewerActivity() {
@@ -70,17 +72,21 @@ class OnlineViewerActivity: BaseViewerActivity() {
 
     override fun loadPage() {
         super.loadPage()
-        preloadPage(page + 1)
-        preloadPage(page + 2)
-        preloadPage(page - 1)
-        preloadPage(page - 2)
+        try {
+            preloadPage(page + 1)
+            preloadPage(page + 2)
+            preloadPage(page - 1)
+            preloadPage(page - 2)
+        } catch (e: SocketTimeoutException) {
+            Log.e("${this::class.simpleName}.${this::loadPage.name}", e.stackTraceToString())
+        }
     }
 
     override suspend fun getPictureUrl (page: Int): String? {
         println("[${this::class.simpleName}.${this::getPictureUrl.name}] $page")
 
         if (page < firstPage || page > lastPage) {
-            throw Exception("page out of range")
+            throw IllegalStateException("page out of range")
         }
 
         if (pictureUrls[page] == null) {
@@ -97,7 +103,7 @@ class OnlineViewerActivity: BaseViewerActivity() {
                         }
                     }
                 }
-            }?.path.also { pictureUrls[page] = it }
+            }.path.also { pictureUrls[page] = it }
         }
 
         return pictureUrls[page]

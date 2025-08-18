@@ -112,7 +112,10 @@ class ExcludeTagRepository (context: Context) {
     fun lastExcludeTagUpdateTime () = listLastUpdateTime
 
     fun doExclude (categories: List<Category>, tags: Map<String, List<String>>, verbose: Boolean = false): Boolean {
-        val logTag = "${this::class.simpleName}.${this::doExclude.name}"
+        val logTag = if (verbose) "${this::class.simpleName}.${this::doExclude.name}" else ""
+        if (verbose) {
+            Log.e(logTag, logTag)
+        }
 
         val categoryNames = categories.fastMap { it.name }.toSet()
         val setTags = tags.keys.associateWith { tags.getValue(it).toSet() }

@@ -1,10 +1,7 @@
 package com.example.viewer.fetcher
 
-import android.accounts.NetworkErrorException
 import android.content.Context
 import android.util.Log
-import android.widget.Toast
-import com.example.viewer.Util
 import com.example.viewer.data.repository.BookRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -14,10 +11,7 @@ import org.jsoup.HttpStatusException
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import java.io.File
-import java.net.ConnectException
-import java.net.SocketTimeoutException
 import java.net.UnknownHostException
-import kotlin.math.log
 
 class EPictureFetcher: BasePictureFetcher {
     companion object {
