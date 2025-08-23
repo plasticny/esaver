@@ -25,6 +25,7 @@ import org.jsoup.HttpStatusException
 import java.io.File
 import java.io.FileOutputStream
 import java.net.ConnectException
+import java.net.SocketException
 import java.net.SocketTimeoutException
 import kotlin.math.floor
 
@@ -113,6 +114,9 @@ class LocalViewerActivity: BaseViewerActivity() {
             } catch (e: HttpStatusException) {
                 toggleLoadingUi(false)
                 toggleLoadFailedScreen(true, "圖片下載失敗")
+            } catch (e: SocketException) {
+                toggleLoadingUi(false)
+                toggleLoadFailedScreen(true, "連接失敗")
             } catch (e: SocketTimeoutException) {
                 toggleLoadingUi(false)
                 toggleLoadFailedScreen(true, "圖片下載超時")

@@ -173,24 +173,22 @@ abstract class BasePictureFetcher {
         }.build()
 
         return withContext(Dispatchers.IO) {
-            Log.i(logTag, "start download $page\n$url")
+            Log.i(logTag, "download started: $page")
+            Log.i(logTag, url)
             downloadClient.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
                     throw HttpStatusException("download failed", response.code, url)
                 }
 
                 file.outputStream().use {
-                    try {
-                        response.body!!.byteStream().copyTo(it)
-                    } catch (e: SocketTimeoutException) {
-                        Log.e(logTag, e.stackTraceToString())
-                        throw e
-                    }
+                    response.body!!.byteStream().copyTo(it)
                 }
 
                 // this line should be after the write-to-file statement
                 // else a corrupted image might be read
                 downloadingPages.remove(page)
+
+                Log.i(logTag, "download finished: $page")
 
                 return@withContext file
             }

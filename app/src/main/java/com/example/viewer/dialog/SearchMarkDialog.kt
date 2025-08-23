@@ -7,7 +7,6 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import com.example.viewer.R
 import com.example.viewer.Util
-import com.example.viewer.data.struct.Book
 import com.example.viewer.data.struct.SearchMark
 import com.example.viewer.databinding.DialogSearchMarkBinding
 import com.example.viewer.databinding.DialogSearchMarkTagBinding
