@@ -24,7 +24,7 @@ import com.example.viewer.data.struct.SearchMark
 import com.example.viewer.databinding.SearchActivityBinding
 import com.example.viewer.databinding.ActivitySearchBookBinding
 import com.example.viewer.databinding.DialogSearchInfoBinding
-import com.example.viewer.dialog.SearchMarkDialog
+import com.example.viewer.dialog.SearchMarkDialog.SearchMarkDialog
 import com.example.viewer.dialog.SimpleEditTextDialog
 import com.example.viewer.fetcher.EPictureFetcher
 import com.example.viewer.struct.BookSource
@@ -38,7 +38,6 @@ import kotlinx.coroutines.withContext
 import org.jsoup.HttpStatusException
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
-import kotlin.reflect.jvm.internal.impl.serialization.deserialization.EnumEntriesDeserializationSupport
 
 /**
  * intExtra: searchMarkId; -1 for temporary search mark
@@ -194,7 +193,7 @@ class SearchActivity: AppCompatActivity() {
         }
 
         rootBinding.searchMarkNameContainer.setOnClickListener {
-            SearchMarkDialog(this, layoutInflater).apply {
+            val dialog = SearchMarkDialog(this, layoutInflater).apply {
                 title = if (isTemporarySearch) "編輯搜尋" else "編輯搜尋標記"
                 showNameField = !isTemporarySearch
                 showSaveButton = true
@@ -254,15 +253,20 @@ class SearchActivity: AppCompatActivity() {
                     )
                     lifecycleScope.launch { reset() }
                 }
-            }.show(
-                name = searchMarkData.name,
-                sourceOrdinal = searchMarkData.sourceOrdinal,
-                categories = searchMarkData.categories,
-                keyword = searchMarkData.keyword,
-                tags = searchMarkData.tags,
-                uploader = searchMarkData.uploader ?: "",
-                doExclude = searchMarkData.doExclude
-            )
+            }
+
+            when (searchMarkData.sourceOrdinal) {
+                BookSource.E.ordinal -> dialog.showESearchMark(
+                    name = searchMarkData.name,
+                    categories = searchMarkData.categories,
+                    keyword = searchMarkData.keyword,
+                    tags = searchMarkData.tags,
+                    uploader = searchMarkData.uploader ?: "",
+                    doExclude = searchMarkData.doExclude
+                )
+                BookSource.Wn.ordinal -> throw NotImplementedError()
+                else -> throw IllegalStateException("unexpected ordinal")
+            }
         }
 
         rootBinding.prevSearchMarkButton.apply {

@@ -100,30 +100,13 @@
                     android:text="@string/category"/>
 
                 <GridLayout
+                    android:id="@+id/category_wrapper"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
                     android:columnCount="2">
 
-                    <Button
-                        android:id="@+id/cat_doujinshi"
-                        style="@style/SearchMarkCategoryStyle"
-                        android:text="@string/doujinshi" />
-
-                    <Button
-                        android:id="@+id/cat_manga"
-                        style="@style/SearchMarkCategoryStyle"
-                        android:text="@string/manga"/>
-
-                    <Button
-                        android:id="@+id/cat_artist_cg"
-                        style="@style/SearchMarkCategoryStyle"
-                        android:text="@string/artist_cg"/>
-
-                    <Button
-                        android:id="@+id/cat_non_h"
-                        style="@style/SearchMarkCategoryStyle"
-                        android:text="@string/non_h"/>
+                    <!--  some button will be added here  -->
 
                 </GridLayout>
 

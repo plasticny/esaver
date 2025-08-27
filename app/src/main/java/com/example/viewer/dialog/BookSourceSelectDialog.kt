@@ -17,7 +17,7 @@ class BookSourceSelectDialog (context: Context, layoutInflater: LayoutInflater) 
         for (source in listOf(BookSource.E, BookSource.Wn)) {
             val itemBinding = DialogListItemBinding.inflate(layoutInflater, dialogBinding.tagWrapper, false)
 
-            itemBinding.name.text = source.name
+            itemBinding.name.text = source.keyString
 
             itemBinding.root.setOnClickListener {
                 cb.invoke(source)

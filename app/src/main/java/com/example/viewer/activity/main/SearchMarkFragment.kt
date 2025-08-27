@@ -1,7 +1,6 @@
 package com.example.viewer.activity.main
 
 import android.annotation.SuppressLint
-import android.app.AlertDialog
 import android.content.ClipData
 import android.content.ClipDescription
 import android.content.Intent
@@ -24,13 +23,11 @@ import com.example.viewer.activity.SearchActivity
 import com.example.viewer.data.repository.SearchRepository
 import com.example.viewer.data.struct.SearchMark
 import com.example.viewer.databinding.ComponentListItemBinding
-import com.example.viewer.databinding.DialogListItemBinding
-import com.example.viewer.databinding.DialogSelectBookSourceBinding
 import com.example.viewer.databinding.FragmentMainSearchBinding
 import com.example.viewer.dialog.BookSourceSelectDialog
 import com.example.viewer.dialog.ConfirmDialog
 import com.example.viewer.dialog.FilterOutDialog
-import com.example.viewer.dialog.SearchMarkDialog
+import com.example.viewer.dialog.SearchMarkDialog.SearchMarkDialog
 import com.example.viewer.struct.BookSource
 
 class SearchMarkFragment: Fragment() {
@@ -95,7 +92,7 @@ class SearchMarkFragment: Fragment() {
 
         rootBinding.advanceSearchButton.apply {
             setOnClickListener {
-                SearchMarkDialog(context, layoutInflater).apply {
+                val dialog = SearchMarkDialog(context, layoutInflater).apply {
                     title = "進階搜尋"
                     showNameField = false
                     showSearchButton = true
@@ -110,15 +107,20 @@ class SearchMarkFragment: Fragment() {
                             data.doExclude
                         )
                     }
-                }.show(
-                    sourceOrdinal = searchBarSource.ordinal,
-                    keyword = rootBinding.searchEditText.text.toString().trim()
-                )
+                }
+
+                when (searchBarSource.ordinal) {
+                    BookSource.E.ordinal -> dialog.showESearchMark(
+                        keyword = rootBinding.searchEditText.text.toString().trim()
+                    )
+                    BookSource.Wn.ordinal -> throw NotImplementedError()
+                    else -> throw IllegalStateException("unexpected ordinal")
+                }
             }
         }
 
         rootBinding.addButton.setOnClickListener {
-            SearchMarkDialog(parent.context, layoutInflater).apply {
+            val dialog = SearchMarkDialog(parent.context, layoutInflater).apply {
                 title = "新增搜尋標記"
                 showConfirmButton = true
                 confirmCb = { data ->
@@ -133,7 +135,13 @@ class SearchMarkFragment: Fragment() {
                     )
                     refreshSearchMarkWrapper()
                 }
-            }.show(sourceOrdinal = searchBarSource.ordinal)
+            }
+
+            when (searchBarSource.ordinal) {
+                BookSource.E.ordinal -> dialog.showESearchMark()
+                BookSource.Wn.ordinal -> throw NotImplementedError()
+                else -> throw IllegalStateException("unexpected ordinal")
+            }
         }
 
         rootBinding.toolBarFilterOutButton.setOnClickListener {
