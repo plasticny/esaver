@@ -10,7 +10,6 @@ import android.graphics.Rect
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.text.InputType
-import android.util.Log
 import android.view.GestureDetector
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -23,8 +22,12 @@ import com.example.viewer.R
 import com.example.viewer.databinding.ViewerActivityBinding
 import com.example.viewer.dialog.SimpleEditTextDialog
 import kotlinx.coroutines.launch
+import org.jsoup.HttpStatusException
 import java.io.File
+import java.io.FileNotFoundException
 import java.io.IOException
+import java.net.ConnectException
+import java.net.SocketException
 import java.net.SocketTimeoutException
 import kotlin.math.abs
 
@@ -41,7 +44,8 @@ abstract class BaseViewerActivity: AppCompatActivity() {
     protected abstract fun prevPage()
     protected abstract fun nextPage()
     protected abstract fun reloadPage()
-    protected abstract suspend fun getPictureUrl (page: Int): String?
+    protected abstract suspend fun getPictureStoredUrl (page: Int): String
+    protected abstract suspend fun downloadPicture (page: Int): File
 
     protected lateinit var viewerActivityBinding: ViewerActivityBinding
 
@@ -154,6 +158,7 @@ abstract class BaseViewerActivity: AppCompatActivity() {
     protected fun toggleLoadFailedScreen (toggle: Boolean, msg: String = getString(R.string.fail_to_load_picture)) {
         viewerActivityBinding.let {
             if (toggle) {
+                it.photoView.setImageDrawable(null)
                 it.reloadTextView.text = msg
                 it.loadFailedContainer.visibility = ProgressBar.VISIBLE
                 it.photoView.visibility = View.INVISIBLE
@@ -172,63 +177,46 @@ abstract class BaseViewerActivity: AppCompatActivity() {
         loadPage()
     }
 
-    protected open fun loadPage () {
-        val myPage = page
-
-        viewerActivityBinding.viewerPageTextView.text = (page + 1).toString()
-        toggleLoadingUi(true)
-        toggleLoadFailedScreen(false)
-
+    protected open fun loadPage (myPage: Int = this.page) {
+        if (myPage == page) {
+            viewerActivityBinding.viewerPageTextView.text = (myPage + 1).toString()
+            toggleLoadFailedScreen(false)
+            toggleLoadingUi(true)
+        }
         lifecycleScope.launch {
-            val pictureUrl = try {
-                getPictureUrl(page)
-            } catch (e: SocketTimeoutException) {
-                viewerActivityBinding.photoView.setImageDrawable(null)
-                toggleLoadFailedScreen(true, "URL解析超時")
-                return@launch
-            }
-
-            if (myPage != page) {
-                return@launch
-            }
-
-            if (pictureUrl != null) {
-                showPicture(
-                    pictureUrl,
-                    onPictureReady = { toggleLoadFailedScreen(false) },
-                    onFailed = { failMsg ->
-                        viewerActivityBinding.photoView.setImageDrawable(null)
-                        toggleLoadFailedScreen(true, failMsg)
-                    },
-                    onFinished = { toggleLoadingUi(false) }
-                )
-            } else {
-                toggleLoadingUi(false)
-                viewerActivityBinding.photoView.setImageDrawable(null)
-                toggleLoadFailedScreen(true, "URL解析失敗")
+            try {
+                val pictureUrl = try {
+                    getPictureStoredUrl(myPage)
+                } catch (e: FileNotFoundException) {
+                    downloadPicture(myPage).path
+                }
+                if (myPage == page) {
+                    viewerActivityBinding.photoView.setImageDrawable(
+                        ImageDecoder.decodeDrawable(
+                            ImageDecoder.createSource(File(pictureUrl))
+                        )
+                    )
+                }
+            } catch (e: Exception) {
+                if (myPage == page) {
+                    toggleLoadFailedScreen(
+                        true,
+                        when (e) {
+                            is SocketTimeoutException -> "圖片下載超時"
+                            is HttpStatusException -> "圖片下載失敗"
+                            is ConnectException, is SocketException -> "連接失敗"
+                            is DecodeException -> "${getString(R.string.fail_to_load_picture)} (decode)"
+                            is IOException -> "${getString(R.string.fail_to_load_picture)} (io)"
+                            else -> throw e
+                        }
+                    )
+                }
+            } finally {
+                if (myPage == page) {
+                    toggleLoadingUi(false)
+                }
             }
         }
-    }
-
-    private fun showPicture (
-        url: String,
-        onPictureReady: (() -> Unit)? = null,
-        onFailed: ((failMsg: String) -> Unit)? = null,
-        onFinished: (() -> Unit)? = null
-    ) {
-        val file = File(url)
-        try {
-            val drawable = ImageDecoder.decodeDrawable(ImageDecoder.createSource(file))
-            viewerActivityBinding.photoView.setImageDrawable(drawable)
-            onPictureReady?.invoke()
-        } catch (e: DecodeException) {
-            Log.w("${this::class.simpleName}.${this::showPicture}", "decode exception")
-            onFailed?.invoke("${getString(R.string.fail_to_load_picture)} (decode)")
-        } catch (e: IOException) {
-            Log.w("${this::class.simpleName}.${this::showPicture}", "io exception")
-            onFailed?.invoke("${getString(R.string.fail_to_load_picture)} (io)")
-        }
-        onFinished?.invoke()
     }
 
     @SuppressLint("ClickableViewAccessibility")

@@ -1,9 +1,7 @@
 package com.example.viewer.activity.viewer
 
 import android.os.Bundle
-import android.util.Log
 import android.widget.Toast
-import androidx.lifecycle.lifecycleScope
 import com.example.viewer.R
 import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.data.struct.Book
@@ -13,7 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.net.SocketTimeoutException
+import java.io.FileNotFoundException
 import kotlin.math.floor
 
 class OnlineViewerActivity: BaseViewerActivity() {
@@ -70,49 +68,44 @@ class OnlineViewerActivity: BaseViewerActivity() {
         loadPage()
     }
 
-    override fun loadPage() {
-        super.loadPage()
-        try {
-            preloadPage(page + 1)
-            preloadPage(page + 2)
-            preloadPage(page - 1)
-            preloadPage(page - 2)
-        } catch (e: SocketTimeoutException) {
-            Log.e("${this::class.simpleName}.${this::loadPage.name}", e.stackTraceToString())
-        }
+    override fun loadPage(myPage: Int) {
+        super.loadPage(page)
+        // preload
+        super.loadPage(page + 1)
+        super.loadPage(page - 1)
+        super.loadPage(page + 2)
+        super.loadPage(page - 2)
     }
 
-    override suspend fun getPictureUrl (page: Int): String? {
-        println("[${this::class.simpleName}.${this::getPictureUrl.name}] $page")
+    override suspend fun getPictureStoredUrl (page: Int): String {
+        println("[${this::class.simpleName}.${this::getPictureStoredUrl.name}] $page")
 
+        if (pictureUrls[page] == null) {
+            throw FileNotFoundException()
+        }
+        return pictureUrls[page]!!
+    }
+
+    override suspend fun downloadPicture(page: Int): File {
         if (page < firstPage || page > lastPage) {
             throw IllegalStateException("page out of range")
         }
 
-        if (pictureUrls[page] == null) {
-            if (this.page == page) {
-                viewerActivityBinding.progress.textView.text = getString(R.string.n_percent, 0)
-            }
-            withContext(Dispatchers.IO) {
-                fetcher.savePicture(page) { total, downloaded ->
-                    if (this@OnlineViewerActivity.page == page) {
-                        CoroutineScope(Dispatchers.Main).launch {
-                            viewerActivityBinding.progress.textView.text = getString(
-                                R.string.n_percent, floor(downloaded.toDouble() / total * 100).toInt()
-                            )
-                        }
+        if (this.page == page) {
+            viewerActivityBinding.progress.textView.text = getString(R.string.n_percent, 0)
+        }
+        val picture = withContext(Dispatchers.IO) {
+            fetcher.savePicture(page) { total, downloaded ->
+                if (this@OnlineViewerActivity.page == page) {
+                    CoroutineScope(Dispatchers.Main).launch {
+                        viewerActivityBinding.progress.textView.text = getString(
+                            R.string.n_percent, floor(downloaded.toDouble() / total * 100).toInt()
+                        )
                     }
                 }
-            }.path.also { pictureUrls[page] = it }
+            }
         }
-
-        return pictureUrls[page]
-    }
-
-    private fun preloadPage (page: Int) {
-        if (page < firstPage || page > lastPage) {
-            return
-        }
-        lifecycleScope.launch { getPictureUrl(page) }
+        pictureUrls[page] = picture.path
+        return picture
     }
 }

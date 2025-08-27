@@ -17,6 +17,7 @@ import okio.ForwardingSource
 import okio.buffer
 import org.jsoup.HttpStatusException
 import java.io.File
+import java.io.FileNotFoundException
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 
@@ -102,23 +103,20 @@ abstract class BasePictureFetcher {
         isLocal = false
     }
 
-    suspend fun getPictureUrl (
-        page: Int,
-        progressListener: ((contentLength: Long, downloadLength: Long) -> Unit)? = null
-    ): String? {
+    /**
+     * @throws FileNotFoundException
+     */
+    fun getPictureStoredUrl (page: Int): String {
         assertPageInRange(page)
 
         //
         // check whether picture is stored
         //
         val pictureFile = File(bookFolder, page.toString())
-        println("[${this::class.simpleName}.${this::getPictureUrl.name}]\n${pictureFile.path}")
-
-        // prevent return the url of an incomplete picture
-        waitPictureDownload(page)
+        println("[${this::class.simpleName}.${this::getPictureStoredUrl.name}]\n${pictureFile.path}")
 
         if (!pictureFile.exists()) {
-            savePicture(page, progressListener) ?: return null
+            throw FileNotFoundException()
         }
 
         return pictureFile.path
