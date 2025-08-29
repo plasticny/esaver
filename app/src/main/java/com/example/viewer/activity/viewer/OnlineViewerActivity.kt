@@ -80,6 +80,8 @@ class OnlineViewerActivity: BaseViewerActivity() {
     override suspend fun getPictureStoredUrl (page: Int): String {
         println("[${this::class.simpleName}.${this::getPictureStoredUrl.name}] $page")
 
+        fetcher.waitPictureDownload(page)
+
         if (pictureUrls[page] == null) {
             throw FileNotFoundException()
         }

@@ -202,12 +202,10 @@ abstract class BasePictureFetcher {
     /**
      * wait if the picture of "page" is downloading
      */
-    private suspend fun waitPictureDownload (page: Int) {
-        if (downloadingPages.contains(page)) {
-            withContext(Dispatchers.IO) {
-                while (downloadingPages.contains(page)) {
-                    delay(100)
-                }
+    suspend fun waitPictureDownload (page: Int) {
+        withContext(Dispatchers.IO) {
+            while (downloadingPages.contains(page)) {
+                delay(100)
             }
         }
     }

@@ -99,6 +99,7 @@ class LocalViewerActivity: BaseViewerActivity() {
     }
 
     override suspend fun getPictureStoredUrl(page: Int): String {
+        fetcher.waitPictureDownload(page)
         return fetcher.getPictureStoredUrl(page)
     }
 
