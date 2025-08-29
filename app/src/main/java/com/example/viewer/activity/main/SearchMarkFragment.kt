@@ -94,8 +94,6 @@ class SearchMarkFragment: Fragment() {
             setOnClickListener {
                 val dialog = SearchMarkDialog(context, layoutInflater).apply {
                     title = "進階搜尋"
-                    showNameField = false
-                    showSearchButton = true
                     searchCb = { data ->
                         SearchActivity.startTmpSearch(
                             context,
@@ -113,8 +111,13 @@ class SearchMarkFragment: Fragment() {
                     BookSource.E.ordinal -> dialog.showESearchMark(
                         keyword = rootBinding.searchEditText.text.toString().trim()
                     )
-                    BookSource.Wn.ordinal -> throw NotImplementedError()
+                    BookSource.Wn.ordinal -> dialog.showWnSearchMark()
                     else -> throw IllegalStateException("unexpected ordinal")
+                }
+
+                dialog.apply {
+                    showNameField = false
+                    showSearchButton = true
                 }
             }
         }
@@ -122,7 +125,6 @@ class SearchMarkFragment: Fragment() {
         rootBinding.addButton.setOnClickListener {
             val dialog = SearchMarkDialog(parent.context, layoutInflater).apply {
                 title = "新增搜尋標記"
-                showConfirmButton = true
                 confirmCb = { data ->
                     searchRepo.addSearchMark(
                         name = data.name,
@@ -139,9 +141,11 @@ class SearchMarkFragment: Fragment() {
 
             when (searchBarSource.ordinal) {
                 BookSource.E.ordinal -> dialog.showESearchMark()
-                BookSource.Wn.ordinal -> throw NotImplementedError()
+                BookSource.Wn.ordinal -> dialog.showWnSearchMark()
                 else -> throw IllegalStateException("unexpected ordinal")
             }
+
+            dialog.showConfirmButton = true
         }
 
         rootBinding.toolBarFilterOutButton.setOnClickListener {

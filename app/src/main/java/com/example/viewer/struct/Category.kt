@@ -2,6 +2,9 @@ package com.example.viewer.struct
 
 import com.example.viewer.R
 
+/**
+ * NOTE: do not change the ordering
+ */
 enum class Category {
     Doujinshi {
         override val color = R.color.doujinshi_red
@@ -22,6 +25,16 @@ enum class Category {
         override val color = R.color.nonH_blue
         override val value = 256
         override val displayText = R.string.non_h
+    },
+    All {
+        override val color = R.color.nonH_blue
+        override val value = -1
+        override val displayText = R.string.category_all
+    },
+    Magazine {
+        override val color = R.color.artistCG_yellow
+        override val value = -1
+        override val displayText = R.string.magazine
     };
 
     abstract val color: Int

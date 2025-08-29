@@ -47,6 +47,11 @@ open class SearchMarkDialog (
             field = value
             dialogBinding.keywordFieldContainer.visibility = if (value) View.VISIBLE else View.GONE
         }
+    var showTagsField: Boolean = true
+        set(value) {
+            field = value
+            dialogBinding.tagsFieldContainer.visibility = if (value) View.VISIBLE else View.GONE
+        }
     var showUploaderField: Boolean = true
         set (value) {
             field = value
@@ -102,7 +107,7 @@ open class SearchMarkDialog (
                         )
                         BookSource.Wn -> showWnSearchMark(
                             dialogData.name,
-                            dialogData.categories.toList()
+                            Category.All
                         )
                         else -> throw IllegalArgumentException("unexpected source ordinal")
                     }
@@ -170,7 +175,10 @@ open class SearchMarkDialog (
                 searchMark.uploader ?: "",
                 searchMark.doExclude
             )
-            BookSource.Wn.ordinal -> showWnSearchMark()
+            BookSource.Wn.ordinal -> showWnSearchMark(
+                name = searchMark.name,
+                category = searchMark.getCategories().also { assert(it.size == 1) }.first()
+            )
             else -> throw IllegalArgumentException("unexpected source ordinal")
         }
 
@@ -193,33 +201,14 @@ open class SearchMarkDialog (
 
     fun showWnSearchMark (
         name: String = "",
-        categories: List<Category> = listOf()
+        category: Category = Category.All
     ) {
-//        selectedCats = categories.toMutableSet()
-//        tagBindings = mutableListOf()
-//
-//        // name field
-//        dialogBinding.nameEditText.setText(name)
-//
-//        // book source
-//        bookSource = BookSource.Wn
-//        dialogBinding.bookSourceEditText.setText(bookSource.keyString)
-//
-//        // category button
-//        dialogBinding.categoryWrapper.removeAllViews()
-//        listOf(
-//            Category.Doujinshi, Category.Manga, Category.ArtistCG, Category.NonH
-//        ).forEachIndexed { index, cat ->
-//            dialogBinding.categoryWrapper.addView(
-//                createCategoryButton(cat, index % 2).apply {
-//                    setBackgroundColor(context.getColor(
-//                        if (selectedCats.contains(cat)) cat.color else R.color.grey
-//                    ))
-//                }
-//            )
-//        }
-//
-//        dialog.show()
+        dialogHandler = WnHandler(
+            context, layoutInflater,
+            this, dialogBinding,
+            name, category
+        ).also { it.setupUi() }
+        dialog.show()
     }
 
     /**

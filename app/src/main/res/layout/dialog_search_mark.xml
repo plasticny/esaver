@@ -139,38 +139,47 @@
                 <!--  tags  -->
 
                 <LinearLayout
+                    android:id="@+id/tags_field_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="fill_vertical">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="@string/tag"
-                        android:textColor="@color/grey"
-                        android:textSize="16sp" />
-
-                    <TextView
-                        android:id="@+id/add_tag_button"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginLeft="8dp"
-                        android:fontFamily="@font/font_awesome"
-                        android:text="@string/fa_plus"
-                        android:textColor="@color/white"
-                        android:textSize="22sp" />
-
-                </LinearLayout>
-
-                <LinearLayout
-                    android:id="@+id/tag_wrapper"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
                     android:orientation="vertical">
 
-                    <!--    some tag item will be added here    -->
+                    <LinearLayout
+                        android:layout_marginTop="8dp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="fill_vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="@string/tag"
+                            android:textColor="@color/grey"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:id="@+id/add_tag_button"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginLeft="8dp"
+                            android:fontFamily="@font/font_awesome"
+                            android:text="@string/fa_plus"
+                            android:textColor="@color/white"
+                            android:textSize="22sp" />
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/tag_wrapper"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <!--    some tag item will be added here    -->
+
+                    </LinearLayout>
 
                 </LinearLayout>
 

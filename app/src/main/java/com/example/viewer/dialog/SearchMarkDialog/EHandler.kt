@@ -27,13 +27,10 @@ class EHandler (
 
     override fun setupUi () {
         owner.apply {
-            showNameField = true
             showKeywordField = true
+            showTagsField = true
             showUploaderField = true
             showDoExcludeField = true
-            showSaveButton = true
-            showSearchButton = true
-            showConfirmButton = true
         }
 
         // name field

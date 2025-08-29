@@ -195,9 +195,6 @@ class SearchActivity: AppCompatActivity() {
         rootBinding.searchMarkNameContainer.setOnClickListener {
             val dialog = SearchMarkDialog(this, layoutInflater).apply {
                 title = if (isTemporarySearch) "編輯搜尋" else "編輯搜尋標記"
-                showNameField = !isTemporarySearch
-                showSaveButton = true
-                showSearchButton = true
                 saveCb = { data ->
                     // save tmp search
                     if (isTemporarySearch) {
@@ -264,8 +261,17 @@ class SearchActivity: AppCompatActivity() {
                     uploader = searchMarkData.uploader ?: "",
                     doExclude = searchMarkData.doExclude
                 )
-                BookSource.Wn.ordinal -> throw NotImplementedError()
+                BookSource.Wn.ordinal -> dialog.showWnSearchMark(
+                    name = searchMarkData.name,
+                    category = searchMarkData.categories.also { assert(it.size == 1) }.first()
+                )
                 else -> throw IllegalStateException("unexpected ordinal")
+            }
+
+            dialog.apply {
+                showNameField = !isTemporarySearch
+                showSaveButton = true
+                showSearchButton = true
             }
         }
 

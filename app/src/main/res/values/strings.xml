@@ -26,6 +26,13 @@
     <string name="fa_list">\uf03a</string>
     <string name="fa_share_from_square">\uf14d</string>
     <string name="fa_crop">\uf125</string>
+<!--  book category string  -->
+    <string name="category_all">全部</string>
+    <string name="doujinshi">同人誌</string>
+    <string name="manga">漫畫</string>
+    <string name="artist_cg">畫冊</string>
+    <string name="non_h">非H</string>
+    <string name="magazine">雜誌</string>
 <!--  strings  -->
     <string name="app_name">eSaver</string>
     <string name="enter_url">輸入URL</string>
@@ -50,9 +57,6 @@
     <string name="book_gallery">書庫</string>
     <string name="search">搜尋</string>
     <string name="category">類別</string>
-    <string name="doujinshi">同人誌</string>
-    <string name="manga">漫畫</string>
-    <string name="artist_cg">畫冊</string>
     <string name="search_mark">搜尋標籤</string>
     <string name="read">閱讀</string>
     <string name="save_to_gallery">存至書庫</string>
@@ -60,7 +64,6 @@
     <string name="filter_out">濾除</string>
     <string name="load_more">加載更多</string>
     <string name="keyword">關鍵字</string>
-    <string name="non_h">非H</string>
     <string name="backup">備份</string>
     <string name="other">其他</string>
     <string name="bookmark">書籤</string>
