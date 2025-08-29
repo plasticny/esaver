@@ -8,6 +8,7 @@ import com.example.viewer.data.dao.ExcludeTagDao
 import com.example.viewer.data.database.SearchDatabase
 import com.example.viewer.data.struct.Book
 import com.example.viewer.data.struct.ExcludeTag
+import com.example.viewer.struct.BookSource
 import com.example.viewer.struct.Category
 import com.google.gson.Gson
 import kotlinx.coroutines.runBlocking
@@ -111,7 +112,16 @@ class ExcludeTagRepository (context: Context) {
 
     fun lastExcludeTagUpdateTime () = listLastUpdateTime
 
-    fun doExclude (categories: List<Category>, tags: Map<String, List<String>>, verbose: Boolean = false): Boolean {
+    fun doExclude (
+        sourceOrdinal: Int,
+        categories: List<Category>,
+        tags: Map<String, List<String>>,
+        verbose: Boolean = false
+    ): Boolean {
+        if (sourceOrdinal != BookSource.E.ordinal) {
+            return false
+        }
+
         val logTag = if (verbose) "${this::class.simpleName}.${this::doExclude.name}" else ""
         if (verbose) {
             Log.e(logTag, logTag)

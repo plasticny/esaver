@@ -19,7 +19,7 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import com.example.viewer.R
 import com.example.viewer.Util
-import com.example.viewer.activity.SearchActivity
+import com.example.viewer.activity.search.SearchActivity
 import com.example.viewer.data.repository.SearchRepository
 import com.example.viewer.data.struct.SearchMark
 import com.example.viewer.databinding.ComponentListItemBinding
@@ -97,7 +97,7 @@ class SearchMarkFragment: Fragment() {
                     searchCb = { data ->
                         SearchActivity.startTmpSearch(
                             context,
-                            searchBarSource.ordinal,
+                            data.sourceOrdinal,
                             data.categories.toList(),
                             data.keyword,
                             data.tags,
@@ -163,6 +163,7 @@ class SearchMarkFragment: Fragment() {
                         searchRepo.modifySearchMark(
                             id = entry.id,
                             name = data.name,
+                            sourceOrdinal = data.sourceOrdinal,
                             categories = data.categories.toList(),
                             keyword = data.keyword,
                             tags = data.tags,

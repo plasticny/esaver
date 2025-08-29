@@ -4,7 +4,6 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
-import android.graphics.Point
 import android.graphics.PointF
 import android.net.Uri
 import android.os.Bundle
@@ -25,13 +24,13 @@ import com.example.viewer.CoverCrop
 import com.example.viewer.R
 import com.example.viewer.Util
 import com.example.viewer.activity.main.MainActivity
+import com.example.viewer.activity.search.SearchActivity
 import com.example.viewer.activity.viewer.LocalViewerActivity
 import com.example.viewer.activity.viewer.OnlineViewerActivity
 import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.data.repository.ExcludeTagRepository
 import com.example.viewer.data.repository.GroupRepository
 import com.example.viewer.data.struct.Book
-import com.example.viewer.data.struct.Group
 import com.example.viewer.databinding.BookProfileActivityBinding
 import com.example.viewer.databinding.BookProfileTagBinding
 import com.example.viewer.databinding.DialogBookInfoBinding
@@ -50,7 +49,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.jsoup.HttpStatusException
-import org.jsoup.Jsoup
 import java.io.File
 import kotlin.math.floor
 import kotlin.math.min
