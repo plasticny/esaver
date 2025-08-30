@@ -43,8 +43,11 @@ class WnHandler (
             ownerRootBinding.categoryWrapper.addView(
                 createCategoryButton(cat, index % 2).apply {
                     setOnClickListener {
+                        if (category == cat) {
+                            return@setOnClickListener
+                        }
                         for (i in 0 until categoryButtons.size) {
-                            setBackgroundColor(context.getColor(
+                            categoryButtons[i].setBackgroundColor(context.getColor(
                                 if (i == index) cat.color else R.color.grey
                             ))
                         }

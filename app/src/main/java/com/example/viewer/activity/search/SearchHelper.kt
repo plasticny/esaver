@@ -13,6 +13,7 @@ abstract class SearchHelper (
         fun getSearchHelper (searchMarkData: SearchMarkData): SearchHelper {
             return when (searchMarkData.sourceOrdinal) {
                 BookSource.E.ordinal -> ESearchHelper(searchMarkData)
+                BookSource.Wn.ordinal -> WnSearchHelper(searchMarkData)
                 else -> throw NotImplementedError()
             }
         }

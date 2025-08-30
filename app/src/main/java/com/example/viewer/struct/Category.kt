@@ -35,6 +35,11 @@ enum class Category {
         override val color = R.color.artistCG_yellow
         override val value = -1
         override val displayText = R.string.magazine
+    },
+    Cosplay {
+        override val color = R.color.cosplay_purple
+        override val value = 64
+        override val displayText = R.string.cosplay
     };
 
     abstract val color: Int
@@ -55,5 +60,10 @@ enum class Category {
             "Non-H" -> NonH
             else -> throw Exception("unexpected string $name")
         }
+
+        @JvmStatic
+        val ECategories = arrayOf(Doujinshi, Manga, ArtistCG, NonH)
+        @JvmStatic
+        val WnCategories = arrayOf(All, Doujinshi, Manga, Magazine)
     }
 }

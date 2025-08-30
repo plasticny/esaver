@@ -169,9 +169,9 @@ class BookProfileActivity: AppCompatActivity() {
         rootBinding.pageNumTextView.text = baseContext.getString(R.string.n_page, book.pageNum)
 
         rootBinding.categoryTextView.apply {
-            val name = book.getCategory().name
-            text = name
-            setTextColor(context.getColor(Category.fromName(name).color))
+            val cate = book.getCategory()
+            text = getString(cate.displayText)
+            setTextColor(context.getColor(cate.color))
         }
 
         rootBinding.readButton.setOnClickListener {
@@ -301,7 +301,8 @@ class BookProfileActivity: AppCompatActivity() {
             SearchActivity.startTmpSearch(
                 this@BookProfileActivity,
                 sourceOrdinal = book.sourceOrdinal,
-                tags = mapOf(Pair(category, listOf(value)))
+                tags = mapOf(Pair(category, listOf(value))),
+                categories = Category.ECategories.toList()
             )
         }
 

@@ -23,52 +23,6 @@ class ESearchHelper (
         prev = if (this.prev == NOT_SET) null else this.prev.toString()
     )
 
-    private fun getSearchUrl (next: String? = null, prev: String? = null): String {
-        if (next != null && prev != null) {
-            throw Exception("Do not pass in next and prev together")
-        }
-
-        val fCatsValue = 1023 - if (searchMarkData.categories.isNotEmpty()) {
-            searchMarkData.categories.sumOf {
-                assert(it.value != -1)
-                it.value
-            }
-        } else {
-            listOf(
-                Category.NonH, Category.Manga, Category.ArtistCG, Category.Doujinshi
-            ).sumOf { it.value }
-        }
-
-        // f search
-        var fSearch = ""
-        if (searchMarkData.keyword.isNotEmpty()) {
-            fSearch += "${searchMarkData.keyword}+"
-        }
-        if (searchMarkData.tags.isNotEmpty() || searchMarkData.uploader?.isNotEmpty() == true) {
-            val tokens = mutableListOf<String>()
-            searchMarkData.tags.forEach { entry ->
-                val cat = entry.key
-                for (value in entry.value) {
-                    tokens.add(buildTagValueString(cat, value))
-                }
-            }
-            if (searchMarkData.uploader?.isNotEmpty() == true) {
-                tokens.add(buildTagValueString("uploader", searchMarkData.uploader))
-            }
-            fSearch += tokens.joinToString(" ")
-        }
-
-        var ret = "https://e-hentai.org/?f_cats=$fCatsValue&"
-        if (fSearch.isNotEmpty()) {
-            ret += "f_search=$fSearch&"
-        }
-        ret += "inline_set=dm_e&"
-        next?.let { ret += "next=$next" }
-        prev?.let { ret += "prev=$prev" }
-
-        return ret
-    }
-
     /**
      * This method will access and change the private variable next and prev
      */
@@ -107,7 +61,7 @@ class ESearchHelper (
                 },
                 url = url,
                 coverUrl = book.selectFirst(".gl1e img")!!.attr("src"),
-                cat = book.selectFirst(".cn")!!.text(),
+                cat = Category.fromName(book.selectFirst(".cn")!!.text()),
                 title = book.selectFirst(".glink")!!.text(),
                 pageNum = book.select(".gl3e div").let { divs ->
                     for (div in divs.reversed()) {
@@ -150,13 +104,57 @@ class ESearchHelper (
             title = doc.selectFirst("#gj")!!.text().trim().ifEmpty { searchBookData.title },
             subTitle = searchBookData.title,
             pageNum = searchBookData.pageNum,
-            categoryOrdinal = Category.fromName(searchBookData.cat).ordinal,
+            categoryOrdinal = searchBookData.cat.ordinal,
             uploader = doc.selectFirst("#gdn a")?.text(),
             tagsJson = gson.toJson(tags),
             sourceOrdinal = BookSource.E.ordinal,
             pageUrlsJson = gson.toJson(listOf(searchBookData.coverUrl))
         )
         return true
+    }
+
+    private fun getSearchUrl (next: String? = null, prev: String? = null): String {
+        assert(next == null || prev == null)
+
+        val fCatsValue = 1023 - if (searchMarkData.categories.isNotEmpty()) {
+            searchMarkData.categories.sumOf {
+                assert(it.value != -1)
+                it.value
+            }
+        } else {
+            listOf(
+                Category.NonH, Category.Manga, Category.ArtistCG, Category.Doujinshi
+            ).sumOf { it.value }
+        }
+
+        // f search
+        var fSearch = ""
+        if (searchMarkData.keyword.isNotEmpty()) {
+            fSearch += "${searchMarkData.keyword}+"
+        }
+        if (searchMarkData.tags.isNotEmpty() || searchMarkData.uploader?.isNotEmpty() == true) {
+            val tokens = mutableListOf<String>()
+            searchMarkData.tags.forEach { entry ->
+                val cat = entry.key
+                for (value in entry.value) {
+                    tokens.add(buildTagValueString(cat, value))
+                }
+            }
+            if (searchMarkData.uploader?.isNotEmpty() == true) {
+                tokens.add(buildTagValueString("uploader", searchMarkData.uploader))
+            }
+            fSearch += tokens.joinToString(" ")
+        }
+
+        var ret = "https://e-hentai.org/?f_cats=$fCatsValue&"
+        if (fSearch.isNotEmpty()) {
+            ret += "f_search=$fSearch&"
+        }
+        ret += "inline_set=dm_e&"
+        next?.let { ret += "next=$next" }
+        prev?.let { ret += "prev=$prev" }
+
+        return ret
     }
 
     private fun buildTagValueString (category: String, value: String): String {

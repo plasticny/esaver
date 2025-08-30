@@ -29,6 +29,7 @@ import com.example.viewer.dialog.ConfirmDialog
 import com.example.viewer.dialog.FilterOutDialog
 import com.example.viewer.dialog.SearchMarkDialog.SearchMarkDialog
 import com.example.viewer.struct.BookSource
+import com.example.viewer.struct.Category
 
 class SearchMarkFragment: Fragment() {
     private lateinit var parent: ViewGroup
@@ -82,7 +83,12 @@ class SearchMarkFragment: Fragment() {
                         SearchActivity.startTmpSearch(
                             context,
                             sourceOrdinal = searchBarSource.ordinal,
-                            keyword = text.toString().trim()
+                            keyword = text.toString().trim(),
+                            categories = when (searchBarSource) {
+                                BookSource.E -> Category.ECategories
+                                BookSource.Wn -> Category.WnCategories
+                                else -> throw NotImplementedError()
+                            }.toList()
                         )
                     }
                 }

@@ -20,23 +20,19 @@ import com.example.viewer.activity.BookProfileActivity
 import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.data.repository.ExcludeTagRepository
 import com.example.viewer.data.repository.SearchRepository
-import com.example.viewer.data.struct.Book
 import com.example.viewer.data.struct.SearchMark
 import com.example.viewer.databinding.SearchActivityBinding
 import com.example.viewer.databinding.ActivitySearchBookBinding
 import com.example.viewer.databinding.DialogSearchInfoBinding
 import com.example.viewer.dialog.SearchMarkDialog.SearchMarkDialog
 import com.example.viewer.dialog.SimpleEditTextDialog
-import com.example.viewer.fetcher.EPictureFetcher
 import com.example.viewer.struct.BookSource
 import com.example.viewer.struct.Category
-import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import org.jsoup.HttpStatusException
 import org.jsoup.Jsoup
 
 /**
@@ -50,7 +46,7 @@ class SearchActivity: AppCompatActivity() {
         fun startTmpSearch (
             context: Context,
             sourceOrdinal: Int,
-            categories: List<Category> = Category.entries.toList(),
+            categories: List<Category>,
             keyword: String = "",
             tags: Map<String, List<String>> = mapOf(),
             uploader: String = "",
@@ -472,7 +468,7 @@ class SearchActivity: AppCompatActivity() {
         books.filterNot {
             excludeTagRepo.doExclude(
                 searchMarkData.sourceOrdinal,
-                listOf(Category.fromName(it.cat)),
+                listOf(it.cat),
                 it.tags
             ).also { excluded ->
                 if (excluded) {
@@ -557,8 +553,8 @@ class SearchActivity: AppCompatActivity() {
             }
 
             binding.searchBookCatTextView.apply {
-                text = bookRecord.cat
-                setTextColor(context.getColor(Category.fromName(bookRecord.cat).color))
+                text = getString(bookRecord.cat.displayText)
+                setTextColor(context.getColor(bookRecord.cat.color))
             }
 
             binding.root.apply {

@@ -35,8 +35,9 @@ data class Book (
     // Represent of the top left point of the cover position
     // Stored in normalized coordinates, i.e. x and y are >= 0 and <= 1
     var coverCropPositionString: String?,
-    // for e book only
+    // for e and wn book, url of page contain image
     var pageUrlsJson: String?,
+    // for e and wn book, page of the book profile in the source website
     var p: Int?
 ) {
     companion object {
