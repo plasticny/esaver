@@ -31,6 +31,7 @@ abstract class BasePictureFetcher {
             return when (source) {
                 BookSource.E -> EPictureFetcher(context, bookId)
                 BookSource.Hi -> HiPictureFetcher(context, bookId)
+                BookSource.Wn -> WnPictureFetcher(context, bookId)
                 else -> throw NotImplementedError(source.name)
             }
         }
@@ -44,7 +45,7 @@ abstract class BasePictureFetcher {
     abstract suspend fun savePicture (
         page: Int, progressListener: ((contentLength: Long, downloadLength: Long) -> Unit)? = null
     ): File
-    protected abstract suspend fun fetchPictureUrl (page: Int): String
+    abstract suspend fun fetchPictureUrl (page: Int): String
 
     private val downloadingPages = mutableSetOf<Int>()
 
@@ -79,7 +80,7 @@ abstract class BasePictureFetcher {
     protected constructor (context: Context, pageNum: Int, bookId: String? = null) {
         this.context = context
         this.pageNum = pageNum
-        this.bookId = null
+        this.bookId = bookId
 
         this.bookFolder = File(context.getExternalFilesDir(null), "tmp")
         if (!this.bookFolder.exists()) {

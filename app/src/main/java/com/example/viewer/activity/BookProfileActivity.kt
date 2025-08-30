@@ -39,8 +39,9 @@ import com.example.viewer.databinding.DialogTagBinding
 import com.example.viewer.dialog.ConfirmDialog
 import com.example.viewer.dialog.EditExcludeTagDialog
 import com.example.viewer.dialog.SelectGroupDialog
+import com.example.viewer.fetcher.BasePictureFetcher
 import com.example.viewer.fetcher.EPictureFetcher
-import com.example.viewer.fetcher.HiPictureFetcher
+import com.example.viewer.fetcher.WnPictureFetcher
 import com.example.viewer.struct.BookSource
 import com.example.viewer.struct.Category
 import kotlinx.coroutines.CoroutineScope
@@ -110,22 +111,14 @@ class BookProfileActivity: AppCompatActivity() {
         }
 
         rootBinding.coverImageView.let {
-            if(isBookStored) {
-                CoroutineScope(Dispatchers.Main).launch {
+            CoroutineScope(Dispatchers.Main).launch {
+                if (isBookStored) {
                     val coverFile = File(book.getCoverUrl(baseContext))
                     if (!coverFile.exists()) {
                         withContext(Dispatchers.IO) {
-                            val id = book.id
-                            val source = bookRepo.getBookSource(id)
-                            val fetcher = if (source == BookSource.E) EPictureFetcher(
-                                baseContext,
-                                id
-                            ) else HiPictureFetcher(baseContext, id)
-                            try {
-                                fetcher.savePicture(bookRepo.getBookCoverPage(book.id))
-                            } catch (e: Exception) {
-                                println(e.stackTraceToString())
-                            }
+                            BasePictureFetcher.getFetcher(baseContext, book.id).savePicture(
+                                bookRepo.getBookCoverPage(book.id)
+                            )
                         }
                     }
                     Glide.with(baseContext)
@@ -135,15 +128,24 @@ class BookProfileActivity: AppCompatActivity() {
                             book.getCoverCropPosition()?.let { p -> transform(CoverCrop(p)) }
                             into(it)
                         }
+                } else {
+                    Glide.with(baseContext).load(
+                        withContext(Dispatchers.IO) {
+                            getOnlinePictureFetcher().fetchPictureUrl(0)
+                        }
+                    ).into(it)
                 }
-            } else {
-                Glide.with(baseContext).load(book.getPageUrls()!![0]).into(it)
             }
         }
 
         rootBinding.titleTextView.text = book.customTitle ?: book.title
 
         rootBinding.warningContainer.apply {
+            // for e only
+            if (book.sourceOrdinal != BookSource.E.ordinal) {
+                return@apply
+            }
+
             if (!Util.isInternetAvailable(baseContext)) {
                 return@apply
             }
@@ -396,7 +398,7 @@ class BookProfileActivity: AppCompatActivity() {
         rootBinding.progress.textView.text = getString(R.string.n_percent, 0)
         toggleProgressBar(true)
 
-        val fetcher = EPictureFetcher(baseContext, book.pageNum, book.url, book.id)
+        val fetcher = getOnlinePictureFetcher()
 
         // download cover page if not exist
         if (!File(fetcher.bookFolder, "0").exists()) {
@@ -443,7 +445,7 @@ class BookProfileActivity: AppCompatActivity() {
             subtitle = book.subTitle,
             pageNum = book.pageNum,
             tags = book.getTags(),
-            source = BookSource.E,
+            source = BookSource.fromOrdinal(book.sourceOrdinal),
             uploader = book.uploader
         )
         groupRepo.addBookIdToGroup(GroupRepository.DEFAULT_GROUP_ID, book.id)
@@ -513,6 +515,13 @@ class BookProfileActivity: AppCompatActivity() {
             }
         )
     }
+
+    private fun getOnlinePictureFetcher (): BasePictureFetcher =
+        when (book.sourceOrdinal) {
+            BookSource.E.ordinal -> EPictureFetcher(baseContext, book.pageNum, book.url, book.id)
+            BookSource.Wn.ordinal -> WnPictureFetcher(baseContext, book.pageNum, book.url, book.id)
+            else -> throw NotImplementedError()
+        }
 
     private class CropContract: ActivityResultContract<Uri, PointF?>() {
         override fun createIntent(context: Context, input: Uri): Intent {

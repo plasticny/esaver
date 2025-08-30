@@ -107,11 +107,6 @@ data class Book (
         val folder = getBookFolder(context)
         val coverPageFile = File(folder, coverPage.toString())
         return coverPageFile.path
-//        return if (coverPageFile.exists()) {
-//            coverPageFile.path
-//        } else {
-//            File(folder, "0").path
-//        }
     }
 
     fun getBookFolder (context: Context): File =
