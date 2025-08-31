@@ -82,11 +82,12 @@ class EHandler (
         sourceOrdinal = source.ordinal,
         categories = selectedCats,
         keyword = ownerRootBinding.keywordEditText.text.toString(),
-        tags = (ownerRootBinding.tagWrapper.children as Sequence<DialogSearchMarkTagBinding>).mapNotNull {
-            if (it.spinner.selectedIndex == 0) {
+        tags = (ownerRootBinding.tagWrapper.children).mapNotNull {
+            val binding = DialogSearchMarkTagBinding.bind(it)
+            if (binding.spinner.selectedIndex == 0) {
                 return@mapNotNull null
             }
-            TAGS[it.spinner.selectedIndex] to it.editText.text.toString()
+            TAGS[binding.spinner.selectedIndex] to binding.editText.text.toString()
         }.groupBy({it.first}, {it.second}),
         uploader = ownerRootBinding.uploaderEditText.text.toString(),
         doExclude = ownerRootBinding.doExcludeSwitch.isChecked

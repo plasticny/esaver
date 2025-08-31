@@ -42,6 +42,7 @@ data class Book (
 ) {
     companion object {
         private var tmpBook: Book? = null
+        private var tmpCoverUrl: String? = null
 
         fun setTmpBook (
             id: String,
@@ -53,7 +54,8 @@ data class Book (
             uploader: String?,
             tagsJson: String,
             sourceOrdinal: Int,
-            pageUrlsJson: String
+            // for book profile quick load cover page
+            coverUrl: String
         ) {
             tmpBook = Book(
                 id = id,
@@ -71,12 +73,15 @@ data class Book (
                 bookMarksJson = "[]",
                 customTitle = null,
                 coverCropPositionString = null,
-                pageUrlsJson = pageUrlsJson,
+                pageUrlsJson = "",
                 p = null
             )
+            tmpCoverUrl = coverUrl
         }
 
         fun getTmpBook () = tmpBook!!
+
+        fun getTmpCoverUrl () = tmpCoverUrl!!
 
         fun clearTmpBook () {
             tmpBook = null

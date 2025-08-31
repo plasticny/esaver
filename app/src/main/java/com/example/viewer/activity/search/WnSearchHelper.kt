@@ -78,9 +78,7 @@ class WnSearchHelper (
             uploader = doc.selectFirst(".uwuinfo p")?.text(),
             tagsJson = gson.toJson(tags),
             sourceOrdinal = BookSource.Wn.ordinal,
-            pageUrlsJson = gson.toJson(listOf(
-                "https://www.wnacg.com${doc.selectFirst(".gallary_item a")!!.attr("href")}"
-            ))
+            coverUrl = searchBookData.coverUrl
         )
 
         return true
@@ -104,8 +102,7 @@ class WnSearchHelper (
     private fun cateClassToCategory (cateClass: String): Category {
         val cateIndex = cateClass.slice(5 until cateClass.length)
         return when (cateIndex.toInt()) {
-            1, 12 -> Category.Doujinshi
-            2 -> Category.ArtistCG
+            1, 2, 12, 16 -> Category.Doujinshi
             3 -> Category.Cosplay
             9, 13 -> Category.Manga
             10, 14 -> Category.Magazine

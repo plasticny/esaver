@@ -98,6 +98,7 @@ class ESearchHelper (
             }
             tags
         }
+
         Book.setTmpBook(
             id = searchBookData.id,
             url = searchBookData.url,
@@ -108,7 +109,7 @@ class ESearchHelper (
             uploader = doc.selectFirst("#gdn a")?.text(),
             tagsJson = gson.toJson(tags),
             sourceOrdinal = BookSource.E.ordinal,
-            pageUrlsJson = gson.toJson(listOf(searchBookData.coverUrl))
+            coverUrl = searchBookData.coverUrl
         )
         return true
     }

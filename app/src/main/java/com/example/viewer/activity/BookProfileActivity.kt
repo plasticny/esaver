@@ -129,11 +129,7 @@ class BookProfileActivity: AppCompatActivity() {
                             into(it)
                         }
                 } else {
-                    Glide.with(baseContext).load(
-                        withContext(Dispatchers.IO) {
-                            getOnlinePictureFetcher().fetchPictureUrl(0)
-                        }
-                    ).into(it)
+                    Glide.with(baseContext).load(Book.getTmpCoverUrl()).into(it)
                 }
             }
         }
