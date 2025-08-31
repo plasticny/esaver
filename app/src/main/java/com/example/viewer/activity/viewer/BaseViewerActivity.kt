@@ -10,6 +10,7 @@ import android.graphics.Rect
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.text.InputType
+import android.util.Log
 import android.view.GestureDetector
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -198,6 +199,10 @@ abstract class BaseViewerActivity: AppCompatActivity() {
                     )
                 }
             } catch (e: Exception) {
+                Log.e(
+                    "${this@BaseViewerActivity::class.simpleName}.${this@BaseViewerActivity::loadPage}",
+                    e.stackTraceToString()
+                )
                 if (myPage == page) {
                     toggleLoadFailedScreen(
                         true,

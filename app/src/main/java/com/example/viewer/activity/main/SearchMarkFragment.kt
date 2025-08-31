@@ -86,7 +86,7 @@ class SearchMarkFragment: Fragment() {
                             keyword = text.toString().trim(),
                             categories = when (searchBarSource) {
                                 BookSource.E -> Category.ECategories
-                                BookSource.Wn -> Category.WnCategories
+                                BookSource.Wn -> arrayOf(Category.All)
                                 else -> throw NotImplementedError()
                             }.toList()
                         )

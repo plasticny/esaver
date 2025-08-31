@@ -2,6 +2,7 @@ package com.example.viewer.fetcher
 
 import android.content.Context
 import android.util.Log
+import com.example.viewer.Util
 import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.struct.BookSource
 import kotlinx.coroutines.Dispatchers
@@ -20,6 +21,7 @@ import java.io.File
 import java.io.FileNotFoundException
 import java.net.ConnectException
 import java.net.SocketTimeoutException
+import kotlin.math.log
 
 abstract class BasePictureFetcher {
     companion object {
@@ -172,8 +174,11 @@ abstract class BasePictureFetcher {
         }.build()
 
         return withContext(Dispatchers.IO) {
-            Log.i(logTag, "download started: $page")
-            Log.i(logTag, url)
+            Util.log(
+                logTag,
+                "download started: $page",
+                url
+            )
             downloadClient.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
                     throw HttpStatusException("download failed", response.code, url)

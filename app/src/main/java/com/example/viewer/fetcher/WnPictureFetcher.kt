@@ -2,8 +2,10 @@ package com.example.viewer.fetcher
 
 import android.content.Context
 import android.util.Log
+import com.example.viewer.Util
 import com.example.viewer.data.repository.BookRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -12,6 +14,26 @@ import org.jsoup.Jsoup
 import java.io.File
 
 class WnPictureFetcher: BasePictureFetcher {
+    companion object {
+        private const val MAX_REQUEST = 20
+        private const val REQUEST_DELAY = 30000L
+        private var request_cnt = 0
+
+        suspend fun obtainRequestSlot () {
+            withContext(Dispatchers.IO) {
+                while (request_cnt >= MAX_REQUEST) {
+                    delay(100)
+                }
+            }
+            request_cnt++
+
+            Thread {
+                Thread.sleep(REQUEST_DELAY)
+                request_cnt--
+            }.start()
+        }
+    }
+
     private val bookRepo: BookRepository by lazy { BookRepository(context) }
     private val bookUrl: String
 
@@ -70,11 +92,13 @@ class WnPictureFetcher: BasePictureFetcher {
         if (pictureUrlMap.containsKey(page)) {
             return pictureUrlMap.getValue(page)
         }
-
-        println("[${this::class.simpleName}.${this::fetchPictureUrl.name}] $page")
-
         fetchingPictureUrl.add(page)
+
+        val logTag = "${this::class.simpleName}.${this::fetchPictureUrl.name}"
+        Util.log(logTag, "fetch $page start")
+
         val res = withContext(Dispatchers.IO) {
+            obtainRequestSlot()
             Jsoup.connect(getPageUrl(page)).get()
         }.getElementById("picarea")?.attr("src")
         if (res != null) {
@@ -83,6 +107,8 @@ class WnPictureFetcher: BasePictureFetcher {
             throw IllegalStateException("cannot fetch picture url of page $page")
         }
         fetchingPictureUrl.remove(page)
+
+        Util.log(logTag, "fetch $page end")
 
         return pictureUrlMap[page]!!
     }
@@ -104,6 +130,7 @@ class WnPictureFetcher: BasePictureFetcher {
             while (pageUrls[page] == null) {
                 Log.i(logTag, "load next p $p")
                 val pageDoc = try {
+                    obtainRequestSlot()
                     Jsoup.connect("https://www.wnacg.com/photos-index-page-${p}-aid-${pureBookId}.html").get()
                 } catch (e: HttpStatusException) {
                     if (e.statusCode == 404) {

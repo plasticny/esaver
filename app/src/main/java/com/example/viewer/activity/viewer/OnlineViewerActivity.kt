@@ -5,7 +5,10 @@ import android.widget.Toast
 import com.example.viewer.R
 import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.data.struct.Book
+import com.example.viewer.fetcher.BasePictureFetcher
 import com.example.viewer.fetcher.EPictureFetcher
+import com.example.viewer.fetcher.WnPictureFetcher
+import com.example.viewer.struct.BookSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -16,7 +19,7 @@ import kotlin.math.floor
 
 class OnlineViewerActivity: BaseViewerActivity() {
     private lateinit var book: Book
-    private lateinit var fetcher: EPictureFetcher
+    private lateinit var fetcher: BasePictureFetcher
     private lateinit var pictureUrls: MutableList<String?>
     private lateinit var bookRepo: BookRepository
 
@@ -33,7 +36,11 @@ class OnlineViewerActivity: BaseViewerActivity() {
         firstPage = 0
         lastPage = book.pageNum - 1
 
-        fetcher = EPictureFetcher(this, pageNum = book.pageNum, bookUrl = book.url, bookId = book.id)
+        fetcher = when (book.sourceOrdinal) {
+            BookSource.E.ordinal -> EPictureFetcher(this, pageNum = book.pageNum, bookUrl = book.url, bookId = book.id)
+            BookSource.Wn.ordinal -> WnPictureFetcher(this, pageNum = book.pageNum, bookUrl = book.url, bookId = book.id)
+            else -> throw NotImplementedError()
+        }
         pictureUrls = MutableList(book.pageNum) {
             val file = File(fetcher.bookFolder, it.toString())
             if (file.exists()) file.path else null

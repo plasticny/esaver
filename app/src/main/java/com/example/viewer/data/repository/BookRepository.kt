@@ -95,6 +95,7 @@ class BookRepository (private val context: Context) {
         uploader: String?
     ) = runBlocking {
         val gson = Gson()
+        val doSaveFetchHistory = source == BookSource.E || source == BookSource.Wn
         bookDao.insert(
             Book(
                 id = id,
@@ -112,10 +113,10 @@ class BookRepository (private val context: Context) {
                 bookMarksJson = gson.toJson(listOf<Int>()).toString(),
                 customTitle = null,
                 coverCropPositionString = null,
-                pageUrlsJson = if (source == BookSource.E) {
+                pageUrlsJson = if (doSaveFetchHistory) {
                     gson.toJson(listOf<String>()).toString()
                 } else null,
-                p = if (source == BookSource.E) 0 else null
+                p = if (doSaveFetchHistory) 0 else null
             )
         )
         listLastUpdateTime = System.currentTimeMillis()
@@ -218,13 +219,7 @@ class BookRepository (private val context: Context) {
     fun getBookPageNum (id: String): Int = runBlocking { bookDao.getPageNum(id) }
 
     fun getBookSource (id: String): BookSource =
-        when (val sourceOrdinal = runBlocking { bookDao.getSourceOrdinal(id) }) {
-            BookSource.Hi.ordinal -> BookSource.Hi
-            BookSource.E.ordinal -> BookSource.E
-            else -> {
-                throw Exception("unexpected ordinal $sourceOrdinal")
-            }
-        }
+        BookSource.fromOrdinal(runBlocking { bookDao.getSourceOrdinal(id) })
 
     fun getBookCoverPage (id: String): Int = runBlocking { bookDao.getCoverPage(id) }
     fun setBookCoverPage (id: String, v: Int) {
