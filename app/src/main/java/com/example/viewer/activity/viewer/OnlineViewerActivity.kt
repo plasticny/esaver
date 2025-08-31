@@ -78,10 +78,12 @@ class OnlineViewerActivity: BaseViewerActivity() {
     override fun loadPage(myPage: Int) {
         super.loadPage(page)
         // preload
-        super.loadPage(page + 1)
-        super.loadPage(page - 1)
-        super.loadPage(page + 2)
-        super.loadPage(page - 2)
+        for (d in arrayOf(1, -1, 2, -2)) {
+            val preloadPage = page + d
+            if (preloadPage in 0 until lastPage) {
+                super.loadPage(preloadPage)
+            }
+        }
     }
 
     override suspend fun getPictureStoredUrl (page: Int): String {

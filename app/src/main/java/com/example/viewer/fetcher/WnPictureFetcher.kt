@@ -15,7 +15,7 @@ import java.io.File
 
 class WnPictureFetcher: BasePictureFetcher {
     companion object {
-        private const val MAX_REQUEST = 20
+        private const val MAX_REQUEST = 18
         private const val REQUEST_DELAY = 30000L
         private var request_cnt = 0
 
@@ -77,7 +77,7 @@ class WnPictureFetcher: BasePictureFetcher {
         page: Int,
         progressListener: ((contentLength: Long, downloadLength: Long) -> Unit)?
     ): File {
-        Log.i("${this::class.simpleName}.${this::savePicture}", "save $page")
+        Util.log("${this@WnPictureFetcher::class.simpleName}.${this@WnPictureFetcher::savePicture}", "save $page")
         assertPageInRange(page)
         return downloadPicture(page, fetchPictureUrl(page), progressListener =  progressListener)
     }
@@ -128,10 +128,14 @@ class WnPictureFetcher: BasePictureFetcher {
             }
 
             while (pageUrls[page] == null) {
-                Log.i(logTag, "load next p $p")
+                Util.log(logTag, "load next p $p")
                 val pageDoc = try {
                     obtainRequestSlot()
-                    Jsoup.connect("https://www.wnacg.com/photos-index-page-${p}-aid-${pureBookId}.html").get()
+                    Jsoup.connect(
+                        "https://www.wnacg.com/photos-index-page-${p}-aid-${pureBookId}.html".also {
+                            Util.log(logTag, "fetch next p from $it")
+                        }
+                    ).get()
                 } catch (e: HttpStatusException) {
                     if (e.statusCode == 404) {
                         Log.e(logTag, "404 on fetching book p")

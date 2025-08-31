@@ -95,7 +95,6 @@ class BookRepository (private val context: Context) {
         uploader: String?
     ) = runBlocking {
         val gson = Gson()
-        val doSaveFetchHistory = source == BookSource.E || source == BookSource.Wn
         bookDao.insert(
             Book(
                 id = id,
@@ -113,10 +112,15 @@ class BookRepository (private val context: Context) {
                 bookMarksJson = gson.toJson(listOf<Int>()).toString(),
                 customTitle = null,
                 coverCropPositionString = null,
-                pageUrlsJson = if (doSaveFetchHistory) {
-                    gson.toJson(listOf<String>()).toString()
-                } else null,
-                p = if (doSaveFetchHistory) 0 else null
+                pageUrlsJson = when (source) {
+                    BookSource.E, BookSource.Wn -> gson.toJson(listOf<String>()).toString()
+                    BookSource.Hi -> null
+                },
+                p = when (source) {
+                    BookSource.E -> 0
+                    BookSource.Wn -> 1
+                    BookSource.Hi -> null
+                }
             )
         )
         listLastUpdateTime = System.currentTimeMillis()

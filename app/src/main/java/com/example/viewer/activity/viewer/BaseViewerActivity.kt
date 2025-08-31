@@ -179,16 +179,21 @@ abstract class BaseViewerActivity: AppCompatActivity() {
     }
 
     protected open fun loadPage (myPage: Int = this.page) {
+        var doToggledLoading = false
         if (myPage == page) {
             viewerActivityBinding.viewerPageTextView.text = (myPage + 1).toString()
-            toggleLoadFailedScreen(false)
-            toggleLoadingUi(true)
         }
+
         lifecycleScope.launch {
             try {
                 val pictureUrl = try {
                     getPictureStoredUrl(myPage)
                 } catch (e: FileNotFoundException) {
+                    if (myPage == page) {
+                        toggleLoadFailedScreen(false)
+                        toggleLoadingUi(true)
+                        doToggledLoading = true
+                    }
                     downloadPicture(myPage).path
                 }
                 if (myPage == page) {
@@ -208,7 +213,12 @@ abstract class BaseViewerActivity: AppCompatActivity() {
                         true,
                         when (e) {
                             is SocketTimeoutException -> "圖片下載超時"
-                            is HttpStatusException -> "圖片下載失敗"
+                            is HttpStatusException -> {
+                                if (e.statusCode == 429) {
+                                    Toast.makeText(baseContext, "too many request", Toast.LENGTH_SHORT).show()
+                                }
+                                "圖片下載失敗"
+                            }
                             is ConnectException, is SocketException -> "連接失敗"
                             is DecodeException -> "${getString(R.string.fail_to_load_picture)} (decode)"
                             is IOException -> "${getString(R.string.fail_to_load_picture)} (io)"
@@ -217,7 +227,7 @@ abstract class BaseViewerActivity: AppCompatActivity() {
                     )
                 }
             } finally {
-                if (myPage == page) {
+                if (doToggledLoading && myPage == page) {
                     toggleLoadingUi(false)
                 }
             }
