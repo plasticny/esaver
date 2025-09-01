@@ -4,13 +4,12 @@ import android.animation.Animator
 import android.animation.Animator.AnimatorListener
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
-import android.graphics.ImageDecoder
 import android.graphics.ImageDecoder.DecodeException
 import android.graphics.Rect
 import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.text.InputType
-import android.util.Log
 import android.view.GestureDetector
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -19,7 +18,14 @@ import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.DataSource
+import com.bumptech.glide.load.engine.GlideException
+import com.bumptech.glide.request.RequestListener
+import com.bumptech.glide.request.target.Target
+import com.bumptech.glide.signature.MediaStoreSignature
 import com.example.viewer.R
+import com.example.viewer.Util
 import com.example.viewer.databinding.ViewerActivityBinding
 import com.example.viewer.dialog.SimpleEditTextDialog
 import kotlinx.coroutines.launch
@@ -56,6 +62,11 @@ abstract class BaseViewerActivity: AppCompatActivity() {
     protected var lastPage = -1 // 0 to pageNum - 1
 
     private var showingToolBar = false
+    /**
+     *  set as a drawable when a picture successfully shown,
+     *  set as null when loading screen or load failed screen
+     */
+    private var placeHolderDrawable: Drawable? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -145,6 +156,7 @@ abstract class BaseViewerActivity: AppCompatActivity() {
     protected fun toggleLoadingUi (toggle: Boolean) {
         viewerActivityBinding.let {
             if (toggle) {
+                placeHolderDrawable = null
                 it.progress.wrapper.visibility = ProgressBar.VISIBLE
                 it.photoView.visibility = View.INVISIBLE
                 it.photoView.imageAlpha = 0
@@ -159,6 +171,7 @@ abstract class BaseViewerActivity: AppCompatActivity() {
     protected fun toggleLoadFailedScreen (toggle: Boolean, msg: String = getString(R.string.fail_to_load_picture)) {
         viewerActivityBinding.let {
             if (toggle) {
+                placeHolderDrawable = null
                 it.photoView.setImageDrawable(null)
                 it.reloadTextView.text = msg
                 it.loadFailedContainer.visibility = ProgressBar.VISIBLE
@@ -179,7 +192,6 @@ abstract class BaseViewerActivity: AppCompatActivity() {
     }
 
     protected open fun loadPage (myPage: Int = this.page) {
-        var doToggledLoading = false
         if (myPage == page) {
             viewerActivityBinding.viewerPageTextView.text = (myPage + 1).toString()
         }
@@ -192,19 +204,32 @@ abstract class BaseViewerActivity: AppCompatActivity() {
                     if (myPage == page) {
                         toggleLoadFailedScreen(false)
                         toggleLoadingUi(true)
-                        doToggledLoading = true
                     }
                     downloadPicture(myPage).path
                 }
                 if (myPage == page) {
-                    viewerActivityBinding.photoView.setImageDrawable(
-                        ImageDecoder.decodeDrawable(
-                            ImageDecoder.createSource(File(pictureUrl))
-                        )
-                    )
+//                    viewerActivityBinding.photoView.setImageDrawable(
+//                        ImageDecoder.decodeDrawable(
+//                            ImageDecoder.createSource(File(pictureUrl))
+//                        )
+//                    )
+                    val pictureFile = File(pictureUrl)
+                    Glide.with(baseContext)
+                        .load(pictureFile)
+                        .placeholder(placeHolderDrawable)
+                        .signature(MediaStoreSignature("", pictureFile.lastModified(), 0))
+                        .listener(object: RequestListener<Drawable> {
+                            override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean): Boolean = false
+                            override fun onResourceReady(resource: Drawable?, model: Any?, target: Target<Drawable>?, dataSource: DataSource?, isFirstResource: Boolean): Boolean {
+                                placeHolderDrawable = resource
+                                return false
+                            }
+                        })
+                        .into(viewerActivityBinding.photoView)
+                    toggleLoadFailedScreen(false)
                 }
             } catch (e: Exception) {
-                Log.e(
+                Util.log(
                     "${this@BaseViewerActivity::class.simpleName}.${this@BaseViewerActivity::loadPage}",
                     e.stackTraceToString()
                 )
@@ -227,7 +252,7 @@ abstract class BaseViewerActivity: AppCompatActivity() {
                     )
                 }
             } finally {
-                if (doToggledLoading && myPage == page) {
+                if (myPage == page) {
                     toggleLoadingUi(false)
                 }
             }

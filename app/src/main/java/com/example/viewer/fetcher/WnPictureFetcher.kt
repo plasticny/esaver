@@ -15,7 +15,7 @@ import java.io.File
 
 class WnPictureFetcher: BasePictureFetcher {
     companion object {
-        private const val MAX_REQUEST = 18
+        private const val MAX_REQUEST = 19
         private const val REQUEST_DELAY = 30000L
         private var request_cnt = 0
 
@@ -77,7 +77,8 @@ class WnPictureFetcher: BasePictureFetcher {
         page: Int,
         progressListener: ((contentLength: Long, downloadLength: Long) -> Unit)?
     ): File {
-        Util.log("${this@WnPictureFetcher::class.simpleName}.${this@WnPictureFetcher::savePicture}", "save $page")
+        // dynamic log tag does not work
+        Util.log("WnPictureFetcher.SavePicture", "save $page")
         assertPageInRange(page)
         return downloadPicture(page, fetchPictureUrl(page), progressListener =  progressListener)
     }
