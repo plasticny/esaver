@@ -14,7 +14,8 @@ class WnHandler (
     owner: SearchMarkDialog,
     ownerRootBinding: DialogSearchMarkBinding,
     private val name: String = "",
-    private var category: Category = Category.All
+    private var category: Category = Category.All,
+    private val keyword: String
 ): BaseHandler(context, layoutInflater, owner, ownerRootBinding) {
     override val source = BookSource.Wn
 
@@ -22,7 +23,6 @@ class WnHandler (
 
     override fun setupUi() {
         owner.apply {
-            showKeywordField = false
             showTagsField = false
             showUploaderField = false
             showDoExcludeField = false
@@ -33,6 +33,10 @@ class WnHandler (
 
         // book source
         ownerRootBinding.bookSourceEditText.setText(source.keyString)
+
+        // keyword
+        owner.showKeywordField = category == Category.All
+        ownerRootBinding.keywordEditText.setText(keyword)
 
         // category button
         ownerRootBinding.categoryWrapper.removeAllViews()
@@ -52,6 +56,7 @@ class WnHandler (
                             ))
                         }
                         category = cat
+                        owner.showKeywordField = category == Category.All
                     }
                     setBackgroundColor(context.getColor(
                         if (cat == category) cat.color else R.color.grey
@@ -66,7 +71,9 @@ class WnHandler (
             name = ownerRootBinding.nameEditText.text.toString(),
             sourceOrdinal = source.ordinal,
             categories = setOf(category),
-            keyword = "",
+            keyword = if (owner.showKeywordField) {
+                ownerRootBinding.keywordEditText.text.toString()
+            } else "",
             tags = mapOf(),
             uploader = "",
             doExclude = true

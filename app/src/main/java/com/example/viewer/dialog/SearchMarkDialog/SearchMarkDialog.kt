@@ -107,7 +107,8 @@ open class SearchMarkDialog (
                         )
                         BookSource.Wn -> showWnSearchMark(
                             dialogData.name,
-                            Category.All
+                            Category.All,
+                            dialogData.keyword
                         )
                         else -> throw IllegalArgumentException("unexpected source ordinal")
                     }
@@ -177,7 +178,8 @@ open class SearchMarkDialog (
             )
             BookSource.Wn.ordinal -> showWnSearchMark(
                 name = searchMark.name,
-                category = searchMark.getCategories().also { assert(it.size == 1) }.first()
+                category = searchMark.getCategories().also { assert(it.size == 1) }.first(),
+                keyword = searchMark.keyword
             )
             else -> throw IllegalArgumentException("unexpected source ordinal")
         }
@@ -201,12 +203,13 @@ open class SearchMarkDialog (
 
     fun showWnSearchMark (
         name: String = "",
-        category: Category = Category.All
+        category: Category = Category.All,
+        keyword: String = ""
     ) {
         dialogHandler = WnHandler(
             context, layoutInflater,
             this, dialogBinding,
-            name, category
+            name, category, keyword
         ).also { it.setupUi() }
         dialog.show()
     }

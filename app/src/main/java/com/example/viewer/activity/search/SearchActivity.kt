@@ -253,7 +253,8 @@ class SearchActivity: AppCompatActivity() {
                 )
                 BookSource.Wn.ordinal -> dialog.showWnSearchMark(
                     name = searchMarkData.name,
-                    category = searchMarkData.categories.also { assert(it.size == 1) }.first()
+                    category = searchMarkData.categories.also { assert(it.size == 1) }.first(),
+                    keyword = searchMarkData.keyword
                 )
                 else -> throw IllegalStateException("unexpected ordinal")
             }

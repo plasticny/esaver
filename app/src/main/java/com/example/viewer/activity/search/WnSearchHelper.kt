@@ -12,10 +12,15 @@ import org.jsoup.nodes.Document
 class WnSearchHelper (
     searchMarkData: SearchMarkData
 ): SearchHelper(searchMarkData) {
+    private val isKeywordSearching: Boolean
+    private val category: Category
+
     init {
         assert(searchMarkData.sourceOrdinal == BookSource.Wn.ordinal)
         next = 1
         prev = ENDED
+        category = searchMarkData.categories.first()
+        isKeywordSearching = category == Category.All && searchMarkData.keyword.isNotEmpty()
     }
 
     override fun getNextBlockSearchUrl (): String {
@@ -30,28 +35,41 @@ class WnSearchHelper (
 
     override fun processSearchDoc (doc: Document): List<SearchBookData> {
         // update next
-        if (doc.getElementsByClass("next").isNotEmpty()) {
-            next++
+        if (isKeywordSearching) {
+            if (doc.getElementsByClass("thispage").first()!!.text() != next.toString()) {
+                next++
+            } else {
+                next = ENDED
+            }
         } else {
-            next = ENDED
+            if (doc.getElementsByClass("next").isNotEmpty()) {
+                next++
+            } else {
+                next = ENDED
+            }
         }
 
-        return doc.getElementsByClass("gallary_item").map { galleryItem ->
+
+        return doc.getElementsByClass("gallary_item").mapNotNull { galleryItem ->
             val bookUrl = galleryItem.getElementsByTag("a").first()!!.attr("href")
             SearchBookData(
                 id = "wn${bookUrl.slice(18..bookUrl.length - 6)}",
                 url = "https://www.wnacg.com$bookUrl",
                 coverUrl = "https:${galleryItem.getElementsByTag("img").first()!!.attr("src")}",
                 cat = if (searchMarkData.sourceOrdinal != Category.All.ordinal) {
-                    cateClassToCategory(
-                        galleryItem.getElementsByClass("pic_box").first()!!.classNames().last()
-                    )
+                    try {
+                        cateClassToCategory(
+                            galleryItem.getElementsByClass("pic_box").first()!!.classNames().last()
+                        )
+                    } catch (_: ExcludedCategoryError) {
+                        return@mapNotNull null
+                    }
                 } else {
                     Category.fromOrdinal(searchMarkData.sourceOrdinal)
                 },
                 title = galleryItem.getElementsByClass("title").first()!!.text(),
                 pageNum = galleryItem.getElementsByClass("info_col").first()!!.text()
-                    .trim().split("張照片").first().toInt(),
+                    .trim().split("張").first().toInt(),
                 tags = mapOf()
             )
         }
@@ -85,8 +103,9 @@ class WnSearchHelper (
     }
 
     private fun createSearchUrl (searchPageNumber: Int): String {
-        val category = searchMarkData.categories.first()
-        return if (category == Category.All) {
+        return if (isKeywordSearching) {
+            "https://www.wnacg.com/search/index.php?q=${searchMarkData.keyword}&syn=yes&f=_all&s=create_time_DESC&p=${searchPageNumber}"
+        } else if (category == Category.All) {
             "https://www.wnacg.com/albums-index-page-${searchPageNumber}.html"
         } else {
             val cate = when (category) {
@@ -106,7 +125,10 @@ class WnSearchHelper (
             3 -> Category.Cosplay
             9, 13 -> Category.Manga
             10, 14 -> Category.Magazine
+            20, 23 -> throw ExcludedCategoryError(cateIndex)
             else -> throw NotImplementedError(cateIndex)
         }
     }
+
+    class ExcludedCategoryError (cateIndex: String): Exception(cateIndex)
 }

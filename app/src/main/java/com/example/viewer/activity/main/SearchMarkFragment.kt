@@ -117,7 +117,9 @@ class SearchMarkFragment: Fragment() {
                     BookSource.E.ordinal -> dialog.showESearchMark(
                         keyword = rootBinding.searchEditText.text.toString().trim()
                     )
-                    BookSource.Wn.ordinal -> dialog.showWnSearchMark()
+                    BookSource.Wn.ordinal -> dialog.showWnSearchMark(
+                        keyword = rootBinding.searchEditText.text.toString().trim()
+                    )
                     else -> throw IllegalStateException("unexpected ordinal")
                 }
 
