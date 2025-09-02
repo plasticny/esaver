@@ -63,6 +63,32 @@
 
                 </LinearLayout>
 
+                <!--  search source  -->
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/book_source"
+                        android:textSize="16sp"
+                        android:textColor="@color/grey"/>
+
+                    <EditText
+                        android:id="@+id/book_source_editText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="18sp"
+                        android:focusable="false"
+                        android:backgroundTint="@color/grey"
+                        android:textColor="@color/white"/>
+
+                </LinearLayout>
+
                 <!--  category  -->
 
                 <TextView
@@ -74,30 +100,13 @@
                     android:text="@string/category"/>
 
                 <GridLayout
+                    android:id="@+id/category_wrapper"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
                     android:columnCount="2">
 
-                    <Button
-                        android:id="@+id/cat_doujinshi"
-                        style="@style/SearchMarkCategoryStyle"
-                        android:text="@string/doujinshi" />
-
-                    <Button
-                        android:id="@+id/cat_manga"
-                        style="@style/SearchMarkCategoryStyle"
-                        android:text="@string/manga"/>
-
-                    <Button
-                        android:id="@+id/cat_artist_cg"
-                        style="@style/SearchMarkCategoryStyle"
-                        android:text="@string/artist_cg"/>
-
-                    <Button
-                        android:id="@+id/cat_non_h"
-                        style="@style/SearchMarkCategoryStyle"
-                        android:text="@string/non_h"/>
+                    <!--  some button will be added here  -->
 
                 </GridLayout>
 
@@ -130,38 +139,47 @@
                 <!--  tags  -->
 
                 <LinearLayout
+                    android:id="@+id/tags_field_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="fill_vertical">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="@string/tag"
-                        android:textColor="@color/grey"
-                        android:textSize="16sp" />
-
-                    <TextView
-                        android:id="@+id/add_tag_button"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginLeft="8dp"
-                        android:fontFamily="@font/font_awesome"
-                        android:text="@string/fa_plus"
-                        android:textColor="@color/white"
-                        android:textSize="22sp" />
-
-                </LinearLayout>
-
-                <LinearLayout
-                    android:id="@+id/tag_wrapper"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
                     android:orientation="vertical">
 
-                    <!--    some tag item will be added here    -->
+                    <LinearLayout
+                        android:layout_marginTop="8dp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="fill_vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="@string/tag"
+                            android:textColor="@color/grey"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:id="@+id/add_tag_button"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginLeft="8dp"
+                            android:fontFamily="@font/font_awesome"
+                            android:text="@string/fa_plus"
+                            android:textColor="@color/white"
+                            android:textSize="22sp" />
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/tag_wrapper"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <!--    some tag item will be added here    -->
+
+                    </LinearLayout>
 
                 </LinearLayout>
 

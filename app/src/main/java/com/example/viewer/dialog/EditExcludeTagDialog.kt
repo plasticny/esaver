@@ -4,23 +4,14 @@ import android.content.Context
 import android.view.LayoutInflater
 import android.widget.Toast
 import com.example.viewer.data.struct.ExcludeTag
+import com.example.viewer.dialog.SearchMarkDialog.DialogData
+import com.example.viewer.dialog.SearchMarkDialog.SearchMarkDialog
 import com.example.viewer.struct.Category
-import com.example.viewer.struct.ExcludeTagRecord
-import com.example.viewer.struct.SearchMark
 
 class EditExcludeTagDialog (
     context: Context,
     layoutInflater: LayoutInflater,
 ): SearchMarkDialog(context, layoutInflater) {
-    init {
-        title = "編輯濾除規則"
-        showKeywordField = false
-        showUploaderField = false
-        showDoExcludeField = false
-        showNameField = false
-        showSaveButton = true
-    }
-
     override fun checkValid(item: DialogData): Boolean {
         if (item.tags.isEmpty()) {
             Toast.makeText(context, "需要至少一個標籤", Toast.LENGTH_SHORT).show()
@@ -41,7 +32,8 @@ class EditExcludeTagDialog (
             )
             onSave(recordToSave)
         }
-        super.show(
+
+        super.showESearchMark(
             name = "",
             categories = categories,
             keyword = "",
@@ -49,6 +41,13 @@ class EditExcludeTagDialog (
             uploader = "",
             doExclude = false
         )
+
+        title = "編輯濾除規則"
+        showKeywordField = false
+        showUploaderField = false
+        showDoExcludeField = false
+        showNameField = false
+        showSaveButton = true
     }
 
     fun show(record: ExcludeTag, onSave: (OnSaveData) -> Unit) =

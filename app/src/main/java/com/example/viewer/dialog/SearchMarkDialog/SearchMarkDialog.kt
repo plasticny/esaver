@@ -1,15 +1,15 @@
-package com.example.viewer.dialog
+package com.example.viewer.dialog.SearchMarkDialog
 
 import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
-import com.example.viewer.R
-import com.example.viewer.Util
+import com.example.viewer.data.struct.Book
 import com.example.viewer.data.struct.SearchMark
 import com.example.viewer.databinding.DialogSearchMarkBinding
-import com.example.viewer.databinding.DialogSearchMarkTagBinding
+import com.example.viewer.dialog.BookSourceSelectDialog
+import com.example.viewer.struct.BookSource
 import com.example.viewer.struct.Category
 
 open class SearchMarkDialog (
@@ -18,16 +18,12 @@ open class SearchMarkDialog (
 ) {
     companion object {
         private const val DIALOG_HEIGHT_PERCENT = 0.6
-
-        private val TAGS = mutableListOf("-").also { it.addAll(Util.TAG_TRANSLATION_MAP.keys) }.toList()
-        private val TAGS_DISPLAY = mutableListOf("-").also { it.addAll(Util.TAG_TRANSLATION_MAP.values) }.toList()
     }
+
+    lateinit var dialogHandler: BaseHandler
 
     private val dialogBinding = DialogSearchMarkBinding.inflate(layoutInflater)
     private val dialog = AlertDialog.Builder(context).setView(dialogBinding.root).create()
-
-    private var selectedCats: MutableSet<Category> = mutableSetOf()
-    private var tagBindings: MutableList<DialogSearchMarkTagBinding> = mutableListOf()
 
     var title: String = ""
         set (value) {
@@ -50,6 +46,11 @@ open class SearchMarkDialog (
         set (value) {
             field = value
             dialogBinding.keywordFieldContainer.visibility = if (value) View.VISIBLE else View.GONE
+        }
+    var showTagsField: Boolean = true
+        set(value) {
+            field = value
+            dialogBinding.tagsFieldContainer.visibility = if (value) View.VISIBLE else View.GONE
         }
     var showUploaderField: Boolean = true
         set (value) {
@@ -91,26 +92,33 @@ open class SearchMarkDialog (
         dialogBinding.titleTextView.visibility = View.GONE
         dialogBinding.nameFieldContainer.visibility = View.VISIBLE
 
-        // category buttons
-        listOf(
-            Pair(dialogBinding.catDoujinshi, Category.Doujinshi),
-            Pair(dialogBinding.catManga, Category.Manga),
-            Pair(dialogBinding.catArtistCg, Category.ArtistCG),
-            Pair(dialogBinding.catNonH, Category.NonH)
-        ).forEach { (view, category) ->
-            view.apply {
-                setOnClickListener {
-                    setBackgroundColor(context.getColor(
-                        if (selectedCats.toggle(category)) category.color else R.color.grey
-                    ))
+        dialogBinding.bookSourceEditText.apply {
+            setOnClickListener {
+                BookSourceSelectDialog(context, layoutInflater).show { source ->
+                    val dialogData = dialogHandler.dialogData
+                    when (source) {
+                        BookSource.E -> showESearchMark(
+                            dialogData.name,
+                            dialogData.categories.toList(),
+                            dialogData.keyword,
+                            dialogData.tags,
+                            dialogData.uploader,
+                            dialogData.doExclude
+                        )
+                        BookSource.Wn -> showWnSearchMark(
+                            dialogData.name,
+                            Category.All,
+                            dialogData.keyword
+                        )
+                        else -> throw IllegalArgumentException("unexpected source ordinal")
+                    }
                 }
             }
         }
 
         dialogBinding.addTagButton.apply {
             setOnClickListener {
-                val tagBinding = createSearchMarkDialogTag()
-                tagBindings.add(tagBinding)
+                val tagBinding = dialogHandler.createSearchMarkDialogTag()
                 dialogBinding.tagWrapper.addView(tagBinding.root, 0)
             }
         }
@@ -118,7 +126,7 @@ open class SearchMarkDialog (
         dialogBinding.saveButton.apply {
             visibility = View.GONE
             setOnClickListener {
-                val data = buildDialogData()
+                val data = dialogHandler.dialogData
                 saveCb?.let {
                     if (!checkValid(data)) {
                         return@setOnClickListener
@@ -132,7 +140,7 @@ open class SearchMarkDialog (
         dialogBinding.searchButton.apply {
             visibility = View.GONE
             setOnClickListener {
-                val data = buildDialogData()
+                val data = dialogHandler.dialogData
                 searchCb?.let {
                     if (!checkValid(data)) {
                         return@setOnClickListener
@@ -146,7 +154,7 @@ open class SearchMarkDialog (
         dialogBinding.confirmButton.apply {
             visibility = View.GONE
             setOnClickListener {
-                val data = buildDialogData()
+                val data = dialogHandler.dialogData
                 confirmCb?.let {
                     if (!checkValid(data)) {
                         return@setOnClickListener
@@ -159,16 +167,25 @@ open class SearchMarkDialog (
     }
 
     fun show (searchMark: SearchMark) =
-        show(
-            name = searchMark.name,
-            categories = searchMark.getCategories(),
-            keyword = searchMark.keyword,
-            tags = searchMark.getTags(),
-            uploader = searchMark.uploader ?: "",
-            doExclude = searchMark.doExclude
-        )
+        when (searchMark.sourceOrdinal) {
+            BookSource.E.ordinal -> showESearchMark(
+                searchMark.name,
+                searchMark.getCategories(),
+                searchMark.keyword,
+                searchMark.getTags(),
+                searchMark.uploader ?: "",
+                searchMark.doExclude
+            )
+            BookSource.Wn.ordinal -> showWnSearchMark(
+                name = searchMark.name,
+                category = searchMark.getCategories().also { assert(it.size == 1) }.first(),
+                keyword = searchMark.keyword
+            )
+            else -> throw IllegalArgumentException("unexpected source ordinal")
+        }
 
-    fun show (
+
+    fun showESearchMark (
         name: String = "",
         categories: List<Category> = listOf(),
         keyword: String = "",
@@ -176,56 +193,26 @@ open class SearchMarkDialog (
         uploader: String = "",
         doExclude: Boolean = true
     ) {
-        selectedCats = categories.toMutableSet()
-        tagBindings = mutableListOf()
-
-        // name field
-        dialogBinding.nameEditText.setText(name)
-
-        // keyword
-        dialogBinding.keywordEditText.setText(keyword)
-
-        // uploader
-        dialogBinding.uploaderEditText.setText(uploader)
-
-        // tags
-        tags.forEach { entry ->
-            val cat = entry.key
-            for (value in entry.value) {
-                val tagBinding = createSearchMarkDialogTag(cat, value)
-                tagBindings.add(tagBinding)
-                dialogBinding.tagWrapper.addView(tagBinding.root)
-            }
-        }
-
-        // category button
-        listOf(
-            Pair(dialogBinding.catDoujinshi, Category.Doujinshi),
-            Pair(dialogBinding.catManga, Category.Manga),
-            Pair(dialogBinding.catArtistCg, Category.ArtistCG),
-            Pair(dialogBinding.catNonH, Category.NonH)
-        ).forEach { (view, category) ->
-            view.apply {
-                setBackgroundColor(context.getColor(
-                    if (selectedCats.contains(category)) category.color else R.color.grey
-                ))
-            }
-        }
-
-        // do apply exclude tag
-        dialogBinding.doExcludeSwitch.isChecked = doExclude
-
+        dialogHandler = EHandler(
+            context, layoutInflater,
+            this, dialogBinding,
+            name, categories, keyword, tags, uploader, doExclude
+        ).also { it.setupUi() }
         dialog.show()
     }
 
-    private fun createSearchMarkDialogTag (cat: String? = null, value: String? = null) =
-        DialogSearchMarkTagBinding.inflate(layoutInflater).apply {
-            spinner.apply {
-                setItems(TAGS_DISPLAY)
-                cat?.let { selectedIndex = TAGS.indexOf(it) }
-            }
-            value?.let { editText.setText(it) }
-        }
+    fun showWnSearchMark (
+        name: String = "",
+        category: Category = Category.All,
+        keyword: String = ""
+    ) {
+        dialogHandler = WnHandler(
+            context, layoutInflater,
+            this, dialogBinding,
+            name, category, keyword
+        ).also { it.setupUi() }
+        dialog.show()
+    }
 
     /**
      * check the filled in information is valid
@@ -237,41 +224,4 @@ open class SearchMarkDialog (
         }
         return true
     }
-
-    private fun buildDialogData () = DialogData (
-        name = if (showNameField) dialogBinding.nameEditText.text.toString() else "",
-        categories = selectedCats,
-        keyword = dialogBinding.keywordEditText.text.toString(),
-        tags = tagBindings.mapNotNull {
-            if (it.spinner.selectedIndex == 0) {
-                return@mapNotNull null
-            }
-            TAGS[it.spinner.selectedIndex] to it.editText.text.toString()
-        }.groupBy({it.first}, {it.second}),
-        uploader = dialogBinding.uploaderEditText.text.toString(),
-        doExclude = dialogBinding.doExcludeSwitch.isChecked
-    )
-
-    /**
-     * Given a value, add it if it not exist, else remove it
-     *
-     * @return boolean represent that the value is in the set after the operation
-     */
-    private fun <T> MutableSet<T>.toggle(value: T): Boolean {
-        return if (this.contains(value)) {
-            this.remove(value)
-            false
-        } else {
-            this.add(value)
-        }
-    }
-
-    data class DialogData (
-        val name: String,
-        val categories: Set<Category>,
-        val keyword: String,
-        val tags: Map<String, List<String>>,
-        val uploader: String,
-        val doExclude: Boolean
-    )
 }

@@ -5,7 +5,7 @@ import android.view.LayoutInflater
 import androidx.appcompat.app.AlertDialog
 import com.example.viewer.data.repository.ExcludeTagRepository
 import com.example.viewer.databinding.DialogFilterOutBinding
-import com.example.viewer.databinding.DialogFilterOutItemBinding
+import com.example.viewer.databinding.DialogListItemBinding
 
 class FilterOutDialog (
     private val context: Context,
@@ -18,7 +18,7 @@ class FilterOutDialog (
         val repo = ExcludeTagRepository(context)
 
         repo.getAllExcludeTag().forEach { record ->
-            val itemBinding = DialogFilterOutItemBinding.inflate(layoutInflater, dialogBinding.tagWrapper, false)
+            val itemBinding = DialogListItemBinding.inflate(layoutInflater, dialogBinding.tagWrapper, false)
 
             itemBinding.name.text = record.getName()
 

@@ -22,12 +22,35 @@
             android:layout_height="match_parent"
             android:paddingHorizontal="16dp"
             android:gravity="center_vertical">
+            
+            <androidx.cardview.widget.CardView
+                android:id="@+id/search_source_button"
+                android:layout_width="25dp"
+                android:layout_height="25dp"
+                android:backgroundTint="@color/grey"
+                app:cardCornerRadius="20dp">
+
+                <TextView
+                    android:id="@+id/search_source_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="E"
+                    android:textSize="18sp"
+                    android:textColor="@color/black"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent"/>
+
+            </androidx.cardview.widget.CardView>
 
             <EditText
                 android:id="@+id/search_editText"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:layout_marginStart="8dp"
                 android:textColor="@color/white"
                 android:hint="@string/search"
                 android:textColorHint="@color/grey"

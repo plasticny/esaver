@@ -15,7 +15,7 @@ import com.example.viewer.data.struct.SearchMark
 
 @Database(
     entities = [SearchMark::class, ExcludeTag::class, SearchHistory::class],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class SearchDatabase: RoomDatabase() {
@@ -24,9 +24,10 @@ abstract class SearchDatabase: RoomDatabase() {
         private var instance: SearchDatabase? = null
         fun getInstance (context: Context): SearchDatabase =
             instance ?: synchronized(this) {
-                Room.databaseBuilder(
-                    context, SearchDatabase::class.java, "search_db"
-                ).addMigrations(migration_1_2).build().also { instance = it }
+                Room.databaseBuilder(context, SearchDatabase::class.java, "search_db")
+                    .addMigrations(migration_1_2)
+                    .addMigrations(migration_2_3)
+                    .build().also { instance = it }
             }
 
         private val migration_1_2 = object: Migration(1, 2) {
@@ -44,6 +45,12 @@ abstract class SearchDatabase: RoomDatabase() {
                     "INSERT INTO SearchHistories (searchMarkId)" +
                         "SELECT id FROM SearchMarks"
                 )
+            }
+        }
+
+        private val migration_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE SearchMarks ADD COLUMN sourceOrdinal INTEGER NOT NULL DEFAULT 0")
             }
         }
     }

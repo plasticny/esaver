@@ -15,9 +15,10 @@
     <color name="grey_blue">#495097</color>
 
     <color name="warning_yellow">#FFFC52</color>
-
+<!--  category color  -->
     <color name="doujinshi_red">#EB5656</color>
     <color name="manga_orange">#DC9741</color>
     <color name="artistCG_yellow">#D3CD41</color>
     <color name="nonH_blue">#0F9EBD</color>
+    <color name="cosplay_purple">#9755f5</color>
 </resources>

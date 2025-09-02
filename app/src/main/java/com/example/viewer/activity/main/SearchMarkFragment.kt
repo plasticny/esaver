@@ -19,20 +19,28 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import com.example.viewer.R
 import com.example.viewer.Util
-import com.example.viewer.activity.SearchActivity
+import com.example.viewer.activity.search.SearchActivity
 import com.example.viewer.data.repository.SearchRepository
 import com.example.viewer.data.struct.SearchMark
 import com.example.viewer.databinding.ComponentListItemBinding
-import com.example.viewer.databinding.MainSearchFragmentBinding
+import com.example.viewer.databinding.FragmentMainSearchBinding
+import com.example.viewer.dialog.BookSourceSelectDialog
 import com.example.viewer.dialog.ConfirmDialog
 import com.example.viewer.dialog.FilterOutDialog
-import com.example.viewer.dialog.SearchMarkDialog
+import com.example.viewer.dialog.SearchMarkDialog.SearchMarkDialog
+import com.example.viewer.struct.BookSource
+import com.example.viewer.struct.Category
 
 class SearchMarkFragment: Fragment() {
     private lateinit var parent: ViewGroup
-    private lateinit var binding: MainSearchFragmentBinding
+    private lateinit var rootBinding: FragmentMainSearchBinding
     private lateinit var searchRepo: SearchRepository
     private lateinit var gestureDetector: GestureDetector
+
+    /**
+     * book source to search when activate tmp searching
+     */
+    private var searchBarSource: BookSource = BookSource.E
 
     private var focusedSearchMark: SearchMarkEntry? = null
     private var searchMarkListLastUpdate = 0L
@@ -45,7 +53,7 @@ class SearchMarkFragment: Fragment() {
     ): View {
         parent = container!!
         searchRepo = SearchRepository(parent.context)
-        binding = MainSearchFragmentBinding.inflate(layoutInflater, parent, false)
+        rootBinding = FragmentMainSearchBinding.inflate(layoutInflater, parent, false)
 
         gestureDetector = GestureDetector(
             requireContext(),
@@ -59,12 +67,28 @@ class SearchMarkFragment: Fragment() {
 
         searchMarkListLastUpdate = searchRepo.getSearchMarkListUpdateTime()
 
-        binding.searchEditText.apply {
+        rootBinding.searchSourceButton.apply {
+            setOnClickListener {
+                BookSourceSelectDialog(requireContext(), layoutInflater).show { source ->
+                    rootBinding.searchSourceText.text = source.name.first().uppercase()
+                    searchBarSource = source
+                }
+            }
+        }
+
+        rootBinding.searchEditText.apply {
             setOnEditorActionListener { _, actionId, event ->
                 if (actionId == EditorInfo.IME_ACTION_SEARCH) {
                     if (event?.action == null || event.action == KeyEvent.ACTION_UP) {
                         SearchActivity.startTmpSearch(
-                            context, keyword = text.toString().trim()
+                            context,
+                            sourceOrdinal = searchBarSource.ordinal,
+                            keyword = text.toString().trim(),
+                            categories = when (searchBarSource) {
+                                BookSource.E -> Category.ECategories
+                                BookSource.Wn -> arrayOf(Category.All)
+                                else -> throw NotImplementedError()
+                            }.toList()
                         )
                     }
                 }
@@ -72,15 +96,14 @@ class SearchMarkFragment: Fragment() {
             }
         }
 
-        binding.advanceSearchButton.apply {
+        rootBinding.advanceSearchButton.apply {
             setOnClickListener {
-                SearchMarkDialog(context, layoutInflater).apply {
+                val dialog = SearchMarkDialog(context, layoutInflater).apply {
                     title = "進階搜尋"
-                    showNameField = false
-                    showSearchButton = true
                     searchCb = { data ->
                         SearchActivity.startTmpSearch(
                             context,
+                            data.sourceOrdinal,
                             data.categories.toList(),
                             data.keyword,
                             data.tags,
@@ -88,19 +111,32 @@ class SearchMarkFragment: Fragment() {
                             data.doExclude
                         )
                     }
-                }.show(
-                    keyword = binding.searchEditText.text.toString().trim()
-                )
+                }
+
+                when (searchBarSource.ordinal) {
+                    BookSource.E.ordinal -> dialog.showESearchMark(
+                        keyword = rootBinding.searchEditText.text.toString().trim()
+                    )
+                    BookSource.Wn.ordinal -> dialog.showWnSearchMark(
+                        keyword = rootBinding.searchEditText.text.toString().trim()
+                    )
+                    else -> throw IllegalStateException("unexpected ordinal")
+                }
+
+                dialog.apply {
+                    showNameField = false
+                    showSearchButton = true
+                }
             }
         }
 
-        binding.addButton.setOnClickListener {
-            SearchMarkDialog(parent.context, layoutInflater).apply {
+        rootBinding.addButton.setOnClickListener {
+            val dialog = SearchMarkDialog(parent.context, layoutInflater).apply {
                 title = "新增搜尋標記"
-                showConfirmButton = true
                 confirmCb = { data ->
                     searchRepo.addSearchMark(
                         name = data.name,
+                        sourceOrdinal = data.sourceOrdinal,
                         categories = data.categories.toList(),
                         keyword = data.keyword,
                         tags = data.tags,
@@ -109,16 +145,24 @@ class SearchMarkFragment: Fragment() {
                     )
                     refreshSearchMarkWrapper()
                 }
-            }.show()
+            }
+
+            when (searchBarSource.ordinal) {
+                BookSource.E.ordinal -> dialog.showESearchMark()
+                BookSource.Wn.ordinal -> dialog.showWnSearchMark()
+                else -> throw IllegalStateException("unexpected ordinal")
+            }
+
+            dialog.showConfirmButton = true
         }
 
-        binding.toolBarFilterOutButton.setOnClickListener {
+        rootBinding.toolBarFilterOutButton.setOnClickListener {
             FilterOutDialog(parent.context, layoutInflater).show()
         }
 
-        binding.toolBarCloseButton.setOnClickListener { deFocusSearchMark() }
+        rootBinding.toolBarCloseButton.setOnClickListener { deFocusSearchMark() }
 
-        binding.toolBarEditButton.setOnClickListener {
+        rootBinding.toolBarEditButton.setOnClickListener {
             focusedSearchMark!!.let { entry ->
                 SearchMarkDialog(parent.context, layoutInflater).apply {
                     title = "編輯搜尋標記"
@@ -127,6 +171,7 @@ class SearchMarkFragment: Fragment() {
                         searchRepo.modifySearchMark(
                             id = entry.id,
                             name = data.name,
+                            sourceOrdinal = data.sourceOrdinal,
                             categories = data.categories.toList(),
                             keyword = data.keyword,
                             tags = data.tags,
@@ -140,7 +185,7 @@ class SearchMarkFragment: Fragment() {
             }
         }
 
-        binding.toolBarDeleteButton.setOnClickListener {
+        rootBinding.toolBarDeleteButton.setOnClickListener {
             focusedSearchMark!!.let {
                 ConfirmDialog(parent.context, inflater).show(
                     "刪除${it.searchMark.name}嗎？",
@@ -155,12 +200,12 @@ class SearchMarkFragment: Fragment() {
 
         refreshSearchMarkWrapper()
 
-        return binding.root
+        return rootBinding.root
     }
 
     override fun onResume() {
         super.onResume()
-        binding.searchEditText.text.clear()
+        rootBinding.searchEditText.text.clear()
 
         searchRepo.getSearchMarkListUpdateTime().let {
             if (it != searchMarkListLastUpdate) {
@@ -172,10 +217,10 @@ class SearchMarkFragment: Fragment() {
 
     @SuppressLint("ClickableViewAccessibility")
     private fun refreshSearchMarkWrapper () {
-        binding.searchMarkWrapper.removeAllViews()
+        rootBinding.searchMarkWrapper.removeAllViews()
 
         for (searchMark in searchRepo.getAllSearchMarkInListOrder()) {
-            val searchMarkBinding = ComponentListItemBinding.inflate(layoutInflater, binding.searchMarkWrapper, true)
+            val searchMarkBinding = ComponentListItemBinding.inflate(layoutInflater, rootBinding.searchMarkWrapper, true)
 
             searchMarkBinding.name.text = searchMark.name
 
@@ -246,16 +291,16 @@ class SearchMarkFragment: Fragment() {
     }
 
     private fun focusSearchMark (id: Long, searchMark: SearchMark, searchMarkBinding: ComponentListItemBinding) {
-        binding.notFocusedToolBarWrapper.visibility = View.GONE
-        binding.focusedToolBarWrapper.visibility = View.VISIBLE
+        rootBinding.notFocusedToolBarWrapper.visibility = View.GONE
+        rootBinding.focusedToolBarWrapper.visibility = View.VISIBLE
         searchMarkBinding.name.setTextColor(parent.context.getColor(R.color.black))
         searchMarkBinding.root.backgroundTintList = ColorStateList.valueOf(parent.context.getColor(R.color.grey))
         focusedSearchMark = SearchMarkEntry(id, searchMark, searchMarkBinding)
     }
 
     private fun deFocusSearchMark (doModifyBindingStyle: Boolean = true) {
-        binding.notFocusedToolBarWrapper.visibility = View.VISIBLE
-        binding.focusedToolBarWrapper.visibility = View.GONE
+        rootBinding.notFocusedToolBarWrapper.visibility = View.VISIBLE
+        rootBinding.focusedToolBarWrapper.visibility = View.GONE
         if (doModifyBindingStyle) {
             focusedSearchMark!!.binding.let {
                 it.name.setTextColor(parent.context.getColor(R.color.white))

@@ -2,9 +2,6 @@ package com.example.viewer
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.ImageDecoder
-import android.graphics.ImageDecoder.DecodeException
-import android.graphics.Point
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -15,7 +12,6 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import com.bumptech.glide.load.resource.bitmap.CenterCrop
 import com.bumptech.glide.signature.MediaStoreSignature
 import com.example.viewer.activity.BookProfileActivity
 import com.example.viewer.data.database.BookDatabase
@@ -23,14 +19,10 @@ import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.data.repository.GroupRepository
 import com.example.viewer.databinding.FragmentMainGalleryBookBinding
 import com.example.viewer.databinding.MainGalleryFragmentAuthorBinding
-import com.example.viewer.dialog.SelectGroupDialog
-import com.example.viewer.fetcher.EPictureFetcher
-import com.example.viewer.fetcher.HiPictureFetcher
-import com.example.viewer.struct.BookSource
+import com.example.viewer.fetcher.BasePictureFetcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import java.io.File
 import kotlin.math.ceil
@@ -208,13 +200,7 @@ class BookGallery (
             CoroutineScope(Dispatchers.Main).launch {
                 if (!coverPageFile.exists()) {
                     withContext(Dispatchers.IO) {
-                        val source = bookRepo.getBookSource(id)
-                        val fetcher = if (source == BookSource.E) EPictureFetcher(context, id) else HiPictureFetcher(context, id)
-                        try {
-                            fetcher.savePicture(coverPage)
-                        } catch (e: Exception) {
-                            println(e.stackTraceToString())
-                        }
+                        BasePictureFetcher.getFetcher(context, id).savePicture(coverPage)
                     }
                 }
                 Glide.with(context)

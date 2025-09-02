@@ -87,5 +87,11 @@ class Util {
             Regex("(http(s?)://)?hitomi.la/reader/(\\d+).html(#(\\d+))?$").matches(url) -> BookSource.Hi
             else -> null
         }
+
+        fun log (tag: String, vararg msgs: String) {
+            for (msg in msgs) {
+                println("[$tag] $msg")
+            }
+        }
     }
 }

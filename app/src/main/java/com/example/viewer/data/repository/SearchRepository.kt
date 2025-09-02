@@ -49,6 +49,7 @@ class SearchRepository (context: Context) {
     @Transaction
     fun addSearchMark (
         name: String,
+        sourceOrdinal: Int,
         categories: List<Category> = listOf(),
         keyword: String,
         tags: Map<String, List<String>> = mapOf(),
@@ -59,6 +60,7 @@ class SearchRepository (context: Context) {
         val id = searchMarkDao.insert(
             SearchMark(
                 name = name,
+                sourceOrdinal = sourceOrdinal,
                 categoryOrdinalsJson = gson.toJson(
                     categories.map { it.ordinal }
                 ).toString(),
@@ -79,6 +81,7 @@ class SearchRepository (context: Context) {
     fun modifySearchMark (
         id: Long,
         name: String,
+        sourceOrdinal: Int,
         categories: List<Category>,
         keyword: String,
         tags: Map<String, List<String>>,
@@ -89,6 +92,7 @@ class SearchRepository (context: Context) {
         searchMarkDao.update(
             searchMarkDao.queryById(id).apply {
                 this.name = name
+                this.sourceOrdinal = sourceOrdinal
                 this.categoryOrdinalsJson = gson.toJson(categories.map { it.ordinal })
                 this.keyword = keyword
                 this.tagsJson = gson.toJson(tags)
