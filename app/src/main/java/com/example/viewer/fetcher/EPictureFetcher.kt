@@ -1,5 +1,6 @@
 package com.example.viewer.fetcher
 
+import android.accounts.NetworkErrorException
 import android.content.Context
 import android.util.Log
 import android.widget.Toast
@@ -11,9 +12,39 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.jsoup.HttpStatusException
 import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
 import java.io.File
+import java.net.ConnectException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
+import kotlin.math.log
 
 class EPictureFetcher: BasePictureFetcher {
+    companion object {
+        /**
+         * with context io wrapped
+         */
+        @JvmStatic
+        suspend fun fetchWebpage (url: String, nw: Boolean = false): Document {
+            return try {
+                withContext(Dispatchers.IO) {
+                    Jsoup.connect(url).run {
+                        if (nw) {
+                            cookies(mapOf("nw" to "1"))
+                        }
+                        this
+                    }.get()
+                }
+            } catch (e: HttpStatusException) {
+                assert(e.statusCode == 404 || e.statusCode == 408)
+                throw e
+            } catch (e: UnknownHostException) {
+                // throw when no network
+                throw e
+            }
+        }
+    }
+
     private val bookDataset = BookRepository(context)
     private val bookUrl: String
 
@@ -53,21 +84,13 @@ class EPictureFetcher: BasePictureFetcher {
     override suspend fun savePicture(
         page: Int,
         progressListener: ((contentLength: Long, downloadLength: Long) -> Unit)?
-    ): File? {
+    ): File {
         println("[EPictureFetcher.savePicture] $page")
         assertPageInRange(page)
-
-        if (!Util.isInternetAvailable(context)) {
-            Toast.makeText(context, "沒有網絡，無法下載", Toast.LENGTH_SHORT).show()
-            return null
-        }
-
-        return fetchPictureUrl(page)?.let {
-            downloadPicture(page, it, progressListener =  progressListener)
-        }
+        return downloadPicture(page, fetchPictureUrl(page), progressListener =  progressListener)
     }
 
-    override suspend fun fetchPictureUrl (page: Int): String? {
+    override suspend fun fetchPictureUrl (page: Int): String {
         if (page >= pageNum) {
             throw Exception("page out of range")
         }
@@ -85,15 +108,11 @@ class EPictureFetcher: BasePictureFetcher {
         println("[${this::class.simpleName}.${this::fetchPictureUrl.name}] $page")
 
         fetchingPictureUrl.add(page)
-        val res = withContext(Dispatchers.IO) {
-            try {
-                Jsoup.connect(getPageUrl(page)).get()
-            } catch (e: HttpStatusException) {
-                null
-            }
-        }?.selectFirst("#i3 #img")?.attr("src")
+        val res = fetchWebpage(getPageUrl(page)).selectFirst("#i3 #img")?.attr("src")
         if (res != null) {
             pictureUrlMap[page] = res
+        } else {
+            throw IllegalStateException("cannot fetch picture url of page $page")
         }
         fetchingPictureUrl.remove(page)
 
@@ -116,11 +135,21 @@ class EPictureFetcher: BasePictureFetcher {
 
             while (pageUrls[page] == null) {
                 Log.i(logTag, "load next p $p")
-                withContext(Dispatchers.IO) {
-                    Jsoup.connect(
-                        "${bookUrl}?p=$p".also { Log.i(logTag, it) }
-                    ).cookies(mapOf("nw" to "1")).get()
-                }.select("#gdt a").map { it.attr("href") }.let { pageUrlSegment ->
+                val pageDoc = try {
+                    fetchWebpage("${bookUrl}?p=$p".also { Log.i(logTag, it) }, true)
+                } catch (e: HttpStatusException) {
+                    if (e.statusCode == 404) {
+                        Log.e(logTag, "404 on fetching book p")
+                        throw e
+                    }
+                    null
+                }
+
+                if (pageDoc == null) {
+                    continue
+                }
+
+                pageDoc.select("#gdt a").map { it.attr("href") }.let { pageUrlSegment ->
                     if (pageUrlSegment.isEmpty()) {
                         throw Exception("[${this@EPictureFetcher::class.simpleName}.${this@EPictureFetcher::getPageUrl.name}] no page url fetched")
                     }

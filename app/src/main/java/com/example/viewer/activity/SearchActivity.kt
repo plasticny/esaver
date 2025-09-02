@@ -26,6 +26,7 @@ import com.example.viewer.databinding.ActivitySearchBookBinding
 import com.example.viewer.databinding.DialogSearchInfoBinding
 import com.example.viewer.dialog.SearchMarkDialog
 import com.example.viewer.dialog.SimpleEditTextDialog
+import com.example.viewer.fetcher.EPictureFetcher
 import com.example.viewer.struct.BookSource
 import com.example.viewer.struct.Category
 import com.google.gson.Gson
@@ -34,6 +35,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import org.jsoup.HttpStatusException
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import kotlin.reflect.jvm.internal.impl.serialization.deserialization.EnumEntriesDeserializationSupport
@@ -320,7 +322,7 @@ class SearchActivity: AppCompatActivity() {
             name = searchMark.name,
             keyword = searchMark.keyword,
             categories = Util.readListFromJson<Int>(searchMark.categoryOrdinalsJson)
-                .map { Util.categoryFromOrdinal(it) },
+                .map { Category.fromOrdinal(it) },
             tags = Util.readMapFromJson(searchMark.tagsJson),
             uploader = searchMark.uploader,
             doExclude = searchMark.doExclude
@@ -536,19 +538,24 @@ class SearchActivity: AppCompatActivity() {
 
     private fun excludeTagFilter (books: List<SearchBookData>): List<SearchBookData> =
         books.filterNot {
-            excludeTagRepo.doExclude(listOf(Util.categoryFromName(it.cat)), it.tags).also { excluded ->
+            excludeTagRepo.doExclude(listOf(Category.fromName(it.cat)), it.tags).also { excluded ->
                 if (excluded) {
                     println("[${this::class.simpleName}.${this::excludeTagFilter.name}] ${it.id} is excluded")
                 }
             }
         }
 
-    private suspend fun storeTmpBook (searchBookData: SearchBookData) {
-        withContext(Dispatchers.Main) { rootBinding.screenProgressBarWrapper.visibility = View.VISIBLE }
-        val doc = withContext(Dispatchers.IO) {
-            Jsoup.connect(searchBookData.url).cookies(mapOf("nw" to "1")).get()
+    /**
+     * @return do the store success
+     */
+    private suspend fun storeTmpBook (searchBookData: SearchBookData): Boolean {
+        rootBinding.screenProgressBarWrapper.visibility = View.VISIBLE
+        val doc = try {
+            EPictureFetcher.fetchWebpage(searchBookData.url, true)
+        } catch (_: HttpStatusException) {
+            return false
         }
-        withContext(Dispatchers.Main) { rootBinding.screenProgressBarWrapper.visibility = View.GONE }
+        rootBinding.screenProgressBarWrapper.visibility = View.GONE
 
         val gson = Gson()
 
@@ -566,12 +573,13 @@ class SearchActivity: AppCompatActivity() {
             title = doc.selectFirst("#gj")!!.text().trim().ifEmpty { searchBookData.title },
             subTitle = searchBookData.title,
             pageNum = searchBookData.pageNum,
-            categoryOrdinal = Util.categoryFromName(searchBookData.cat).ordinal,
+            categoryOrdinal = Category.fromName(searchBookData.cat).ordinal,
             uploader = doc.selectFirst("#gdn a")?.text(),
             tagsJson = gson.toJson(tags),
             sourceOrdinal = BookSource.E.ordinal,
             pageUrlsJson = gson.toJson(listOf(searchBookData.coverUrl))
         )
+        return true
     }
 
     private fun showInfoDialog () {
@@ -716,7 +724,7 @@ class SearchActivity: AppCompatActivity() {
 
             binding.searchBookCatTextView.apply {
                 text = bookRecord.cat
-                setTextColor(context.getColor(Util.categoryFromName(bookRecord.cat).color))
+                setTextColor(context.getColor(Category.fromName(bookRecord.cat).color))
             }
 
             binding.root.apply {
@@ -729,8 +737,12 @@ class SearchActivity: AppCompatActivity() {
                             if (bookDb.isBookStored(bookRecord.id)) {
                                 bookRecord.id
                             } else {
-                                withContext(Dispatchers.IO) {
-                                    storeTmpBook(bookRecord)
+                                storeTmpBook(bookRecord).let {
+                                    if (!it) {
+                                        // store failed
+                                        Toast.makeText(baseContext, "這本書出現錯誤，無法打開", Toast.LENGTH_SHORT).show()
+                                        return@launch
+                                    }
                                 }
                                 "-1"
                             }

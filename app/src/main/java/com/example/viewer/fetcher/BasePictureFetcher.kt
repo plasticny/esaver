@@ -1,8 +1,8 @@
 package com.example.viewer.fetcher
 
 import android.content.Context
+import android.util.Log
 import com.example.viewer.Util
-import com.example.viewer.data.database.BookDatabase
 import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.struct.BookSource
 import kotlinx.coroutines.Dispatchers
@@ -16,7 +16,9 @@ import okio.Buffer
 import okio.BufferedSource
 import okio.ForwardingSource
 import okio.buffer
+import org.jsoup.HttpStatusException
 import java.io.File
+import java.net.ConnectException
 import java.net.SocketTimeoutException
 
 abstract class BasePictureFetcher {
@@ -33,10 +35,15 @@ abstract class BasePictureFetcher {
         }
     }
 
+    /**
+     * @throws HttpStatusException save failed
+     * @throws SocketTimeoutException
+     * @throws ConnectException
+     */
     abstract suspend fun savePicture (
         page: Int, progressListener: ((contentLength: Long, downloadLength: Long) -> Unit)? = null
-    ): File?
-    protected abstract suspend fun fetchPictureUrl (page: Int): String?
+    ): File
+    protected abstract suspend fun fetchPictureUrl (page: Int): String
 
     private val downloadingPages = mutableSetOf<Int>()
 
@@ -132,11 +139,7 @@ abstract class BasePictureFetcher {
         url: String,
         headers: Map<String, String> = mapOf(),
         progressListener: ((contentLength: Long, downloadLength: Long) -> Unit)? = null
-    ): File? {
-        if(!Util.isInternetAvailable(context)) {
-            return null
-        }
-
+    ): File {
         if (!bookFolder.exists()) {
             bookFolder.mkdirs()
         }
@@ -149,6 +152,8 @@ abstract class BasePictureFetcher {
             return file
         }
         downloadingPages.add(page)
+
+        val logTag = "${this@BasePictureFetcher::class.simpleName}.${this@BasePictureFetcher::downloadingPages.name}"
 
         // build the download request
         val downloadClient = progressListener?.let {
@@ -168,22 +173,26 @@ abstract class BasePictureFetcher {
         }.build()
 
         return withContext(Dispatchers.IO) {
-            try {
-                println("[BasePictureFetcher.downloadPicture] start download $page\n$url")
-                downloadClient.newCall(request).execute().use { response ->
-                    if (response.isSuccessful) {
-                        file.outputStream().use { response.body!!.byteStream().copyTo(it) }
-                        // this line should be after the write-to-file statement
-                        // else a corrupted image might be read
-                        downloadingPages.remove(page)
-                        return@withContext file
-                    } else {
-                        return@withContext null
+            Log.i(logTag, "start download $page\n$url")
+            downloadClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    throw HttpStatusException("download failed", response.code, url)
+                }
+
+                file.outputStream().use {
+                    try {
+                        response.body!!.byteStream().copyTo(it)
+                    } catch (e: SocketTimeoutException) {
+                        Log.e(logTag, e.stackTraceToString())
+                        throw e
                     }
                 }
-            } catch (e: SocketTimeoutException) {
-                println("[${this@BasePictureFetcher::class.simpleName}.${this@BasePictureFetcher::downloadingPages.name}] socket time out")
-                return@withContext null
+
+                // this line should be after the write-to-file statement
+                // else a corrupted image might be read
+                downloadingPages.remove(page)
+
+                return@withContext file
             }
         }
     }

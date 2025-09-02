@@ -8,6 +8,7 @@ import androidx.room.Ignore
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.example.viewer.Util
+import com.example.viewer.struct.Category
 import java.io.File
 
 @Entity(
@@ -97,7 +98,7 @@ data class Book (
 
     fun getTags (): Map<String, List<String>> = Util.readMapFromJson(tagsJson)
 
-    fun getCategory () = Util.categoryFromOrdinal(categoryOrdinal)
+    fun getCategory () = Category.fromOrdinal(categoryOrdinal)
 
     fun getPageUrls () = pageUrlsJson?.let { Util.readListFromJson<String>(it) }
 
