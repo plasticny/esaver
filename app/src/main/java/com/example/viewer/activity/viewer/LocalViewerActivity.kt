@@ -124,16 +124,11 @@ class LocalViewerActivity: BaseViewerActivity() {
 
     override fun loadPage(myPage: Int) {
         super.loadPage(page)
-        nextPageOf(page)?.let { np ->
-            super.loadPage(np)
-            nextPageOf(np)?.let {
-                nnp -> super.loadPage(nnp)
-            }
-        }
-        prevPageOf(page)?.let { pp ->
-            super.loadPage(pp)
-            prevPageOf(pp)?.let {
-                ppp -> super.loadPage(ppp)
+        // preload
+        for (d in arrayOf(1, -1, 2, -2)) {
+            val preloadPage = page + d
+            if (preloadPage in 0 until lastPage) {
+                super.preloadPage(preloadPage)
             }
         }
     }

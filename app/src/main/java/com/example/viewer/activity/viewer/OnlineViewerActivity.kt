@@ -81,7 +81,7 @@ class OnlineViewerActivity: BaseViewerActivity() {
         for (d in arrayOf(1, -1, 2, -2)) {
             val preloadPage = page + d
             if (preloadPage in 0 until lastPage) {
-                super.loadPage(preloadPage)
+                super.preloadPage(preloadPage)
             }
         }
     }

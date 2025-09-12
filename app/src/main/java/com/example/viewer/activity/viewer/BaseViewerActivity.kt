@@ -20,6 +20,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DataSource
+import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
@@ -67,6 +68,7 @@ abstract class BaseViewerActivity: AppCompatActivity() {
      *  set as null when loading screen or load failed screen
      */
     private var placeHolderDrawable: Drawable? = null
+    private val preloaded = mutableSetOf<Int>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -216,12 +218,14 @@ abstract class BaseViewerActivity: AppCompatActivity() {
                     val pictureFile = File(pictureUrl)
                     Glide.with(baseContext)
                         .load(pictureFile)
-                        .placeholder(placeHolderDrawable)
+//                        .placeholder(placeHolderDrawable)
                         .signature(MediaStoreSignature("", pictureFile.lastModified(), 0))
                         .listener(object: RequestListener<Drawable> {
-                            override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean): Boolean = false
+                            override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean): Boolean {
+                                throw e ?: GlideException("glide load failed")
+                            }
                             override fun onResourceReady(resource: Drawable?, model: Any?, target: Target<Drawable>?, dataSource: DataSource?, isFirstResource: Boolean): Boolean {
-                                placeHolderDrawable = resource
+//                                placeHolderDrawable = resource
                                 return false
                             }
                         })
@@ -245,8 +249,9 @@ abstract class BaseViewerActivity: AppCompatActivity() {
                                 "圖片下載失敗"
                             }
                             is ConnectException, is SocketException -> "連接失敗"
-                            is DecodeException -> "${getString(R.string.fail_to_load_picture)} (decode)"
-                            is IOException -> "${getString(R.string.fail_to_load_picture)} (io)"
+//                            is DecodeException -> "${getString(R.string.fail_to_load_picture)} (decode)"
+//                            is IOException -> "${getString(R.string.fail_to_load_picture)} (io)"
+                            is GlideException -> getString(R.string.fail_to_load_picture)
                             else -> throw e
                         }
                     )
@@ -255,6 +260,51 @@ abstract class BaseViewerActivity: AppCompatActivity() {
                 if (myPage == page) {
                     toggleLoadingUi(false)
                 }
+            }
+        }
+    }
+
+    protected fun preloadPage (page: Int) {
+        if (preloaded.contains(page)) {
+            return
+        }
+
+        lifecycleScope.launch {
+            try {
+                val pictureUrl = try {
+                    getPictureStoredUrl(page)
+                } catch (e: FileNotFoundException) {
+                    downloadPicture(page).path
+                }
+                val pictureFile = File(pictureUrl)
+                Glide.with(baseContext)
+                    .load(pictureFile)
+                    .diskCacheStrategy(DiskCacheStrategy.DATA)
+                    .signature(MediaStoreSignature("", pictureFile.lastModified(), 0))
+                    .listener(object: RequestListener<Drawable> {
+                        override fun onLoadFailed(
+                            e: GlideException?,
+                            model: Any?,
+                            target: Target<Drawable>?,
+                            isFirstResource: Boolean
+                        ): Boolean = false
+                        override fun onResourceReady(
+                            resource: Drawable?,
+                            model: Any?,
+                            target: Target<Drawable>?,
+                            dataSource: DataSource?,
+                            isFirstResource: Boolean
+                        ): Boolean {
+                            preloaded.add(page)
+                            return false
+                        }
+                    })
+                    .preload()
+            } catch (e: Exception) {
+                Util.log(
+                    "BaseViewerActivity.preloadPage",
+                    e.stackTraceToString()
+                )
             }
         }
     }
