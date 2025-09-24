@@ -6,12 +6,10 @@ import android.graphics.Matrix
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
-import androidx.lifecycle.lifecycleScope
 import com.example.viewer.R
 import com.example.viewer.fetcher.BasePictureFetcher
 import com.example.viewer.RandomBook
 import com.example.viewer.Util
-import com.example.viewer.data.database.BookDatabase
 import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.databinding.ViewerImageDialogBinding
 import com.example.viewer.dialog.BookmarkDialog
@@ -21,11 +19,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import org.jsoup.HttpStatusException
 import java.io.File
 import java.io.FileOutputStream
-import java.net.ConnectException
-import java.net.SocketTimeoutException
 import kotlin.math.floor
 
 /**
@@ -99,41 +94,24 @@ class LocalViewerActivity: BaseViewerActivity() {
     }
 
     override fun reloadPage() {
-        val myPage = page
-
-        viewerActivityBinding.viewerPageTextView.text = (page + 1).toString()
-        toggleLoadingUi(true)
-        toggleLoadFailedScreen(false)
-
-        // download the picture again
-        CoroutineScope(Dispatchers.IO).launch {
-            fetcher.deletePicture(page)
-            try {
-                fetcher.savePicture(page)
-            } catch (e: HttpStatusException) {
-                toggleLoadingUi(false)
-                toggleLoadFailedScreen(true, "圖片下載失敗")
-            } catch (e: SocketTimeoutException) {
-                toggleLoadingUi(false)
-                toggleLoadFailedScreen(true, "圖片下載超時")
-            } catch (e: ConnectException) {
-                toggleLoadingUi(false)
-                toggleLoadFailedScreen(true, "連接失敗")
-            }
-            if (myPage != page) {
-                return@launch
-            }
-            withContext(Dispatchers.Main) {
-                loadPage()
-            }
-        }
+        fetcher.deletePicture(page)
+        loadPage()
     }
 
-    override suspend fun getPictureUrl(page: Int): String? {
+    override suspend fun getPictureStoredUrl(page: Int): String {
+        fetcher.waitPictureDownload(page)
+        return fetcher.getPictureStoredUrl(page)
+    }
+
+    override suspend fun downloadPicture(page: Int): File {
+        if (page < firstPage || page > lastPage) {
+            throw IllegalStateException("page out of range")
+        }
+
         if (this.page == page) {
             viewerActivityBinding.progress.textView.text = getString(R.string.n_percent, 0)
         }
-        return fetcher.getPictureUrl(page) { total, downloaded ->
+        return fetcher.savePicture(page) { total, downloaded ->
             if (this.page == page) {
                 CoroutineScope(Dispatchers.Main).launch {
                     viewerActivityBinding.progress.textView.text = getString(
@@ -144,29 +122,19 @@ class LocalViewerActivity: BaseViewerActivity() {
         }
     }
 
-    override fun loadPage() {
-        super.loadPage()
-
-        val np = nextPageOf(page)
-        val pp = prevPageOf(page)
-
-        np?.let { nextPageOf(np)?.let { preloadPage(it) } }
-        pp?.let { prevPageOf(pp)?.let { preloadPage(it) } }
-
-        np?.let { preloadPage(it) }
-        pp?.let { preloadPage(it) }
-    }
-
-    private fun preloadPage (page: Int) {
-        if (page < firstPage || page > lastPage) {
-            return
-        }
-
-        lifecycleScope.launch {
-            if (!File(bookFolder, page.toString()).exists() && !Util.isInternetAvailable(baseContext)) {
-                return@launch
+    override fun loadPage(myPage: Int) {
+        super.loadPage(page)
+        nextPageOf(page)?.let { np ->
+            super.loadPage(np)
+            nextPageOf(np)?.let {
+                nnp -> super.loadPage(nnp)
             }
-            getPictureUrl(page)
+        }
+        prevPageOf(page)?.let { pp ->
+            super.loadPage(pp)
+            prevPageOf(pp)?.let {
+                ppp -> super.loadPage(ppp)
+            }
         }
     }
 

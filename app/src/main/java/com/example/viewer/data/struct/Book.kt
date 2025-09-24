@@ -35,12 +35,14 @@ data class Book (
     // Represent of the top left point of the cover position
     // Stored in normalized coordinates, i.e. x and y are >= 0 and <= 1
     var coverCropPositionString: String?,
-    // for e book only
+    // for e and wn book, url of page contain image
     var pageUrlsJson: String?,
+    // for e and wn book, page of the book profile in the source website
     var p: Int?
 ) {
     companion object {
         private var tmpBook: Book? = null
+        private var tmpCoverUrl: String? = null
 
         fun setTmpBook (
             id: String,
@@ -52,7 +54,8 @@ data class Book (
             uploader: String?,
             tagsJson: String,
             sourceOrdinal: Int,
-            pageUrlsJson: String
+            // for book profile quick load cover page
+            coverUrl: String
         ) {
             tmpBook = Book(
                 id = id,
@@ -70,12 +73,15 @@ data class Book (
                 bookMarksJson = "[]",
                 customTitle = null,
                 coverCropPositionString = null,
-                pageUrlsJson = pageUrlsJson,
+                pageUrlsJson = "",
                 p = null
             )
+            tmpCoverUrl = coverUrl
         }
 
         fun getTmpBook () = tmpBook!!
+
+        fun getTmpCoverUrl () = tmpCoverUrl!!
 
         fun clearTmpBook () {
             tmpBook = null
@@ -106,11 +112,6 @@ data class Book (
         val folder = getBookFolder(context)
         val coverPageFile = File(folder, coverPage.toString())
         return coverPageFile.path
-//        return if (coverPageFile.exists()) {
-//            coverPageFile.path
-//        } else {
-//            File(folder, "0").path
-//        }
     }
 
     fun getBookFolder (context: Context): File =

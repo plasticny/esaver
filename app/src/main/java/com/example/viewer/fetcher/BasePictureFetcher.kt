@@ -18,8 +18,10 @@ import okio.ForwardingSource
 import okio.buffer
 import org.jsoup.HttpStatusException
 import java.io.File
+import java.io.FileNotFoundException
 import java.net.ConnectException
 import java.net.SocketTimeoutException
+import kotlin.math.log
 
 abstract class BasePictureFetcher {
     companion object {
@@ -31,6 +33,8 @@ abstract class BasePictureFetcher {
             return when (source) {
                 BookSource.E -> EPictureFetcher(context, bookId)
                 BookSource.Hi -> HiPictureFetcher(context, bookId)
+                BookSource.Wn -> WnPictureFetcher(context, bookId)
+                else -> throw NotImplementedError(source.name)
             }
         }
     }
@@ -43,7 +47,7 @@ abstract class BasePictureFetcher {
     abstract suspend fun savePicture (
         page: Int, progressListener: ((contentLength: Long, downloadLength: Long) -> Unit)? = null
     ): File
-    protected abstract suspend fun fetchPictureUrl (page: Int): String
+    abstract suspend fun fetchPictureUrl (page: Int): String
 
     private val downloadingPages = mutableSetOf<Int>()
 
@@ -78,7 +82,7 @@ abstract class BasePictureFetcher {
     protected constructor (context: Context, pageNum: Int, bookId: String? = null) {
         this.context = context
         this.pageNum = pageNum
-        this.bookId = null
+        this.bookId = bookId
 
         this.bookFolder = File(context.getExternalFilesDir(null), "tmp")
         if (!this.bookFolder.exists()) {
@@ -102,23 +106,20 @@ abstract class BasePictureFetcher {
         isLocal = false
     }
 
-    suspend fun getPictureUrl (
-        page: Int,
-        progressListener: ((contentLength: Long, downloadLength: Long) -> Unit)? = null
-    ): String? {
+    /**
+     * @throws FileNotFoundException
+     */
+    fun getPictureStoredUrl (page: Int): String {
         assertPageInRange(page)
 
         //
         // check whether picture is stored
         //
         val pictureFile = File(bookFolder, page.toString())
-        println("[${this::class.simpleName}.${this::getPictureUrl.name}]\n${pictureFile.path}")
-
-        // prevent return the url of an incomplete picture
-        waitPictureDownload(page)
+        println("[${this::class.simpleName}.${this::getPictureStoredUrl.name}]\n${pictureFile.path}")
 
         if (!pictureFile.exists()) {
-            savePicture(page, progressListener) ?: return null
+            throw FileNotFoundException()
         }
 
         return pictureFile.path
@@ -173,24 +174,25 @@ abstract class BasePictureFetcher {
         }.build()
 
         return withContext(Dispatchers.IO) {
-            Log.i(logTag, "start download $page\n$url")
+            Util.log(
+                logTag,
+                "download started: $page",
+                url
+            )
             downloadClient.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
                     throw HttpStatusException("download failed", response.code, url)
                 }
 
                 file.outputStream().use {
-                    try {
-                        response.body!!.byteStream().copyTo(it)
-                    } catch (e: SocketTimeoutException) {
-                        Log.e(logTag, e.stackTraceToString())
-                        throw e
-                    }
+                    response.body!!.byteStream().copyTo(it)
                 }
 
                 // this line should be after the write-to-file statement
                 // else a corrupted image might be read
                 downloadingPages.remove(page)
+
+                Log.i(logTag, "download finished: $page")
 
                 return@withContext file
             }
@@ -206,12 +208,10 @@ abstract class BasePictureFetcher {
     /**
      * wait if the picture of "page" is downloading
      */
-    private suspend fun waitPictureDownload (page: Int) {
-        if (downloadingPages.contains(page)) {
-            withContext(Dispatchers.IO) {
-                while (downloadingPages.contains(page)) {
-                    delay(100)
-                }
+    suspend fun waitPictureDownload (page: Int) {
+        withContext(Dispatchers.IO) {
+            while (downloadingPages.contains(page)) {
+                delay(100)
             }
         }
     }
