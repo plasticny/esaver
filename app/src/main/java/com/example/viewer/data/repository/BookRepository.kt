@@ -77,6 +77,7 @@ class BookRepository (private val context: Context) {
             bookWithGroupDao.insert(
                 BookWithGroup(
                     bookId = id,
+                    bookSourceOrdinal = source.ordinal,
                     groupId = groupId
                 )
             )

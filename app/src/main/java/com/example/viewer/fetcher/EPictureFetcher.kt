@@ -3,6 +3,7 @@ package com.example.viewer.fetcher
 import android.content.Context
 import android.util.Log
 import com.example.viewer.data.repository.BookRepository
+import com.example.viewer.struct.BookSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -55,7 +56,7 @@ class EPictureFetcher: BasePictureFetcher {
     /**
      * for local book
      */
-    constructor (context: Context, bookId: String): super(context, bookId) {
+    constructor (context: Context, bookId: String): super(context, bookId, BookSource.E) {
         p = bookRepo.getBookP(bookId)
         bookUrl = bookRepo.getBookUrl(bookId)
         pageUrls = bookRepo.getBookPageUrls(bookId)
@@ -69,7 +70,7 @@ class EPictureFetcher: BasePictureFetcher {
         pageNum: Int,
         bookUrl: String,
         bookId: String? = null
-    ): super(context, pageNum, bookId) {
+    ): super(context, pageNum, BookSource.E, bookId) {
         p = 0
         this.bookUrl = bookUrl
         pageUrls = arrayOfNulls(pageNum)

@@ -53,7 +53,7 @@ class WnSearchHelper (
         return doc.getElementsByClass("gallary_item").mapNotNull { galleryItem ->
             val bookUrl = galleryItem.getElementsByTag("a").first()!!.attr("href")
             SearchBookData(
-                id = "wn${bookUrl.slice(18..bookUrl.length - 6)}",
+                id = bookUrl.slice(18..bookUrl.length - 6),
                 url = "https://www.wnacg.com$bookUrl",
                 coverUrl = "https:${galleryItem.getElementsByTag("img").first()!!.attr("src")}",
                 cat = if (searchMarkData.sourceOrdinal != Category.All.ordinal) {

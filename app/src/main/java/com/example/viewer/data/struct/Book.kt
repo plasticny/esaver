@@ -13,10 +13,12 @@ import java.io.File
 
 @Entity(
     tableName = "Books",
+    primaryKeys = ["id", "sourceOrdinal"],
     indices = [Index(value = ["id"])]
 )
 data class Book (
-    @PrimaryKey val id: String,
+    val id: String,
+    val sourceOrdinal: Int,
     val url: String,
     val title: String, // origin title
     val subTitle: String, // origin sub-title
@@ -24,7 +26,6 @@ data class Book (
     val categoryOrdinal: Int,
     val uploader: String?,
     val tagsJson: String,
-    val sourceOrdinal: Int,
     // user data
     var coverPage: Int,
     var skipPagesJson: String,

@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.example.viewer.Util
 import com.example.viewer.data.repository.BookRepository
+import com.example.viewer.data.struct.Book
 import com.example.viewer.struct.BookSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -66,12 +67,18 @@ abstract class BasePictureFetcher {
     /**
      * for local book
      */
-    protected constructor (context: Context, bookId: String) {
+    protected constructor (context: Context, bookId: String, bookSource: BookSource) {
         this.context = context
         this.bookId = bookId
 
         pageNum = BookRepository(context).getBookPageNum(bookId)
-        bookFolder = File(context.getExternalFilesDir(null), bookId)
+        bookFolder = File(
+            context.getExternalFilesDir(null),
+            when (bookSource) {
+                BookSource.Wn -> "wn$bookId"
+                BookSource.E, BookSource.Hi -> bookId
+            }
+        )
         isLocal = true
     }
 
@@ -79,7 +86,7 @@ abstract class BasePictureFetcher {
      * for online book
      * @param bookId system will store this id, and avoid repeat downloading if the current book id is same as previous one
      */
-    protected constructor (context: Context, pageNum: Int, bookId: String? = null) {
+    protected constructor (context: Context, pageNum: Int, bookSource: BookSource, bookId: String? = null) {
         this.context = context
         this.pageNum = pageNum
         this.bookId = bookId
@@ -92,14 +99,20 @@ abstract class BasePictureFetcher {
         // compare previous tmp book id and that of current
         // to determine whether if the tmp folder should be cleared
         val bookIdTxt = File(this.bookFolder, "bookId.txt")
-        if (bookId == null || !bookIdTxt.exists() || bookId != bookIdTxt.readText()) {
+        val fullBookId = bookId?.let {
+            when (bookSource) {
+                BookSource.Wn -> "wn$bookId"
+                BookSource.E, BookSource.Hi -> bookId
+            }
+        }
+        if (bookId == null || !bookIdTxt.exists() || fullBookId!! != bookIdTxt.readText()) {
             println("[${this::class.simpleName}] clear tmp folder")
             for (file in this.bookFolder.listFiles()!!) {
                 file.delete()
             }
             bookId?.let {
                 bookIdTxt.createNewFile()
-                bookIdTxt.writeText(bookId)
+                bookIdTxt.writeText(fullBookId!!)
             }
         }
 

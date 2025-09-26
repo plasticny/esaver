@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.example.viewer.Util
 import com.example.viewer.data.repository.BookRepository
+import com.example.viewer.struct.BookSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
@@ -43,9 +44,6 @@ class WnPictureFetcher: BasePictureFetcher {
      */
     private val pictureUrlMap = mutableMapOf<Int, String>()
     private val getPageUrlMutex = Mutex()
-    // book id remove "wn"
-    private val pureBookId: String
-        get() = bookId!!.slice(2 until bookId.length)
 
     private var pageUrls: Array<String?>
     private var p: Int
@@ -53,7 +51,7 @@ class WnPictureFetcher: BasePictureFetcher {
     /**
      * for local book
      */
-    constructor (context: Context, bookId: String): super(context, bookId) {
+    constructor (context: Context, bookId: String): super(context, bookId, BookSource.Wn) {
         p = bookRepo.getBookP(bookId)
         bookUrl = bookRepo.getBookUrl(bookId)
         pageUrls = bookRepo.getBookPageUrls(bookId)
@@ -67,7 +65,7 @@ class WnPictureFetcher: BasePictureFetcher {
         pageNum: Int,
         bookUrl: String,
         bookId: String? = null
-    ): super(context, pageNum, bookId) {
+    ): super(context, pageNum, BookSource.Wn, bookId) {
         p = 1
         this.bookUrl = bookUrl
         pageUrls = arrayOfNulls(pageNum)
@@ -133,7 +131,7 @@ class WnPictureFetcher: BasePictureFetcher {
                 val pageDoc = try {
                     obtainRequestSlot()
                     Jsoup.connect(
-                        "https://www.wnacg.com/photos-index-page-${p}-aid-${pureBookId}.html".also {
+                        "https://www.wnacg.com/photos-index-page-${p}-aid-${bookId}.html".also {
                             Util.log(logTag, "fetch next p from $it")
                         }
                     ).get()

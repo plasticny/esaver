@@ -444,7 +444,7 @@ class BookProfileActivity: AppCompatActivity() {
             source = BookSource.fromOrdinal(book.sourceOrdinal),
             uploader = book.uploader
         )
-        groupRepo.addBookIdToGroup(GroupRepository.DEFAULT_GROUP_ID, book.id)
+        groupRepo.addBookIdToGroup(GroupRepository.DEFAULT_GROUP_ID, book.id, book.sourceOrdinal)
 
         // update ui
         toggleProgressBar(false)
@@ -497,7 +497,7 @@ class BookProfileActivity: AppCompatActivity() {
         }
 
         bookRepo.addBook(newBook)
-        groupRepo.addBookIdToGroup(GroupRepository.DEFAULT_GROUP_ID, newBook.id)
+        groupRepo.addBookIdToGroup(GroupRepository.DEFAULT_GROUP_ID, newBook.id, newBook.sourceOrdinal)
 
         book = bookRepo.getBook(newBook.id)
         ConfirmDialog(this, layoutInflater).show(

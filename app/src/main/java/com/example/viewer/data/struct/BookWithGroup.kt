@@ -7,11 +7,12 @@ import androidx.room.PrimaryKey
 
 @Entity (
     tableName = "BookWithGroups",
+    primaryKeys = ["bookId", "bookSourceOrdinal"],
     foreignKeys = [
         ForeignKey(
             entity = Book::class,
-            parentColumns = arrayOf("id"),
-            childColumns = arrayOf("bookId"),
+            parentColumns = arrayOf("id", "sourceOrdinal"),
+            childColumns = arrayOf("bookId", "bookSourceOrdinal"),
             onDelete = ForeignKey.CASCADE
         ),
         ForeignKey(
@@ -23,7 +24,17 @@ import androidx.room.PrimaryKey
     ]
 )
 data class BookWithGroup (
-    @PrimaryKey val bookId: String,
+    val bookId: String,
+    val bookSourceOrdinal: Int,
     @ColumnInfo(index = true)
     var groupId: Int
-)
+) {
+    companion object {
+        data class BookIdentify (
+            @ColumnInfo(name = "bookId")
+            val id: String,
+            @ColumnInfo(name = "bookSourceOrdinal")
+            val sourceOrdinal: Int
+        )
+    }
+}

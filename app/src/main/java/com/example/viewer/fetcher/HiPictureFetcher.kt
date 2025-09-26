@@ -3,6 +3,7 @@ package com.example.viewer.fetcher
 import android.content.Context
 import android.widget.Toast
 import com.example.viewer.Util
+import com.example.viewer.struct.BookSource
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -74,7 +75,7 @@ class HiPictureFetcher: BasePictureFetcher {
     /**
      * local book
      */
-    constructor (context: Context, bookId: String): super(context, bookId) {
+    constructor (context: Context, bookId: String): super(context, bookId, BookSource.Hi) {
         hiBookId = bookId
         init()
     }
@@ -82,7 +83,7 @@ class HiPictureFetcher: BasePictureFetcher {
     /**
      * online book
      */
-    constructor (context: Context, bookId: String, pageNum: Int): super(context, pageNum) {
+    constructor (context: Context, bookId: String, pageNum: Int): super(context, pageNum, BookSource.Hi) {
         hiBookId = bookId
         init()
     }
