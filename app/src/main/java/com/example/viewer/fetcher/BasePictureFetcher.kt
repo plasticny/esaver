@@ -72,13 +72,7 @@ abstract class BasePictureFetcher {
         this.bookId = bookId
 
         pageNum = BookRepository(context).getBookPageNum(bookId)
-        bookFolder = File(
-            context.getExternalFilesDir(null),
-            when (bookSource) {
-                BookSource.Wn -> "wn$bookId"
-                BookSource.E, BookSource.Hi -> bookId
-            }
-        )
+        bookFolder = Book.getBookFolder(context, bookId, bookSource.ordinal)
         isLocal = true
     }
 

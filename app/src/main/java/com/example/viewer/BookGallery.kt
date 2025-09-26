@@ -17,6 +17,7 @@ import com.example.viewer.activity.BookProfileActivity
 import com.example.viewer.data.database.BookDatabase
 import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.data.repository.GroupRepository
+import com.example.viewer.data.struct.Book
 import com.example.viewer.data.struct.BookWithGroup
 import com.example.viewer.databinding.FragmentMainGalleryBookBinding
 import com.example.viewer.databinding.MainGalleryFragmentAuthorBinding
@@ -194,13 +195,7 @@ class BookGallery (
             val (id, sourceOrdinal) = bookIdentifies[position]
 
             println("[${this@BookGallery::class.simpleName}.${this::class.simpleName}] binding $id")
-            val bookFolder = File(
-                context.getExternalFilesDir(null),
-                when (BookSource.entries[sourceOrdinal]) {
-                    BookSource.Wn -> "wn$id"
-                    BookSource.Hi, BookSource.E -> id
-                }
-            )
+            val bookFolder = Book.getBookFolder(context, id, sourceOrdinal)
 
             val coverPage = bookRepo.getBookCoverPage(id)
             val cropPosition = bookRepo.getCoverCropPosition(id)

@@ -445,6 +445,7 @@ class BookProfileActivity: AppCompatActivity() {
             uploader = book.uploader
         )
         groupRepo.addBookIdToGroup(GroupRepository.DEFAULT_GROUP_ID, book.id, book.sourceOrdinal)
+        Book.clearTmpBook()
 
         // update ui
         toggleProgressBar(false)
@@ -485,11 +486,11 @@ class BookProfileActivity: AppCompatActivity() {
             p = book.p
         )
 
-        File(getExternalFilesDir(null), newBook.id).also { newFolder ->
+        Book.getBookFolder(baseContext, newBook.id, book.sourceOrdinal).also { newFolder ->
             if (!newFolder.exists()) {
                 newFolder.mkdirs()
             }
-            val originFolder = File(getExternalFilesDir(null), book.id)
+            val originFolder = Book.getBookFolder(baseContext, book.id, book.sourceOrdinal)
             for (originFile in originFolder.listFiles()!!) {
                 val newFile = File(newFolder, originFile.name)
                 originFile.copyTo(newFile)
@@ -615,6 +616,7 @@ class BookProfileActivity: AppCompatActivity() {
                 // skip page
                 updateSkipPages(
                     book.id,
+                    book.sourceOrdinal,
                     dialogBinding.profileDialogSkipPagesEditText.text.toString().trim(),
                     skipPages
                 )
@@ -638,7 +640,7 @@ class BookProfileActivity: AppCompatActivity() {
         /**
          * @param text text of the skip page editText
          */
-        private fun updateSkipPages (bookId: String, text: String, originSkipPages: List<Int>) {
+        private fun updateSkipPages (bookId: String, bookSourceOrdinal: Int, text: String, originSkipPages: List<Int>) {
             val coverPage = bookRepo.getBookCoverPage(bookId)
             val updatedSkipPages = skipPageStringToList(text)
 
@@ -648,7 +650,7 @@ class BookProfileActivity: AppCompatActivity() {
 
             val newSkipPages = updatedSkipPages.minus(originSkipPages.toSet())
             if (newSkipPages.isNotEmpty()) {
-                val bookFolder = File(context.getExternalFilesDir(null), bookId)
+                val bookFolder = Book.getBookFolder(context, bookId, bookSourceOrdinal)
                 for (p in newSkipPages) {
                     if (p == coverPage) {
                         continue

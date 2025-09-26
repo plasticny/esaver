@@ -6,6 +6,7 @@ import android.net.NetworkCapabilities
 import android.util.TypedValue
 import com.example.viewer.data.database.BookDatabase
 import com.example.viewer.data.repository.BookRepository
+import com.example.viewer.data.struct.Book
 import com.example.viewer.struct.BookSource
 import com.example.viewer.struct.Category
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -51,8 +52,9 @@ class Util {
          * @return boolean represent all pages of the book is downloaded
          */
         fun isBookDownloaded (context: Context, bookId: String): Boolean {
-            val folder = File(context.getExternalFilesDir(null), bookId)
-            return BookRepository(context).getBookPageNum(bookId) <= folder.listFiles()!!.size
+            val bookRepo = BookRepository(context)
+            val folder = Book.getBookFolder(context, bookId, bookRepo.getBookSource(bookId).ordinal)
+            return bookRepo.getBookPageNum(bookId) <= folder.listFiles()!!.size
         }
 
         fun isGifFile (file: File): Boolean = FileInputStream(file).use { fis ->

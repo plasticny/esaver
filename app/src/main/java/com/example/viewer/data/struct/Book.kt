@@ -8,6 +8,7 @@ import androidx.room.Ignore
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.example.viewer.Util
+import com.example.viewer.struct.BookSource
 import com.example.viewer.struct.Category
 import java.io.File
 
@@ -45,6 +46,7 @@ data class Book (
         private var tmpBook: Book? = null
         private var tmpCoverUrl: String? = null
 
+        // tmp book will be removed once it is saved
         fun setTmpBook (
             id: String,
             url: String,
@@ -95,6 +97,15 @@ data class Book (
             }
             return PointF(tokens[0].toFloat(), tokens[1].toFloat())
         }
+
+        fun getBookFolder (context: Context, id: String, sourceOrdinal: Int) =
+            File(
+                context.getExternalFilesDir(null),
+                when (BookSource.entries[sourceOrdinal]) {
+                    BookSource.Wn -> "wn$id"
+                    BookSource.E, BookSource.Hi -> id
+                }
+            )
     }
 
     init {
@@ -115,11 +126,12 @@ data class Book (
         return coverPageFile.path
     }
 
-    fun getBookFolder (context: Context): File =
-        File(
-            context.getExternalFilesDir(null),
-            if (isTmpBook()) "tmp" else id
-        )
+    fun getBookFolder (context: Context): File {
+        if (isTmpBook()) {
+            return File(context.getExternalFilesDir(null), "tmp")
+        }
+        return Companion.getBookFolder(context, id, sourceOrdinal)
+    }
 
     fun getCoverCropPosition (): PointF? {
         if (coverCropPositionString == null) {
