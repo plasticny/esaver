@@ -372,7 +372,7 @@ class BookProfileActivity: AppCompatActivity() {
     private fun refreshCoverPage () {
         if (isBookStored) {
             val file = File(
-                "${getExternalFilesDir(null)}/${book.id}",
+                Book.getBookFolder(baseContext, book.id, book.sourceOrdinal),
                 bookRepo.getBookCoverPage(book.id).toString()
             )
             Glide.with(baseContext)
@@ -421,7 +421,7 @@ class BookProfileActivity: AppCompatActivity() {
         }
 
         // create book folder
-        File(getExternalFilesDir(null), book.id).also {
+        Book.getBookFolder(baseContext, book.id, book.sourceOrdinal).also {
             if (!it.exists()) {
                 it.mkdirs()
             }
