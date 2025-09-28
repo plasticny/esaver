@@ -553,6 +553,12 @@ class SearchActivity: AppCompatActivity() {
                 text = context.getString(R.string.n_page, bookRecord.pageNum)
             }
 
+            binding.ratingTextView.apply {
+                text = if (bookRecord.rating != null) {
+                    context.getString(R.string.n_score, bookRecord.rating)
+                } else ""
+            }
+
             binding.searchBookCatTextView.apply {
                 text = getString(bookRecord.cat.displayText)
                 setTextColor(context.getColor(bookRecord.cat.color))

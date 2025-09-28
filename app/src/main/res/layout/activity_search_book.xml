@@ -53,11 +53,18 @@
                 android:textColor="@color/grey"/>
 
             <TextView
-                android:id="@+id/search_book_cat_textView"
+                android:id="@+id/rating_textView"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:textColor="@color/grey"
                 android:textAlignment="viewEnd"/>
+
+            <TextView
+                android:id="@+id/search_book_cat_textView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
 
         </LinearLayout>
 

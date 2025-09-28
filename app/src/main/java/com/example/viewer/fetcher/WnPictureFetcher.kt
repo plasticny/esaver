@@ -16,7 +16,7 @@ import java.io.File
 
 class WnPictureFetcher: BasePictureFetcher {
     companion object {
-        private const val MAX_REQUEST = 19
+        private const val MAX_REQUEST = 16
         private const val REQUEST_DELAY = 30000L
         private var request_cnt = 0
 

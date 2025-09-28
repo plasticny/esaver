@@ -70,7 +70,8 @@ class WnSearchHelper (
                 title = galleryItem.getElementsByClass("title").first()!!.text(),
                 pageNum = galleryItem.getElementsByClass("info_col").first()!!.text()
                     .trim().split("張").first().toInt(),
-                tags = mapOf()
+                tags = mapOf(),
+                rating = null
             )
         }
     }

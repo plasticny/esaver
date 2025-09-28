@@ -77,6 +77,23 @@ class ESearchHelper (
                         val cat = tr.selectFirst(".tc")!!.text().trim().dropLast(1)
                         set(cat, tr.select(".gt,.gtl").map { it.text().trim() })
                     }
+                },
+                rating = book.selectFirst(".ir")!!.attr("style").split(';').let {
+                    for (item in it) {
+                        val itemTokens = item.split(':')
+                        if (itemTokens[0].trim() == "background-position") {
+                            // value example: "-48px -1px"
+                            val valueTokens = itemTokens[1].split("px")
+                            val x = valueTokens[0].trim().toInt()
+                            val y = valueTokens[1].trim().toInt()
+                            var rating = 5 + x / 16f
+                            if (y != -1) {
+                                rating -= 0.5f
+                            }
+                            return@let rating
+                        }
+                    }
+                    throw IllegalStateException()
                 }
             )
         }
