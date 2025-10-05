@@ -109,7 +109,8 @@ class WnPictureFetcher: BasePictureFetcher {
 
         Util.log(logTag, "fetch $page end")
 
-        return pictureUrlMap[page]!!
+        assert(pictureUrlMap.containsKey(page)) { pictureUrlMap.keys.toString() }
+        return pictureUrlMap.getValue(page)
     }
 
     private suspend fun getPageUrl (page: Int): String {

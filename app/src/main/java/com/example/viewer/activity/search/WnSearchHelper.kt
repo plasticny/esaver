@@ -21,6 +21,7 @@ class WnSearchHelper (
         prev = ENDED
         category = searchMarkData.categories.first()
         isKeywordSearching = category == Category.All && searchMarkData.keyword.isNotEmpty()
+        searchResultString = "N/A"
     }
 
     override fun getNextBlockSearchUrl (): String {
@@ -36,10 +37,11 @@ class WnSearchHelper (
     override fun processSearchDoc (doc: Document): List<SearchBookData> {
         // update next
         if (isKeywordSearching) {
-            if (doc.getElementsByClass("thispage").first()!!.text() != next.toString()) {
-                next++
-            } else {
+            val elThisPage = doc.getElementsByClass("thispage").first()
+            if (elThisPage == null || elThisPage.text() == next.toString()) {
                 next = ENDED
+            } else {
+                next++
             }
         } else {
             if (doc.getElementsByClass("next").isNotEmpty()) {
@@ -125,7 +127,7 @@ class WnSearchHelper (
             1, 2, 12, 16 -> Category.Doujinshi
             3 -> Category.Cosplay
             9, 13 -> Category.Manga
-            10, 14 -> Category.Magazine
+            7, 10, 14, 17 -> Category.Magazine
             20, 23 -> throw ExcludedCategoryError(cateIndex)
             else -> throw NotImplementedError(cateIndex)
         }

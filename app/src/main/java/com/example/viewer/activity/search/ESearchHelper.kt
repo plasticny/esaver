@@ -136,7 +136,7 @@ class ESearchHelper (
 
         val fCatsValue = 1023 - if (searchMarkData.categories.isNotEmpty()) {
             searchMarkData.categories.sumOf {
-                assert(it.value != -1)
+                assert(it.value != -1) { it.name }
                 it.value
             }
         } else {
