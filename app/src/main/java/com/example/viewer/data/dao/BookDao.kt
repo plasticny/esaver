@@ -23,6 +23,12 @@ interface BookDao {
     @Query("SELECT id FROM Books")
     suspend fun getAllBookIds (): List<String>
 
+    @Query("SELECT id, lastViewTime FROM Books WHERE categoryOrdinal != 3 ORDER BY lastViewTime ASC")
+    suspend fun getBookIdSeqH (): List<Book.Companion.SequenceItem>
+
+    @Query("SELECT id, lastViewTime FROM Books WHERE categoryOrdinal == 3 ORDER BY lastViewTime ASC")
+    suspend fun getBookIdSeqNH () : List<Book.Companion.SequenceItem>
+
     @Query("SELECT url FROM Books WHERE id = :id")
     suspend fun getUrl (id: String): String
 

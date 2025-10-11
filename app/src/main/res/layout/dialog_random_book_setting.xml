@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:background="@color/dark_grey"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/set_random_book"
+        android:textSize="16sp"
+        android:textColor="@color/white"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/do_include_h"
+            android:textSize="16sp"
+            android:textColor="@color/grey"/>
+
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/include_h_switch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:switchMinWidth="60dp"/>
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/do_include_non_h"
+            android:textSize="16sp"
+            android:textColor="@color/grey"/>
+
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/include_non_h_switch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:switchMinWidth="60dp"/>
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="end">
+
+        <com.example.viewer.widget.IconButton
+            style="@style/IconButtonCommonStyle"
+            android:id="@+id/cancel_button"
+            android:layout_width="90dp"
+            android:layout_height="wrap_content"
+            android:textColor="@color/black"
+            android:backgroundTint="@color/grey"
+            app:viewIcon="@string/fa_xmark"
+            app:viewText="@string/cancel"/>
+
+        <com.example.viewer.widget.IconButton
+            style="@style/IconButtonCommonStyle"
+            android:id="@+id/confirm_button"
+            android:layout_width="90dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:textColor="@color/black"
+            android:backgroundTint="@color/grey"
+            app:viewIcon="@string/fa_check"
+            app:viewText="@string/confirm"/>
+
+    </LinearLayout>
+
+</LinearLayout>

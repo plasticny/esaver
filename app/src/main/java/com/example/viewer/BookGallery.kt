@@ -70,7 +70,7 @@ class BookGallery (
 
     fun refreshBooks () = groupRecyclerViewAdapter.refreshGroupBooks()
 
-    fun openRandomBook () = openBook(RandomBook.next(context, !Util.isInternetAvailable(context)))
+    fun openRandomBook () = openBook(RandomBook.next(context))
 
     fun scrollToGroup (id: Int) = recyclerView.scrollToPosition(groupRecyclerViewAdapter.getGroupPosition(id))
 

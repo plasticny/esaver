@@ -14,6 +14,7 @@ import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.data.repository.GroupRepository
 import com.example.viewer.data.struct.Book
 import com.example.viewer.databinding.FragmentMainGalleryBinding
+import com.example.viewer.dialog.RandomBookSettingDialog
 
 class GalleryFragment: Fragment() {
     private lateinit var ctx: Context
@@ -40,7 +41,9 @@ class GalleryFragment: Fragment() {
         }
 
         binding.randomOpenButton.setOnClickListener {
-            bookGallery.openRandomBook()
+            RandomBookSettingDialog(ctx, inflater).show {
+                bookGallery.openRandomBook()
+            }
         }
 
         // handle user select group in group list fragment

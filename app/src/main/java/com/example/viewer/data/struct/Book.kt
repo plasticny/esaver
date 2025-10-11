@@ -3,6 +3,7 @@ package com.example.viewer.data.struct
 import android.content.Context
 import android.graphics.Point
 import android.graphics.PointF
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Ignore
 import androidx.room.Index
@@ -43,6 +44,13 @@ data class Book (
     var p: Int?
 ) {
     companion object {
+        data class SequenceItem (
+            @ColumnInfo("id")
+            val id: String,
+            @ColumnInfo("lastViewTime")
+            val lastViewTime: Long
+        )
+
         private var tmpBook: Book? = null
         private var tmpCoverUrl: String? = null
 

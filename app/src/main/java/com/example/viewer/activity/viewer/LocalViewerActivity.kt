@@ -220,7 +220,7 @@ class LocalViewerActivity: BaseViewerActivity() {
     }
 
     private fun nextBook () {
-        bookId = RandomBook.next(this, !Util.isInternetAvailable(this))
+        bookId = RandomBook.next(this)
         prepareBook(bookId)
         runBlocking {
             bookDataset.updateBookLastViewTime(bookId)

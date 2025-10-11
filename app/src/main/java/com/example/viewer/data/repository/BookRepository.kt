@@ -1,7 +1,6 @@
 package com.example.viewer.data.repository
 
 import android.content.Context
-import android.graphics.Point
 import android.graphics.PointF
 import androidx.room.Transaction
 import com.example.viewer.Util
@@ -185,6 +184,10 @@ class BookRepository (private val context: Context) {
     }
 
     fun getAllBookIds () = runBlocking { bookDao.getAllBookIds() }
+
+    fun getBookIdSeqH () = runBlocking { bookDao.getBookIdSeqH() }
+
+    fun getBookIdSeqNH () = runBlocking { bookDao.getBookIdSeqNH() }
 
     fun getBookUrl (id: String) = runBlocking { bookDao.getUrl(id) }
 
