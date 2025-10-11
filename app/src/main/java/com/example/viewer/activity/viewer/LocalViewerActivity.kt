@@ -10,6 +10,7 @@ import com.example.viewer.R
 import com.example.viewer.fetcher.BasePictureFetcher
 import com.example.viewer.RandomBook
 import com.example.viewer.Util
+import com.example.viewer.activity.BookProfileActivity
 import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.databinding.ViewerImageDialogBinding
 import com.example.viewer.dialog.BookmarkDialog
@@ -221,10 +222,14 @@ class LocalViewerActivity: BaseViewerActivity() {
 
     private fun nextBook () {
         bookId = RandomBook.next(this)
+
         prepareBook(bookId)
         runBlocking {
             bookDataset.updateBookLastViewTime(bookId)
         }
+
+        BookProfileActivity.changeBookWhenResume(bookId)
+
         loadPage()
     }
 

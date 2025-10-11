@@ -69,6 +69,11 @@ class BookProfileActivity: AppCompatActivity() {
                 Pair(width, height).also { coverMetrics = it }
             }
         }
+
+        private var resumeBookId: String? = null
+        fun changeBookWhenResume (bookId: String) {
+            resumeBookId = bookId
+        }
     }
 
     private lateinit var book: Book
@@ -88,18 +93,40 @@ class BookProfileActivity: AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        rootBinding = BookProfileActivityBinding.inflate(layoutInflater)
+        setContentView(rootBinding.root)
+
         bookRepo = BookRepository(baseContext)
 
-        book = bookRepo.getBook(intent.getStringExtra("bookId")!!)
-        isBookStored = runBlocking { bookRepo.isBookStored(book.id) }
+        prepareForBook(intent.getStringExtra("bookId")!!)
+    }
 
+    override fun onResume() {
+        super.onResume()
+        if (resumeBookId != null) {
+            prepareForBook(resumeBookId!!)
+            resumeBookId = null
+        }
+        else if (isBookStored) {
+            // the cover page may updated
+            refreshCoverPage()
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+//        Book.clearTmpBook()
+    }
+
+    private fun prepareForBook (bookId: String) {
+        book = bookRepo.getBook(bookId)
+
+        isBookStored = runBlocking { bookRepo.isBookStored(book.id) }
         excludedTags = ExcludeTagRepository(baseContext).findExcludedTags(book)
 
         //
-        // init ui
+        // setup ui
         //
-
-        rootBinding = BookProfileActivityBinding.inflate(layoutInflater)
 
         rootBinding.coverWrapper.let {
             // adjust cover image size
@@ -161,6 +188,8 @@ class BookProfileActivity: AppCompatActivity() {
                     visibility = View.VISIBLE
                     rootBinding.warningText.text = getString(R.string.contain_offensive_context)
                 }
+
+                visibility = View.INVISIBLE
             }
         }
 
@@ -234,6 +263,7 @@ class BookProfileActivity: AppCompatActivity() {
         }
 
         rootBinding.tagWrapper.apply {
+            removeAllViews()
             lifecycleScope.launch {
                 for (entry in book.getTags().entries) {
                     addView(createTagRow(entry.key, entry.value).root)
@@ -241,22 +271,7 @@ class BookProfileActivity: AppCompatActivity() {
             }
         }
 
-        setContentView(rootBinding.root)
-
         refreshButtons()
-    }
-
-    override fun onResume() {
-        super.onResume()
-        if (isBookStored) {
-            // the cover page may updated
-            refreshCoverPage()
-        }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-//        Book.clearTmpBook()
     }
 
     private fun createTagRow (tagCat: String, tagValues: List<String>) =
