@@ -222,7 +222,8 @@ abstract class BaseViewerActivity: AppCompatActivity() {
                         .signature(MediaStoreSignature("", pictureFile.lastModified(), 0))
                         .listener(object: RequestListener<Drawable> {
                             override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean): Boolean {
-                                throw e ?: GlideException("glide load failed")
+                                toggleLoadFailedScreen(true, getString(R.string.fail_to_load_picture))
+                                return false
                             }
                             override fun onResourceReady(resource: Drawable?, model: Any?, target: Target<Drawable>?, dataSource: DataSource?, isFirstResource: Boolean): Boolean {
 //                                placeHolderDrawable = resource
