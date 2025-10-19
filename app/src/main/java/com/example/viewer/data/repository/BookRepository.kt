@@ -145,6 +145,10 @@ class BookRepository (private val context: Context) {
             throw Exception("delete book folder failed")
         }
 
+        GroupRepository(context).removeIfEmpty(
+            runBlocking { bookWithGroupDao.queryGroupId(book.id) }
+        )
+
         listLastUpdateTime = System.currentTimeMillis()
 
         return true

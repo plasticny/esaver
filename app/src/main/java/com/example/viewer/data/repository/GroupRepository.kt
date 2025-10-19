@@ -95,6 +95,15 @@ class GroupRepository (context: Context) {
         moveGroup(from, to)
     }
 
+    fun removeIfEmpty (id: Int) = runBlocking {
+        if (id == DEFAULT_GROUP_ID) {
+            return@runBlocking
+        }
+        if(getGroupBookIdentifies(id).isEmpty()) {
+            removeGroup(id)
+        }
+    }
+
     @Transaction
     private suspend fun moveGroup (fromOrder: Int, toOrder: Int) {
         if (fromOrder == toOrder) {
