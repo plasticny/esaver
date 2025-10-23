@@ -134,6 +134,8 @@ class LocalViewerActivity: BaseViewerActivity() {
         }
     }
 
+    override fun getPictureFetcher(): BasePictureFetcher = fetcher
+
     private fun prepareBook (bookId: String) {
         skipPageSet = bookDataset.getBookSkipPages(bookId).toSet()
 

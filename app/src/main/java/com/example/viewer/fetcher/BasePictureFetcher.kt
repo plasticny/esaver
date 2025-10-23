@@ -1,6 +1,7 @@
 package com.example.viewer.fetcher
 
 import android.content.Context
+import android.graphics.ImageDecoder
 import android.util.Log
 import com.example.viewer.Util
 import com.example.viewer.data.repository.BookRepository
@@ -22,7 +23,6 @@ import java.io.File
 import java.io.FileNotFoundException
 import java.net.ConnectException
 import java.net.SocketTimeoutException
-import kotlin.math.log
 
 abstract class BasePictureFetcher {
     companion object {
@@ -161,7 +161,7 @@ abstract class BasePictureFetcher {
         }
         downloadingPages.add(page)
 
-        val logTag = "${this@BasePictureFetcher::class.simpleName}.${this@BasePictureFetcher::downloadingPages.name}"
+        val logTag = "${this@BasePictureFetcher::class.simpleName}.${this@BasePictureFetcher::downloadPicture.name}"
 
         // build the download request
         val downloadClient = progressListener?.let {
@@ -194,10 +194,17 @@ abstract class BasePictureFetcher {
                 file.outputStream().use {
                     response.body!!.byteStream().copyTo(it)
                 }
-
-                // this line should be after the write-to-file statement
-                // else a corrupted image might be read
-                downloadingPages.remove(page)
+                try {
+                    ImageDecoder.decodeBitmap(ImageDecoder.createSource(file))
+                } catch (_: Exception) {
+                    file.delete()
+                    throw PictureDownloadFailException()
+                }
+                finally {
+                    // this line should be after the write-to-file statement
+                    // else a corrupted image might be read
+                    downloadingPages.remove(page)
+                }
 
                 Log.i(logTag, "download finished: $page")
 
@@ -222,6 +229,10 @@ abstract class BasePictureFetcher {
             }
         }
     }
+
+    fun isPictureDownloading (page: Int) = downloadingPages.contains(page)
+
+    class PictureDownloadFailException: Exception()
 }
 
 private class ProgressResponseBody (

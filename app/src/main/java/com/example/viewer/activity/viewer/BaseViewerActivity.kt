@@ -4,7 +4,6 @@ import android.animation.Animator
 import android.animation.Animator.AnimatorListener
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
-import android.graphics.ImageDecoder.DecodeException
 import android.graphics.Rect
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
@@ -29,11 +28,11 @@ import com.example.viewer.R
 import com.example.viewer.Util
 import com.example.viewer.databinding.ViewerActivityBinding
 import com.example.viewer.dialog.SimpleEditTextDialog
+import com.example.viewer.fetcher.BasePictureFetcher
 import kotlinx.coroutines.launch
 import org.jsoup.HttpStatusException
 import java.io.File
 import java.io.FileNotFoundException
-import java.io.IOException
 import java.net.ConnectException
 import java.net.SocketException
 import java.net.SocketTimeoutException
@@ -54,6 +53,7 @@ abstract class BaseViewerActivity: AppCompatActivity() {
     protected abstract fun reloadPage()
     protected abstract suspend fun getPictureStoredUrl (page: Int): String
     protected abstract suspend fun downloadPicture (page: Int): File
+    protected abstract fun getPictureFetcher (): BasePictureFetcher
 
     protected lateinit var viewerActivityBinding: ViewerActivityBinding
 
@@ -200,9 +200,15 @@ abstract class BaseViewerActivity: AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
+                if (myPage == page && getPictureFetcher().isPictureDownloading(page)) {
+                    viewerActivityBinding.progress.textView.text = getString(R.string.n_percent, 0)
+                    toggleLoadFailedScreen(false)
+                    toggleLoadingUi(true)
+                }
+
                 val pictureUrl = try {
                     getPictureStoredUrl(myPage)
-                } catch (e: FileNotFoundException) {
+                } catch (_: FileNotFoundException) {
                     if (myPage == page) {
                         toggleLoadFailedScreen(false)
                         toggleLoadingUi(true)
@@ -210,11 +216,6 @@ abstract class BaseViewerActivity: AppCompatActivity() {
                     downloadPicture(myPage).path
                 }
                 if (myPage == page) {
-//                    viewerActivityBinding.photoView.setImageDrawable(
-//                        ImageDecoder.decodeDrawable(
-//                            ImageDecoder.createSource(File(pictureUrl))
-//                        )
-//                    )
                     val pictureFile = File(pictureUrl)
                     Glide.with(baseContext)
                         .load(pictureFile)
@@ -249,9 +250,8 @@ abstract class BaseViewerActivity: AppCompatActivity() {
                                 }
                                 "圖片下載失敗"
                             }
+                            is BasePictureFetcher.PictureDownloadFailException -> "圖片下載失敗"
                             is ConnectException, is SocketException -> "連接失敗"
-//                            is DecodeException -> "${getString(R.string.fail_to_load_picture)} (decode)"
-//                            is IOException -> "${getString(R.string.fail_to_load_picture)} (io)"
                             is GlideException -> getString(R.string.fail_to_load_picture)
                             else -> throw e
                         }

@@ -119,4 +119,6 @@ class OnlineViewerActivity: BaseViewerActivity() {
         pictureUrls[page] = picture.path
         return picture
     }
+
+    override fun getPictureFetcher(): BasePictureFetcher = fetcher
 }
