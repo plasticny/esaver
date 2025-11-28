@@ -419,9 +419,10 @@ class SearchActivity: AppCompatActivity() {
             searchRepo.storeLastNext(searchMarkData.id, searchHelper.nextToStore)
 
             val doc = withContext(Dispatchers.IO) {
-                Jsoup.connect(
-                    searchHelper.getNextBlockSearchUrl().also { println("[SearchActivity.fetchBooks] fetch book from\n$it") }
-                ).get()
+                searchHelper.getNextBlockSearchUrl().let {
+                    println("[SearchActivity.fetchBooks] fetch book from\n$it")
+                    searchHelper.fetchWebpage(it)
+                }
             }
 
             if (mySearchId != searchMarkData.id) {
@@ -445,9 +446,10 @@ class SearchActivity: AppCompatActivity() {
 
         do {
             val doc = withContext(Dispatchers.IO) {
-                Jsoup.connect(
-                    searchHelper.getPrevBlockSearchUrl().also { println("[SearchActivity.fetchBooks] fetch book from\n$it") }
-                ).get()
+                searchHelper.getPrevBlockSearchUrl().let {
+                    println("[SearchActivity.fetchBooks] fetch book from\n$it")
+                    searchHelper.fetchWebpage(it)
+                }
             }
 
             if (mySearchId != searchMarkData.id) {

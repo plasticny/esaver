@@ -5,7 +5,10 @@ import com.example.viewer.fetcher.EPictureFetcher
 import com.example.viewer.struct.BookSource
 import com.example.viewer.struct.Category
 import com.google.gson.Gson
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.jsoup.HttpStatusException
+import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 
 class ESearchHelper (
@@ -22,6 +25,11 @@ class ESearchHelper (
     override fun getPrevBlockSearchUrl(): String = getSearchUrl(
         prev = if (this.prev == NOT_SET) null else this.prev.toString()
     )
+
+    override suspend fun fetchWebpage(webpageUrl: String): Document =
+        withContext(Dispatchers.IO) {
+            Jsoup.connect(webpageUrl).get()
+        }
 
     /**
      * This method will access and change the private variable next and prev

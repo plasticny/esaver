@@ -1,17 +1,22 @@
 package com.example.viewer.fetcher
 
 import android.content.Context
+import android.net.Uri
 import android.util.Log
 import com.example.viewer.Util
 import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.struct.BookSource
+import it.skrape.core.htmlDocument
+import it.skrape.fetcher.BrowserFetcher
+import it.skrape.fetcher.response
+import it.skrape.fetcher.skrape
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.jsoup.HttpStatusException
-import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
 import java.io.File
 
 class WnPictureFetcher: BasePictureFetcher {
@@ -98,7 +103,7 @@ class WnPictureFetcher: BasePictureFetcher {
 
         val res = withContext(Dispatchers.IO) {
             obtainRequestSlot()
-            Jsoup.connect(getPageUrl(page)).get()
+            fetchWebpage(getPageUrl((page)))
         }.getElementById("picarea")?.attr("src")
         if (res != null) {
             pictureUrlMap[page] = "https:${res}"
@@ -131,11 +136,11 @@ class WnPictureFetcher: BasePictureFetcher {
                 Util.log(logTag, "load next p $p")
                 val pageDoc = try {
                     obtainRequestSlot()
-                    Jsoup.connect(
+                    fetchWebpage(
                         "https://www.wnacg.com/photos-index-page-${p}-aid-${bookId}.html".also {
                             Util.log(logTag, "fetch next p from $it")
                         }
-                    ).get()
+                    )
                 } catch (e: HttpStatusException) {
                     if (e.statusCode == 404) {
                         Log.e(logTag, "404 on fetching book p")
@@ -161,4 +166,17 @@ class WnPictureFetcher: BasePictureFetcher {
         }
         return pageUrls[page]!!
     }
+
+    private suspend fun fetchWebpage(webpageUrl: String): Document =
+        withContext(Dispatchers.IO) {
+            skrape(BrowserFetcher) {
+                request {
+                    url = webpageUrl
+                }
+                response {
+                    htmlDocument { this }
+                }
+            }.document
+        }
+
 }

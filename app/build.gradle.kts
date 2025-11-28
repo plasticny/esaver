@@ -55,6 +55,8 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "/META-INF/DEPENDENCIES"
+            excludes += "mozilla/public-suffix-list.txt"
         }
     }
 }
@@ -100,4 +102,6 @@ dependencies {
     implementation("com.fasterxml.jackson.core:jackson-core:2.19.0")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.19.0")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.19.+")
+
+    implementation("it.skrape:skrapeit:1.2.2")
 }

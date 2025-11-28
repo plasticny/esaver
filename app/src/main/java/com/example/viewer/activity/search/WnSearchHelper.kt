@@ -1,12 +1,17 @@
 package com.example.viewer.activity.search
 
+import android.net.Uri
 import com.example.viewer.data.struct.Book
 import com.example.viewer.struct.BookSource
 import com.example.viewer.struct.Category
 import com.google.gson.Gson
+import it.skrape.core.document
+import it.skrape.core.htmlDocument
+import it.skrape.fetcher.BrowserFetcher
+import it.skrape.fetcher.response
+import it.skrape.fetcher.skrape
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 
 class WnSearchHelper (
@@ -33,6 +38,18 @@ class WnSearchHelper (
         assert(prev != NOT_SET && hasPrevBlock)
         return createSearchUrl(prev)
     }
+
+    override suspend fun fetchWebpage(webpageUrl: String): Document =
+        withContext(Dispatchers.IO) {
+            skrape(BrowserFetcher) {
+                request {
+                    url = webpageUrl
+                }
+                response {
+                    htmlDocument { this }
+                }
+            }.document
+        }
 
     override fun processSearchDoc (doc: Document): List<SearchBookData> {
         // update next
@@ -80,7 +97,7 @@ class WnSearchHelper (
 
     override suspend fun storeDetailAsTmpBook (searchBookData: SearchBookData): Boolean {
         val doc = withContext(Dispatchers.IO) {
-            Jsoup.connect(searchBookData.url).get()
+            fetchWebpage(searchBookData.url)
         }
 
         val gson = Gson()
@@ -107,7 +124,7 @@ class WnSearchHelper (
 
     private fun createSearchUrl (searchPageNumber: Int): String {
         return if (isKeywordSearching) {
-            "https://www.wnacg.com/search/index.php?q=${searchMarkData.keyword}&syn=yes&f=_all&s=create_time_DESC&p=${searchPageNumber}"
+            "https://www.wnacg.com/search/?q=${Uri.encode(searchMarkData.keyword)}&syn=yes&f=_all&s=create_time_DESC&p=${searchPageNumber}"
         } else if (category == Category.All) {
             "https://www.wnacg.com/albums-index-page-${searchPageNumber}.html"
         } else {
@@ -124,7 +141,7 @@ class WnSearchHelper (
     private fun cateClassToCategory (cateClass: String): Category {
         val cateIndex = cateClass.slice(5 until cateClass.length)
         return when (cateIndex.toInt()) {
-            1, 2, 12, 16 -> Category.Doujinshi
+            1, 2, 12, 16, 37 -> Category.Doujinshi
             3 -> Category.Cosplay
             9, 13 -> Category.Manga
             7, 10, 14, 17 -> Category.Magazine
