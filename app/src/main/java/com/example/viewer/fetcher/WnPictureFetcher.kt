@@ -1,13 +1,12 @@
 package com.example.viewer.fetcher
 
 import android.content.Context
-import android.net.Uri
 import android.util.Log
 import com.example.viewer.Util
 import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.struct.BookSource
 import it.skrape.core.htmlDocument
-import it.skrape.fetcher.BrowserFetcher
+import it.skrape.fetcher.HttpFetcher
 import it.skrape.fetcher.response
 import it.skrape.fetcher.skrape
 import kotlinx.coroutines.Dispatchers
@@ -169,7 +168,7 @@ class WnPictureFetcher: BasePictureFetcher {
 
     private suspend fun fetchWebpage(webpageUrl: String): Document =
         withContext(Dispatchers.IO) {
-            skrape(BrowserFetcher) {
+            skrape(HttpFetcher) {
                 request {
                     url = webpageUrl
                 }

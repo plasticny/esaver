@@ -5,9 +5,8 @@ import com.example.viewer.data.struct.Book
 import com.example.viewer.struct.BookSource
 import com.example.viewer.struct.Category
 import com.google.gson.Gson
-import it.skrape.core.document
 import it.skrape.core.htmlDocument
-import it.skrape.fetcher.BrowserFetcher
+import it.skrape.fetcher.HttpFetcher
 import it.skrape.fetcher.response
 import it.skrape.fetcher.skrape
 import kotlinx.coroutines.Dispatchers
@@ -41,7 +40,7 @@ class WnSearchHelper (
 
     override suspend fun fetchWebpage(webpageUrl: String): Document =
         withContext(Dispatchers.IO) {
-            skrape(BrowserFetcher) {
+            skrape(HttpFetcher) {
                 request {
                     url = webpageUrl
                 }
