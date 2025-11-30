@@ -33,7 +33,7 @@ abstract class BasePictureFetcher {
             println("[BasePictureFetcher.getFetcher] $source")
             return when (source) {
                 BookSource.E -> EPictureFetcher(context, bookId)
-                BookSource.Hi -> HiPictureFetcher(context, bookId)
+//                BookSource.Hi -> HiPictureFetcher(context, bookId)
                 BookSource.Wn -> WnPictureFetcher(context, bookId)
                 else -> throw NotImplementedError(source.name)
             }
@@ -96,7 +96,9 @@ abstract class BasePictureFetcher {
         val fullBookId = bookId?.let {
             when (bookSource) {
                 BookSource.Wn -> "wn$bookId"
-                BookSource.E, BookSource.Hi -> bookId
+                BookSource.E -> bookId
+                else -> throw NotImplementedError(bookSource.name)
+//                BookSource.Hi -> bookId
             }
         }
         if (bookId == null || !bookIdTxt.exists() || fullBookId!! != bookIdTxt.readText()) {
