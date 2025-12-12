@@ -11,6 +11,7 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import com.example.viewer.databinding.FragmentMainOtherBinding
+import com.example.viewer.preference.KeyPreference
 import java.io.FileInputStream
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
@@ -51,13 +52,30 @@ class OtherFragment: Fragment() {
 
         context = requireContext()
 
-        rootBinding.backupButton.setOnClickListener {
-            saveBackupLauncher.launch("eSaver_backup_${Date()}.txt")
+        KeyPreference.getInstance(context).run {
+            rootBinding.ruUserIdEditText.setText(
+                getRuUserId() ?: ""
+            )
+            rootBinding.ruApiKeyEditText.setText(
+                getRuApiKey() ?: ""
+            )
         }
 
-        rootBinding.importButton.setOnClickListener {
-            importBackupLauncher.launch(arrayOf("text/plain"))
+        rootBinding.saveButton.setOnClickListener {
+            KeyPreference.getInstance(context).run {
+                setRuUserId(rootBinding.ruUserIdEditText.text.toString())
+                setRuApiKey(rootBinding.ruApiKeyEditText.text.toString())
+                Toast.makeText(context, "saved", Toast.LENGTH_SHORT).show()
+            }
         }
+
+//        rootBinding.backupButton.setOnClickListener {
+//            saveBackupLauncher.launch("eSaver_backup_${Date()}.txt")
+//        }
+//
+//        rootBinding.importButton.setOnClickListener {
+//            importBackupLauncher.launch(arrayOf("text/plain"))
+//        }
 
         return rootBinding.root
     }

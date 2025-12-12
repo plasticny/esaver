@@ -8,16 +8,48 @@
     android:gravity="center"
     android:padding="16dp">
 
-    <Button
-        android:id="@+id/backup_button"
+<!--    <Button-->
+<!--        android:id="@+id/backup_button"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:text="@string/backup"/>-->
+
+<!--    <Button-->
+<!--        android:id="@+id/import_button"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:text="@string/import_db"/>-->
+
+    <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/backup"/>
+        android:text="Ru User ID"
+        android:textColor="@color/white"/>
+
+    <EditText
+        android:id="@+id/ru_user_id_editText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/white"
+        android:backgroundTint="@color/grey"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Ru Api Key"
+        android:textColor="@color/white"/>
+
+    <EditText
+        android:id="@+id/ru_api_key_editText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/white"
+        android:backgroundTint="@color/grey"/>
 
     <Button
-        android:id="@+id/import_button"
+        android:id="@+id/save_button"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/import_db"/>
+        android:text="save"/>
 
 </LinearLayout>
