@@ -34,6 +34,7 @@
     <string name="non_h">非H</string>
     <string name="magazine">雜誌</string>
     <string name="cosplay">Cosplay</string>
+    <string name="image_set">圖集</string>
 <!--  search mark dialog  -->
     <string name="book_source">書源</string>
     <string name="do_apply_exclude_tag">啟用濾除標籤？</string>

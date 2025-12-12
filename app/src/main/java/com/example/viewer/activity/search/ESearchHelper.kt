@@ -148,9 +148,7 @@ class ESearchHelper (
                 it.value
             }
         } else {
-            listOf(
-                Category.NonH, Category.Manga, Category.ArtistCG, Category.Doujinshi
-            ).sumOf { it.value }
+            Category.ECategories.sumOf { it.value }
         }
 
         // f search

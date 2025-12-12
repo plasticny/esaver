@@ -56,9 +56,7 @@ class EHandler (
 
         // category button
         ownerRootBinding.categoryWrapper.removeAllViews()
-        listOf(
-            Category.Doujinshi, Category.Manga, Category.ArtistCG, Category.NonH
-        ).forEachIndexed { index, cat ->
+        Category.ECategories.forEachIndexed { index, cat ->
             ownerRootBinding.categoryWrapper.addView(
                 createCategoryButton(cat, index % 2).apply {
                     setOnClickListener {

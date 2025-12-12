@@ -105,6 +105,7 @@ class WnPictureFetcher: BasePictureFetcher {
             fetchWebpage(getPageUrl((page)))
         }.getElementById("picarea")?.attr("src")
         if (res != null) {
+            println(res)
             pictureUrlMap[page] = "https:${res}"
         } else {
             throw IllegalStateException("cannot fetch picture url of page $page")
@@ -113,7 +114,9 @@ class WnPictureFetcher: BasePictureFetcher {
 
         Util.log(logTag, "fetch $page end")
 
-        assert(pictureUrlMap.containsKey(page)) { pictureUrlMap.keys.toString() }
+        assert(pictureUrlMap.containsKey(page)) {
+            "exist keys: ${pictureUrlMap.keys}; assert to be exist: $page"
+        }
         return pictureUrlMap.getValue(page)
     }
 
