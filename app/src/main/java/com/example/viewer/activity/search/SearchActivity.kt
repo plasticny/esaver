@@ -324,7 +324,7 @@ class SearchActivity: AppCompatActivity() {
     private suspend fun reset () {
         resetting = true
 
-        searchHelper = SearchHelper.getSearchHelper(searchMarkData)
+        searchHelper = SearchHelper.getSearchHelper(baseContext, searchMarkData)
 
         totalBookLoaded = 0
         totalBookFiltered = 0
@@ -418,18 +418,16 @@ class SearchActivity: AppCompatActivity() {
         do {
             searchRepo.storeLastNext(searchMarkData.id, searchHelper.nextToStore)
 
-            val doc = withContext(Dispatchers.IO) {
-                searchHelper.getNextBlockSearchUrl().let {
+            val fetchedBooks = searchHelper.fetchBooks(
+                searchHelper.getNextBlockSearchUrl().also {
                     println("[SearchActivity.fetchBooks] fetch book from\n$it")
-                    searchHelper.fetchWebpage(it)
                 }
-            }
+            ) { mySearchId != searchMarkData.id }?.also { totalBookLoaded += it.size }
 
-            if (mySearchId != searchMarkData.id) {
+            if (fetchedBooks == null) {
                 break
             }
 
-            val fetchedBooks = searchHelper.processSearchDoc(doc).also { totalBookLoaded += it.size }
             books = if (searchMarkData.doExclude) {
                 excludeTagFilter(fetchedBooks).also {
                     totalBookFiltered += (fetchedBooks.size - it.size)
@@ -445,18 +443,16 @@ class SearchActivity: AppCompatActivity() {
         var books = listOf<SearchBookData>()
 
         do {
-            val doc = withContext(Dispatchers.IO) {
-                searchHelper.getPrevBlockSearchUrl().let {
+            val fetchedBooks = searchHelper.fetchBooks(
+                searchHelper.getPrevBlockSearchUrl().also {
                     println("[SearchActivity.fetchBooks] fetch book from\n$it")
-                    searchHelper.fetchWebpage(it)
                 }
-            }
+            ) { mySearchId != searchMarkData.id }?.also { totalBookLoaded += it.size }
 
-            if (mySearchId != searchMarkData.id) {
+            if (fetchedBooks == null) {
                 break
             }
 
-            val fetchedBooks = searchHelper.processSearchDoc(doc).also { totalBookLoaded += it.size }
             books = if (searchMarkData.doExclude) {
                 excludeTagFilter(fetchedBooks).also {
                     totalBookFiltered += (fetchedBooks.size - it.size)

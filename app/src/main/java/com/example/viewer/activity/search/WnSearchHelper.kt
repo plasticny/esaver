@@ -38,19 +38,44 @@ class WnSearchHelper (
         return createSearchUrl(prev)
     }
 
-    override suspend fun fetchWebpage(webpageUrl: String): Document =
-        withContext(Dispatchers.IO) {
-            skrape(HttpFetcher) {
-                request {
-                    url = webpageUrl
-                }
-                response {
-                    htmlDocument { this }
-                }
-            }.document
+    override suspend fun fetchBooks(
+        searchUrl: String,
+        isSearchMarkChanged: () -> Boolean
+    ): List<SearchBookData>? {
+        val doc = withContext(Dispatchers.IO) {
+            fetchWebpage(searchUrl)
+        }
+        return if (isSearchMarkChanged()) null else processSearchDoc(doc)
+    }
+
+    override suspend fun storeDetailAsTmpBook (searchBookData: SearchBookData): Boolean {
+        val doc = withContext(Dispatchers.IO) {
+            fetchWebpage(searchBookData.url)
         }
 
-    override fun processSearchDoc (doc: Document): List<SearchBookData> {
+        val gson = Gson()
+
+        val tags: Map<String, List<String>> = mapOf(
+            "標籤" to doc.select(".addtags > .tagshow").map { it.text() }
+        )
+
+        Book.setTmpBook(
+            id = searchBookData.id,
+            url = searchBookData.url,
+            title = searchBookData.title,
+            subTitle = "",
+            pageNum = searchBookData.pageNum,
+            categoryOrdinal = searchBookData.cat.ordinal,
+            uploader = doc.selectFirst(".uwuinfo p")?.text(),
+            tagsJson = gson.toJson(tags),
+            sourceOrdinal = BookSource.Wn.ordinal,
+            coverUrl = searchBookData.coverUrl
+        )
+
+        return true
+    }
+
+    private fun processSearchDoc (doc: Document): List<SearchBookData> {
         // update next
         if (isKeywordSearching) {
             val elThisPage = doc.getElementsByClass("thispage").first()
@@ -94,32 +119,17 @@ class WnSearchHelper (
         }
     }
 
-    override suspend fun storeDetailAsTmpBook (searchBookData: SearchBookData): Boolean {
-        val doc = withContext(Dispatchers.IO) {
-            fetchWebpage(searchBookData.url)
+    private suspend fun fetchWebpage (webpageUrl: String): Document =
+        withContext(Dispatchers.IO) {
+            skrape(HttpFetcher) {
+                request {
+                    url = webpageUrl
+                }
+                response {
+                    htmlDocument { this }
+                }
+            }.document
         }
-
-        val gson = Gson()
-
-        val tags: Map<String, List<String>> = mapOf(
-            "標籤" to doc.select(".addtags > .tagshow").map { it.text() }
-        )
-
-        Book.setTmpBook(
-            id = searchBookData.id,
-            url = searchBookData.url,
-            title = searchBookData.title,
-            subTitle = "",
-            pageNum = searchBookData.pageNum,
-            categoryOrdinal = searchBookData.cat.ordinal,
-            uploader = doc.selectFirst(".uwuinfo p")?.text(),
-            tagsJson = gson.toJson(tags),
-            sourceOrdinal = BookSource.Wn.ordinal,
-            coverUrl = searchBookData.coverUrl
-        )
-
-        return true
-    }
 
     private fun createSearchUrl (searchPageNumber: Int): String {
         return if (isKeywordSearching) {

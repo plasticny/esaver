@@ -14,7 +14,7 @@ class BookSourceSelectDialog (context: Context, layoutInflater: LayoutInflater) 
     private lateinit var cb: (selectedSource: BookSource) -> Unit
 
     init {
-        for (source in listOf(BookSource.E, BookSource.Wn)) {
+        for (source in listOf(BookSource.E, BookSource.Wn, BookSource.Ru)) {
             val itemBinding = DialogListItemBinding.inflate(layoutInflater, dialogBinding.tagWrapper, false)
 
             itemBinding.name.text = source.keyString

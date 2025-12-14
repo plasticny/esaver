@@ -3,7 +3,8 @@ package com.example.viewer.struct
 enum class BookSource (val keyString: String) {
     E("eHentai"),
     Hi("hitomi"),
-    Wn("Wnacg");
+    Wn("Wnacg"),
+    Ru("Rule34");
 
     companion object {
         @JvmStatic

@@ -25,9 +25,11 @@ class KeyPreference (context: Context): BasePreference() {
         fun ruApiKey () = stringPreferencesKey("ruApiKey")
     }
 
-    fun getRuUserId (): String? = read(storeKeys.ruUserId())
+    fun isRuReady (): Boolean = (getRuUserId() != "") && (getRuApiKey() != "")
 
-    fun getRuApiKey (): String? = read(storeKeys.ruApiKey())
+    fun getRuUserId (): String = read(storeKeys.ruUserId()) ?: ""
+
+    fun getRuApiKey (): String = read(storeKeys.ruApiKey()) ?: ""
 
     fun setRuUserId (userId: String) = store(storeKeys.ruUserId(), userId)
 

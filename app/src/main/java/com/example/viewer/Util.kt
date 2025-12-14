@@ -82,8 +82,6 @@ class Util {
                 .readValues<Map<String, T>>(json)
                 .let { if (it.hasNextValue()) it.next() else mapOf() }
 
-
-
         fun getUrlSource (url: String): BookSource? = when {
             Regex("(http(s?)://)?e-hentai.org/g/(\\d+)/([a-zA-Z0-9]+)(/?)$").matches(url) -> BookSource.E
 //            Regex("(http(s?)://)?hitomi.la/reader/(\\d+).html(#(\\d+))?$").matches(url) -> BookSource.Hi

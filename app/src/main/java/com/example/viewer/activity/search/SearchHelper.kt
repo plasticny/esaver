@@ -1,5 +1,6 @@
 package com.example.viewer.activity.search
 
+import android.content.Context
 import com.example.viewer.struct.BookSource
 import org.jsoup.nodes.Document
 
@@ -10,11 +11,12 @@ abstract class SearchHelper (
         const val NOT_SET = -1
         const val ENDED = -2
 
-        fun getSearchHelper (searchMarkData: SearchMarkData): SearchHelper {
-            return when (searchMarkData.sourceOrdinal) {
-                BookSource.E.ordinal -> ESearchHelper(searchMarkData)
-                BookSource.Wn.ordinal -> WnSearchHelper(searchMarkData)
-                else -> throw NotImplementedError()
+        fun getSearchHelper (context: Context, searchMarkData: SearchMarkData): SearchHelper {
+            return when (BookSource.fromOrdinal(searchMarkData.sourceOrdinal)) {
+                BookSource.E -> ESearchHelper(searchMarkData)
+                BookSource.Wn -> WnSearchHelper(searchMarkData)
+                BookSource.Ru -> RuSearchHelper(context, searchMarkData)
+                BookSource.Hi -> throw NotImplementedError("unexpected source")
             }
         }
     }
@@ -33,8 +35,7 @@ abstract class SearchHelper (
 
     abstract fun getNextBlockSearchUrl (): String
     abstract fun getPrevBlockSearchUrl (): String
-    abstract suspend fun fetchWebpage (webpageUrl: String): Document
-    abstract fun processSearchDoc (doc: Document): List<SearchBookData>
+    abstract suspend fun fetchBooks (searchUrl: String, isSearchMarkChanged: () -> Boolean): List<SearchBookData>?
     abstract suspend fun storeDetailAsTmpBook (searchBookData: SearchBookData): Boolean
 
     fun loadSearchHistory (next: Int) {

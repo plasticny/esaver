@@ -42,6 +42,11 @@ open class SearchMarkDialog (
             field = value
             dialogBinding.nameFieldContainer.visibility = if (value) View.VISIBLE else View.GONE
         }
+    var showCategoryField: Boolean = true
+        set (value) {
+            field = value
+            dialogBinding.categoryFieldWrapper.visibility = if (value) View.VISIBLE else View.GONE
+        }
     var showKeywordField: Boolean = true
         set (value) {
             field = value
@@ -110,7 +115,10 @@ open class SearchMarkDialog (
                             Category.All,
                             dialogData.keyword
                         )
-                        else -> throw IllegalArgumentException("unexpected source ordinal")
+                        BookSource.Ru -> showRuSearchMark(
+                            dialogData.keyword
+                        )
+                        BookSource.Hi -> throw IllegalArgumentException("unexpected source ordinal")
                     }
                 }
             }
@@ -210,6 +218,17 @@ open class SearchMarkDialog (
             context, layoutInflater,
             this, dialogBinding,
             name, category, keyword
+        ).also { it.setupUi() }
+        dialog.show()
+    }
+
+    fun showRuSearchMark (
+        keyword: String = ""
+    ) {
+        dialogHandler = RuHandler(
+            context, layoutInflater,
+            this, dialogBinding,
+            keyword
         ).also { it.setupUi() }
         dialog.show()
     }

@@ -53,12 +53,8 @@ class OtherFragment: Fragment() {
         context = requireContext()
 
         KeyPreference.getInstance(context).run {
-            rootBinding.ruUserIdEditText.setText(
-                getRuUserId() ?: ""
-            )
-            rootBinding.ruApiKeyEditText.setText(
-                getRuApiKey() ?: ""
-            )
+            rootBinding.ruUserIdEditText.setText(getRuUserId())
+            rootBinding.ruApiKeyEditText.setText(getRuApiKey())
         }
 
         rootBinding.saveButton.setOnClickListener {

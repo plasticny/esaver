@@ -93,15 +93,19 @@ dependencies {
     implementation("androidx.navigation:navigation-fragment-ktx:2.8.8")
     implementation("androidx.navigation:navigation-ui-ktx:2.8.8")
 
+    // preferences
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 
+    // room
     implementation("androidx.room:room-runtime:2.7.1")
     implementation("androidx.room:room-ktx:2.7.1")
     ksp("androidx.room:room-compiler:2.7.1")
 
+    // json parser
     implementation("com.fasterxml.jackson.core:jackson-core:2.19.0")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.19.0")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.19.+")
 
+    // skrapeit
     implementation("it.skrape:skrapeit:1.2.2")
 }
