@@ -25,10 +25,10 @@
             
             <androidx.cardview.widget.CardView
                 android:id="@+id/search_source_button"
-                android:layout_width="25dp"
-                android:layout_height="25dp"
+                android:layout_width="26dp"
+                android:layout_height="26dp"
                 android:backgroundTint="@color/grey"
-                app:cardCornerRadius="20dp">
+                app:cardCornerRadius="13dp">
 
                 <TextView
                     android:id="@+id/search_source_text"

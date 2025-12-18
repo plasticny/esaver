@@ -1,6 +1,7 @@
 package com.example.viewer.fetcher
 
 import android.content.Context
+import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
 import android.util.Log
 import com.example.viewer.Util
@@ -194,17 +195,26 @@ abstract class BasePictureFetcher {
                 file.outputStream().use {
                     response.body!!.byteStream().copyTo(it)
                 }
-                try {
-                    ImageDecoder.decodeBitmap(ImageDecoder.createSource(file))
-                } catch (_: Exception) {
-                    file.delete()
-                    throw PictureDownloadFailException()
+                BitmapFactory.decodeFile(file.absolutePath).let {
+                    if (it == null) {
+                        file.delete()
+                        throw PictureDownloadFailException()
+                    }
                 }
-                finally {
+                // this line should be after the write-to-file statement
+                // else a corrupted image might be read
+                downloadingPages.remove(page)
+//                try {
+//                    ImageDecoder.decodeBitmap(ImageDecoder.createSource(file))
+//                } catch (_: Exception) {
+//                    file.delete()
+//                    throw PictureDownloadFailException()
+//                }
+//                finally {
                     // this line should be after the write-to-file statement
                     // else a corrupted image might be read
-                    downloadingPages.remove(page)
-                }
+//                    downloadingPages.remove(page)
+//                }
 
                 Log.i(logTag, "download finished: $page")
 
