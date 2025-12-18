@@ -18,7 +18,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.viewer"
-        minSdk = 31
+        minSdk = 26
         targetSdk = 34
         versionCode = 1
         versionName = "im1.0"
