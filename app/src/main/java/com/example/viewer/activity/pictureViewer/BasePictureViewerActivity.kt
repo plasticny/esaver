@@ -1,4 +1,4 @@
-package com.example.viewer.activity.viewer
+package com.example.viewer.activity.pictureViewer
 
 import android.animation.Animator
 import android.animation.Animator.AnimatorListener
@@ -26,7 +26,7 @@ import com.bumptech.glide.request.target.Target
 import com.bumptech.glide.signature.MediaStoreSignature
 import com.example.viewer.R
 import com.example.viewer.Util
-import com.example.viewer.databinding.ViewerActivityBinding
+import com.example.viewer.databinding.ActivityPictureViewerBinding
 import com.example.viewer.dialog.SimpleEditTextDialog
 import com.example.viewer.fetcher.BasePictureFetcher
 import kotlinx.coroutines.launch
@@ -55,7 +55,7 @@ abstract class BaseViewerActivity: AppCompatActivity() {
     protected abstract suspend fun downloadPicture (page: Int): File
     protected abstract fun getPictureFetcher (): BasePictureFetcher
 
-    protected lateinit var viewerActivityBinding: ViewerActivityBinding
+    protected lateinit var viewerActivityBinding: ActivityPictureViewerBinding
 
     @Volatile
     protected var page = -1 // current page num, firstPage to lastPage
@@ -73,7 +73,7 @@ abstract class BaseViewerActivity: AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        viewerActivityBinding = ViewerActivityBinding.inflate(layoutInflater)
+        viewerActivityBinding = ActivityPictureViewerBinding.inflate(layoutInflater)
 
         viewerActivityBinding.photoView.setOnLongClickListener {
             onImageLongClicked()
