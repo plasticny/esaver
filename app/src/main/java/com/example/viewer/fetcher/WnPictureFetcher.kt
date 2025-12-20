@@ -4,18 +4,23 @@ import android.content.Context
 import android.util.Log
 import com.example.viewer.Util
 import com.example.viewer.data.repository.BookRepository
+import com.example.viewer.struct.BookSource
+import it.skrape.core.htmlDocument
+import it.skrape.fetcher.HttpFetcher
+import it.skrape.fetcher.response
+import it.skrape.fetcher.skrape
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.jsoup.HttpStatusException
-import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
 import java.io.File
 
 class WnPictureFetcher: BasePictureFetcher {
     companion object {
-        private const val MAX_REQUEST = 19
+        private const val MAX_REQUEST = 16
         private const val REQUEST_DELAY = 30000L
         private var request_cnt = 0
 
@@ -43,9 +48,6 @@ class WnPictureFetcher: BasePictureFetcher {
      */
     private val pictureUrlMap = mutableMapOf<Int, String>()
     private val getPageUrlMutex = Mutex()
-    // book id remove "wn"
-    private val pureBookId: String
-        get() = bookId!!.slice(2 until bookId.length)
 
     private var pageUrls: Array<String?>
     private var p: Int
@@ -53,7 +55,7 @@ class WnPictureFetcher: BasePictureFetcher {
     /**
      * for local book
      */
-    constructor (context: Context, bookId: String): super(context, bookId) {
+    constructor (context: Context, bookId: String): super(context, bookId, BookSource.Wn) {
         p = bookRepo.getBookP(bookId)
         bookUrl = bookRepo.getBookUrl(bookId)
         pageUrls = bookRepo.getBookPageUrls(bookId)
@@ -67,7 +69,7 @@ class WnPictureFetcher: BasePictureFetcher {
         pageNum: Int,
         bookUrl: String,
         bookId: String? = null
-    ): super(context, pageNum, bookId) {
+    ): super(context, pageNum, BookSource.Wn, bookId) {
         p = 1
         this.bookUrl = bookUrl
         pageUrls = arrayOfNulls(pageNum)
@@ -100,7 +102,7 @@ class WnPictureFetcher: BasePictureFetcher {
 
         val res = withContext(Dispatchers.IO) {
             obtainRequestSlot()
-            Jsoup.connect(getPageUrl(page)).get()
+            fetchWebpage(getPageUrl((page)))
         }.getElementById("picarea")?.attr("src")
         if (res != null) {
             pictureUrlMap[page] = "https:${res}"
@@ -111,7 +113,8 @@ class WnPictureFetcher: BasePictureFetcher {
 
         Util.log(logTag, "fetch $page end")
 
-        return pictureUrlMap[page]!!
+        assert(pictureUrlMap.containsKey(page)) { pictureUrlMap.keys.toString() }
+        return pictureUrlMap.getValue(page)
     }
 
     private suspend fun getPageUrl (page: Int): String {
@@ -132,11 +135,11 @@ class WnPictureFetcher: BasePictureFetcher {
                 Util.log(logTag, "load next p $p")
                 val pageDoc = try {
                     obtainRequestSlot()
-                    Jsoup.connect(
-                        "https://www.wnacg.com/photos-index-page-${p}-aid-${pureBookId}.html".also {
+                    fetchWebpage(
+                        "https://www.wnacg.com/photos-index-page-${p}-aid-${bookId}.html".also {
                             Util.log(logTag, "fetch next p from $it")
                         }
-                    ).get()
+                    )
                 } catch (e: HttpStatusException) {
                     if (e.statusCode == 404) {
                         Log.e(logTag, "404 on fetching book p")
@@ -162,4 +165,17 @@ class WnPictureFetcher: BasePictureFetcher {
         }
         return pageUrls[page]!!
     }
+
+    private suspend fun fetchWebpage(webpageUrl: String): Document =
+        withContext(Dispatchers.IO) {
+            skrape(HttpFetcher) {
+                request {
+                    url = webpageUrl
+                }
+                response {
+                    htmlDocument { this }
+                }
+            }.document
+        }
+
 }

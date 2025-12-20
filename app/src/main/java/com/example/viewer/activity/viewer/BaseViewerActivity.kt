@@ -4,7 +4,6 @@ import android.animation.Animator
 import android.animation.Animator.AnimatorListener
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
-import android.graphics.ImageDecoder.DecodeException
 import android.graphics.Rect
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
@@ -20,6 +19,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DataSource
+import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
@@ -28,11 +28,11 @@ import com.example.viewer.R
 import com.example.viewer.Util
 import com.example.viewer.databinding.ViewerActivityBinding
 import com.example.viewer.dialog.SimpleEditTextDialog
+import com.example.viewer.fetcher.BasePictureFetcher
 import kotlinx.coroutines.launch
 import org.jsoup.HttpStatusException
 import java.io.File
 import java.io.FileNotFoundException
-import java.io.IOException
 import java.net.ConnectException
 import java.net.SocketException
 import java.net.SocketTimeoutException
@@ -53,6 +53,7 @@ abstract class BaseViewerActivity: AppCompatActivity() {
     protected abstract fun reloadPage()
     protected abstract suspend fun getPictureStoredUrl (page: Int): String
     protected abstract suspend fun downloadPicture (page: Int): File
+    protected abstract fun getPictureFetcher (): BasePictureFetcher
 
     protected lateinit var viewerActivityBinding: ViewerActivityBinding
 
@@ -67,6 +68,7 @@ abstract class BaseViewerActivity: AppCompatActivity() {
      *  set as null when loading screen or load failed screen
      */
     private var placeHolderDrawable: Drawable? = null
+    private val preloaded = mutableSetOf<Int>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -198,9 +200,15 @@ abstract class BaseViewerActivity: AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
+                if (myPage == page && getPictureFetcher().isPictureDownloading(page)) {
+                    viewerActivityBinding.progress.textView.text = getString(R.string.n_percent, 0)
+                    toggleLoadFailedScreen(false)
+                    toggleLoadingUi(true)
+                }
+
                 val pictureUrl = try {
                     getPictureStoredUrl(myPage)
-                } catch (e: FileNotFoundException) {
+                } catch (_: FileNotFoundException) {
                     if (myPage == page) {
                         toggleLoadFailedScreen(false)
                         toggleLoadingUi(true)
@@ -208,20 +216,18 @@ abstract class BaseViewerActivity: AppCompatActivity() {
                     downloadPicture(myPage).path
                 }
                 if (myPage == page) {
-//                    viewerActivityBinding.photoView.setImageDrawable(
-//                        ImageDecoder.decodeDrawable(
-//                            ImageDecoder.createSource(File(pictureUrl))
-//                        )
-//                    )
                     val pictureFile = File(pictureUrl)
                     Glide.with(baseContext)
                         .load(pictureFile)
-                        .placeholder(placeHolderDrawable)
+//                        .placeholder(placeHolderDrawable)
                         .signature(MediaStoreSignature("", pictureFile.lastModified(), 0))
                         .listener(object: RequestListener<Drawable> {
-                            override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean): Boolean = false
+                            override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean): Boolean {
+                                toggleLoadFailedScreen(true, getString(R.string.fail_to_load_picture))
+                                return false
+                            }
                             override fun onResourceReady(resource: Drawable?, model: Any?, target: Target<Drawable>?, dataSource: DataSource?, isFirstResource: Boolean): Boolean {
-                                placeHolderDrawable = resource
+//                                placeHolderDrawable = resource
                                 return false
                             }
                         })
@@ -244,9 +250,9 @@ abstract class BaseViewerActivity: AppCompatActivity() {
                                 }
                                 "圖片下載失敗"
                             }
+                            is BasePictureFetcher.PictureDownloadFailException -> "圖片下載失敗"
                             is ConnectException, is SocketException -> "連接失敗"
-                            is DecodeException -> "${getString(R.string.fail_to_load_picture)} (decode)"
-                            is IOException -> "${getString(R.string.fail_to_load_picture)} (io)"
+                            is GlideException -> getString(R.string.fail_to_load_picture)
                             else -> throw e
                         }
                     )
@@ -255,6 +261,51 @@ abstract class BaseViewerActivity: AppCompatActivity() {
                 if (myPage == page) {
                     toggleLoadingUi(false)
                 }
+            }
+        }
+    }
+
+    protected fun preloadPage (page: Int) {
+        if (preloaded.contains(page)) {
+            return
+        }
+
+        lifecycleScope.launch {
+            try {
+                val pictureUrl = try {
+                    getPictureStoredUrl(page)
+                } catch (e: FileNotFoundException) {
+                    downloadPicture(page).path
+                }
+                val pictureFile = File(pictureUrl)
+                Glide.with(baseContext)
+                    .load(pictureFile)
+                    .diskCacheStrategy(DiskCacheStrategy.DATA)
+                    .signature(MediaStoreSignature("", pictureFile.lastModified(), 0))
+                    .listener(object: RequestListener<Drawable> {
+                        override fun onLoadFailed(
+                            e: GlideException?,
+                            model: Any?,
+                            target: Target<Drawable>?,
+                            isFirstResource: Boolean
+                        ): Boolean = false
+                        override fun onResourceReady(
+                            resource: Drawable?,
+                            model: Any?,
+                            target: Target<Drawable>?,
+                            dataSource: DataSource?,
+                            isFirstResource: Boolean
+                        ): Boolean {
+                            preloaded.add(page)
+                            return false
+                        }
+                    })
+                    .preload()
+            } catch (e: Exception) {
+                Util.log(
+                    "BaseViewerActivity.preloadPage",
+                    e.stackTraceToString()
+                )
             }
         }
     }

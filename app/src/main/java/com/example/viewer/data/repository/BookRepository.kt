@@ -1,7 +1,6 @@
 package com.example.viewer.data.repository
 
 import android.content.Context
-import android.graphics.Point
 import android.graphics.PointF
 import androidx.room.Transaction
 import com.example.viewer.Util
@@ -77,6 +76,7 @@ class BookRepository (private val context: Context) {
             bookWithGroupDao.insert(
                 BookWithGroup(
                     bookId = id,
+                    bookSourceOrdinal = source.ordinal,
                     groupId = groupId
                 )
             )
@@ -145,6 +145,10 @@ class BookRepository (private val context: Context) {
             throw Exception("delete book folder failed")
         }
 
+        GroupRepository(context).removeIfEmpty(
+            runBlocking { bookWithGroupDao.queryGroupId(book.id) }
+        )
+
         listLastUpdateTime = System.currentTimeMillis()
 
         return true
@@ -184,6 +188,10 @@ class BookRepository (private val context: Context) {
     }
 
     fun getAllBookIds () = runBlocking { bookDao.getAllBookIds() }
+
+    fun getBookIdSeqH () = runBlocking { bookDao.getBookIdSeqH() }
+
+    fun getBookIdSeqNH () = runBlocking { bookDao.getBookIdSeqNH() }
 
     fun getBookUrl (id: String) = runBlocking { bookDao.getUrl(id) }
 

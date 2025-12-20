@@ -5,7 +5,10 @@ import com.example.viewer.fetcher.EPictureFetcher
 import com.example.viewer.struct.BookSource
 import com.example.viewer.struct.Category
 import com.google.gson.Gson
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.jsoup.HttpStatusException
+import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 
 class ESearchHelper (
@@ -22,6 +25,11 @@ class ESearchHelper (
     override fun getPrevBlockSearchUrl(): String = getSearchUrl(
         prev = if (this.prev == NOT_SET) null else this.prev.toString()
     )
+
+    override suspend fun fetchWebpage(webpageUrl: String): Document =
+        withContext(Dispatchers.IO) {
+            Jsoup.connect(webpageUrl).get()
+        }
 
     /**
      * This method will access and change the private variable next and prev
@@ -77,6 +85,23 @@ class ESearchHelper (
                         val cat = tr.selectFirst(".tc")!!.text().trim().dropLast(1)
                         set(cat, tr.select(".gt,.gtl").map { it.text().trim() })
                     }
+                },
+                rating = book.selectFirst(".ir")!!.attr("style").split(';').let {
+                    for (item in it) {
+                        val itemTokens = item.split(':')
+                        if (itemTokens[0].trim() == "background-position") {
+                            // value example: "-48px -1px"
+                            val valueTokens = itemTokens[1].split("px")
+                            val x = valueTokens[0].trim().toInt()
+                            val y = valueTokens[1].trim().toInt()
+                            var rating = 5 + x / 16f
+                            if (y != -1) {
+                                rating -= 0.5f
+                            }
+                            return@let rating
+                        }
+                    }
+                    throw IllegalStateException()
                 }
             )
         }
@@ -119,7 +144,7 @@ class ESearchHelper (
 
         val fCatsValue = 1023 - if (searchMarkData.categories.isNotEmpty()) {
             searchMarkData.categories.sumOf {
-                assert(it.value != -1)
+                assert(it.value != -1) { it.name }
                 it.value
             }
         } else {

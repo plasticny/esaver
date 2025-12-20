@@ -15,7 +15,7 @@ import com.example.viewer.data.struct.Group
 
 @Database (
     entities = [Book::class, BookWithGroup::class, Group::class],
-    version = 9,
+    version = 10,
     exportSchema = false
 )
 abstract class BookDatabase: RoomDatabase() {
@@ -30,6 +30,7 @@ abstract class BookDatabase: RoomDatabase() {
                     .addMigrations(migration_6_7)
                     .addMigrations(migration_7_8)
                     .addMigrations(migration_8_9)
+                    .addMigrations(migration_9_10)
                     .build().also { instance = it }
             }
 
@@ -93,6 +94,80 @@ abstract class BookDatabase: RoomDatabase() {
         private val migration_8_9 = object: Migration(8, 9) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE Books ADD COLUMN coverCropPositionString TEXT DEFAULT NULL")
+            }
+        }
+
+        private val migration_9_10 = object: Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // books
+                db.execSQL("" +
+                    "CREATE TABLE Books_new (" +
+                        "id TEXT NOT NULL, " +
+                        "sourceOrdinal INTEGER NOT NULL, " +
+                        "url TEXT NOT NULL, " +
+                        "title TEXT NOT NULL, " +
+                        "subTitle TEXT NOT NULL, " +
+                        "pageNum INTEGER NOT NULL, " +
+                        "categoryOrdinal INTEGER NOT NULL, " +
+                        "uploader TEXT, " +
+                        "tagsJson TEXT NOT NULL, " +
+                        "coverPage INTEGER NOT NULL, " +
+                        "skipPagesJson TEXT NOT NULL, " +
+                        "lastViewTime INTEGER NOT NULL, " +
+                        "bookMarksJson TEXT NOT NULL, " +
+                        "customTitle TEXT, " +
+                        "coverCropPositionString TEXT, " +
+                        "pageUrlsJson TEXT, " +
+                        "p INTEGER, " +
+                        "PRIMARY KEY(id, sourceOrdinal)" +
+                    ")" +
+                "")
+                db.execSQL("" +
+                    "INSERT INTO Books_new (" +
+                        "id, sourceOrdinal, url, title, subTitle, pageNum, categoryOrdinal, " +
+                        "uploader, tagsJson, coverPage, skipPagesJson, lastViewTime, bookMarksJson, " +
+                        "customTitle, coverCropPositionString, pageUrlsJson, p" +
+                    ") " +
+                    "SELECT " +
+                        "id, sourceOrdinal, url, title, subTitle, pageNum, categoryOrdinal, " +
+                        "uploader, tagsJson, coverPage, skipPagesJson, lastViewTime, bookMarksJson, " +
+                        "customTitle, coverCropPositionString, pageUrlsJson, p " +
+                    "FROM Books" +
+                "")
+
+                db.execSQL("DROP TABLE Books")
+                db.execSQL("ALTER TABLE Books_new RENAME TO Books")
+
+                db.execSQL("CREATE INDEX index_Books_id ON Books(id)")
+
+                // bookWithGroups
+                db.execSQL("" +
+                    "CREATE TABLE BookWithGroups_new (" +
+                        "bookId TEXT NOT NULL, " +
+                        "bookSourceOrdinal INTEGER NOT NULL, " +
+                        "groupId INTEGER NOT NULL, " +
+                        "PRIMARY KEY(bookId, bookSourceOrdinal), " +
+                        "FOREIGN KEY(groupId) REFERENCES BookGroups(id) ON DELETE RESTRICT, " +
+                        "FOREIGN KEY(bookId, bookSourceOrdinal) REFERENCES Books(id, sourceOrdinal) ON DELETE CASCADE" +
+                    ")" +
+                "")
+                db.execSQL("" +
+                    "INSERT INTO " +
+                        "BookWithGroups_new (bookId, bookSourceOrdinal, groupId) " +
+                    "SELECT " +
+                        "bookId, " +
+                        "(SELECT sourceOrdinal FROM Books WHERE bookId = id), " +
+                        "groupId FROM BookWithGroups" +
+                "")
+
+                db.execSQL("DROP TABLE BookWithGroups")
+                db.execSQL("ALTER TABLE BookWithGroups_new RENAME TO BookWithGroups")
+
+                db.execSQL("CREATE INDEX index_BookWithGroups_groupId ON BookWithGroups(groupId)")
+
+                // remove starting
+                db.execSQL("UPDATE BookWithGroups SET bookId = substr(bookId, 3) WHERE bookId LIKE 'wn%'")
+                db.execSQL("UPDATE Books SET id = substr(id, 3) WHERE id LIKE 'wn%'")
             }
         }
     }

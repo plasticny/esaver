@@ -9,5 +9,6 @@ data class SearchBookData (
     val cat: Category,
     val title: String,
     val pageNum: Int,
-    val tags: Map<String, List<String>>
+    val tags: Map<String, List<String>>,
+    val rating: Float?
 )

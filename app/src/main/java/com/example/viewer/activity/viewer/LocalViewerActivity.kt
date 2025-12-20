@@ -10,6 +10,7 @@ import com.example.viewer.R
 import com.example.viewer.fetcher.BasePictureFetcher
 import com.example.viewer.RandomBook
 import com.example.viewer.Util
+import com.example.viewer.activity.BookProfileActivity
 import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.databinding.ViewerImageDialogBinding
 import com.example.viewer.dialog.BookmarkDialog
@@ -124,19 +125,16 @@ class LocalViewerActivity: BaseViewerActivity() {
 
     override fun loadPage(myPage: Int) {
         super.loadPage(page)
-        nextPageOf(page)?.let { np ->
-            super.loadPage(np)
-            nextPageOf(np)?.let {
-                nnp -> super.loadPage(nnp)
-            }
-        }
-        prevPageOf(page)?.let { pp ->
-            super.loadPage(pp)
-            prevPageOf(pp)?.let {
-                ppp -> super.loadPage(ppp)
+        // preload
+        for (d in arrayOf(1, -1, 2, -2)) {
+            val preloadPage = page + d
+            if (preloadPage in 0 until lastPage) {
+                super.preloadPage(preloadPage)
             }
         }
     }
+
+    override fun getPictureFetcher(): BasePictureFetcher = fetcher
 
     private fun prepareBook (bookId: String) {
         skipPageSet = bookDataset.getBookSkipPages(bookId).toSet()
@@ -225,11 +223,15 @@ class LocalViewerActivity: BaseViewerActivity() {
     }
 
     private fun nextBook () {
-        bookId = RandomBook.next(this, !Util.isInternetAvailable(this))
+        bookId = RandomBook.next(this)
+
         prepareBook(bookId)
         runBlocking {
             bookDataset.updateBookLastViewTime(bookId)
         }
+
+        BookProfileActivity.changeBookWhenResume(bookId)
+
         loadPage()
     }
 

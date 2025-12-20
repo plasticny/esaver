@@ -2,7 +2,9 @@ package com.example.viewer.fetcher
 
 import android.content.Context
 import android.util.Log
+import com.example.viewer.Util
 import com.example.viewer.data.repository.BookRepository
+import com.example.viewer.struct.BookSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -12,6 +14,7 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import java.io.File
 import java.net.UnknownHostException
+import kotlin.math.log
 
 class EPictureFetcher: BasePictureFetcher {
     companion object {
@@ -47,6 +50,7 @@ class EPictureFetcher: BasePictureFetcher {
      * map page and its picture url
      */
     private val pictureUrlMap = mutableMapOf<Int, String>()
+    private val nlMap = mutableMapOf<Int, String>()
     private val getPageUrlMutex = Mutex()
 
     private var pageUrls: Array<String?>
@@ -55,7 +59,7 @@ class EPictureFetcher: BasePictureFetcher {
     /**
      * for local book
      */
-    constructor (context: Context, bookId: String): super(context, bookId) {
+    constructor (context: Context, bookId: String): super(context, bookId, BookSource.E) {
         p = bookRepo.getBookP(bookId)
         bookUrl = bookRepo.getBookUrl(bookId)
         pageUrls = bookRepo.getBookPageUrls(bookId)
@@ -69,7 +73,7 @@ class EPictureFetcher: BasePictureFetcher {
         pageNum: Int,
         bookUrl: String,
         bookId: String? = null
-    ): super(context, pageNum, bookId) {
+    ): super(context, pageNum, BookSource.E, bookId) {
         p = 0
         this.bookUrl = bookUrl
         pageUrls = arrayOfNulls(pageNum)
@@ -81,24 +85,55 @@ class EPictureFetcher: BasePictureFetcher {
     ): File {
         println("[EPictureFetcher.savePicture] $page")
         assertPageInRange(page)
-        return downloadPicture(page, fetchPictureUrl(page), progressListener =  progressListener)
+
+        return try {
+            downloadPicture(page, fetchPictureUrl(page, false), progressListener =  progressListener)
+        } catch (_: PictureDownloadFailException) {
+            downloadPicture(page, fetchPictureUrl(page, true), progressListener =  progressListener)
+        }
     }
 
-    override suspend fun fetchPictureUrl (page: Int): String {
+    override suspend fun fetchPictureUrl (page: Int) = fetchPictureUrl(page, false)
+
+    suspend fun fetchPictureUrl (page: Int, useNl: Boolean): String {
         if (fetchingPictureUrl.contains(page)) {
             withContext(Dispatchers.IO) {
                 Thread.sleep(100)
             }
         }
 
-        if (pictureUrlMap.containsKey(page)) {
+        if (pictureUrlMap.containsKey(page) && !useNl) {
             return pictureUrlMap.getValue(page)
         }
 
-        println("[${this::class.simpleName}.${this::fetchPictureUrl.name}] $page")
+        val logTag = "${this::class.simpleName}.fetchPictureUrl"
+        Util.log(logTag, "fetching picture url for page $page")
 
         fetchingPictureUrl.add(page)
-        val res = fetchWebpage(getPageUrl(page)).selectFirst("#i3 #img")?.attr("src")
+
+        val pageUrl = getPageUrl(page).let {
+            if (useNl) {
+                assert(nlMap.contains(page))
+                "$it?nl=${nlMap[page]}"
+            } else it
+        }
+        Util.log(logTag, "fetching picture url from $pageUrl")
+
+        val imgEl = fetchWebpage(pageUrl).selectFirst("#i3 #img")
+
+        // extract nl
+        if (!useNl) {
+            imgEl?.attr("onerror")?.let { errorStr ->
+                val regex = Regex("nl\\('([^']*)'\\)")
+                val matchResult = regex.find(errorStr)
+                matchResult?.groupValues?.first()?.let { s ->
+                    nlMap[page] = s.substring(4..s.lastIndex-2)
+                }
+            }
+        }
+
+        // extract picture url
+        val res = imgEl?.attr("src")
         if (res != null) {
             pictureUrlMap[page] = res
         } else {

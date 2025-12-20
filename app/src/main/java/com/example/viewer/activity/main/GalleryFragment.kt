@@ -14,6 +14,7 @@ import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.data.repository.GroupRepository
 import com.example.viewer.data.struct.Book
 import com.example.viewer.databinding.FragmentMainGalleryBinding
+import com.example.viewer.dialog.RandomBookSettingDialog
 
 class GalleryFragment: Fragment() {
     private lateinit var ctx: Context
@@ -40,7 +41,9 @@ class GalleryFragment: Fragment() {
         }
 
         binding.randomOpenButton.setOnClickListener {
-            bookGallery.openRandomBook()
+            RandomBookSettingDialog(ctx, inflater).show {
+                bookGallery.openRandomBook()
+            }
         }
 
         // handle user select group in group list fragment
@@ -48,25 +51,6 @@ class GalleryFragment: Fragment() {
             val id = b.getInt(GroupListFragment.BUNDLE_SELECTED_ID_KEY)
             bookGallery.scrollToGroup(id)
         }
-
-//        binding.galleryTextAll.setOnClickListener {
-//            bookGallery.applyFilter()
-//            binding.galleryTextAll.setTextColor(ContextCompat.getColor(ctx, R.color.white))
-//            binding.galleryTextDownloaded.setTextColor(ContextCompat.getColor(ctx, R.color.grey))
-//            binding.galleryTextNotDownloaded.setTextColor(ContextCompat.getColor(ctx, R.color.grey))
-//        }
-//        binding.galleryTextDownloaded.setOnClickListener {
-//            bookGallery.applyFilter(true)
-//            binding.galleryTextAll.setTextColor(ContextCompat.getColor(ctx, R.color.grey))
-//            binding.galleryTextDownloaded.setTextColor(ContextCompat.getColor(ctx, R.color.white))
-//            binding.galleryTextNotDownloaded.setTextColor(ContextCompat.getColor(ctx, R.color.grey))
-//        }
-//        binding.galleryTextNotDownloaded.setOnClickListener {
-//            bookGallery.applyFilter(false)
-//            binding.galleryTextAll.setTextColor(ContextCompat.getColor(ctx, R.color.grey))
-//            binding.galleryTextDownloaded.setTextColor(ContextCompat.getColor(ctx, R.color.grey))
-//            binding.galleryTextNotDownloaded.setTextColor(ContextCompat.getColor(ctx, R.color.white))
-//        }
 
         return binding.root
     }

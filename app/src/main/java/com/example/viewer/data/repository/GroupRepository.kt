@@ -46,8 +46,8 @@ class GroupRepository (context: Context) {
 
     fun getGroupName (id: Int): String = runBlocking { groupDao.queryName(id) }
 
-    fun getGroupBookIds (id: Int): List<String> =
-        runBlocking { bookWithGroupDao.queryBookIds(id) }
+    fun getGroupBookIdentifies (id: Int): List<BookWithGroup.Companion.BookIdentify> =
+        runBlocking { bookWithGroupDao.queryBookIdentifyInGroup(id) }
 
     fun getLastUpdateTime (): Long = latestUpdateTime
 
@@ -57,7 +57,7 @@ class GroupRepository (context: Context) {
     @Transaction
     fun changeGroup (bookId: String, oldGroupId: Int, newGroupId: Int) = runBlocking {
         bookWithGroupDao.updateGroupId(bookId, newGroupId)
-        if (oldGroupId != DEFAULT_GROUP_ID && getGroupBookIds(oldGroupId).isEmpty()) {
+        if (oldGroupId != DEFAULT_GROUP_ID && getGroupBookIdentifies(oldGroupId).isEmpty()) {
             removeGroup(oldGroupId)
         }
     }
@@ -66,8 +66,8 @@ class GroupRepository (context: Context) {
         groupDao.updateName(id, name)
     }
 
-    fun addBookIdToGroup (groupId: Int, bookId: String) = runBlocking {
-        bookWithGroupDao.insert(BookWithGroup(bookId, groupId))
+    fun addBookIdToGroup (groupId: Int, bookId: String, sourceOrdinal: Int) = runBlocking {
+        bookWithGroupDao.insert(BookWithGroup(bookId, sourceOrdinal, groupId))
         latestUpdateTime = System.currentTimeMillis()
     }
 
@@ -93,6 +93,15 @@ class GroupRepository (context: Context) {
             return@runBlocking
         }
         moveGroup(from, to)
+    }
+
+    fun removeIfEmpty (id: Int) = runBlocking {
+        if (id == DEFAULT_GROUP_ID) {
+            return@runBlocking
+        }
+        if(getGroupBookIdentifies(id).isEmpty()) {
+            removeGroup(id)
+        }
     }
 
     @Transaction

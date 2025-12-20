@@ -33,6 +33,7 @@ abstract class SearchHelper (
 
     abstract fun getNextBlockSearchUrl (): String
     abstract fun getPrevBlockSearchUrl (): String
+    abstract suspend fun fetchWebpage (webpageUrl: String): Document
     abstract fun processSearchDoc (doc: Document): List<SearchBookData>
     abstract suspend fun storeDetailAsTmpBook (searchBookData: SearchBookData): Boolean
 

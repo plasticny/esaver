@@ -34,7 +34,14 @@
     <string name="non_h">非H</string>
     <string name="magazine">雜誌</string>
     <string name="cosplay">Cosplay</string>
-<!--  strings  -->
+<!--  search mark dialog  -->
+    <string name="book_source">書源</string>
+    <string name="do_apply_exclude_tag">啟用濾除標籤？</string>
+<!--  random book setting dialog  -->
+    <string name="set_random_book">設定隨機</string>
+    <string name="do_include_h">包含H？</string>
+    <string name="do_include_non_h">包含非H？</string>
+<!--  other  -->
     <string name="app_name">eSaver</string>
     <string name="enter_url">輸入URL</string>
     <string name="all">全部</string>
@@ -62,6 +69,7 @@
     <string name="read">閱讀</string>
     <string name="save_to_gallery">存至書庫</string>
     <string name="n_page">%1$d頁</string>
+    <string name="n_score">%1$.1f分</string>
     <string name="filter_out">濾除</string>
     <string name="load_more">加載更多</string>
     <string name="keyword">關鍵字</string>
@@ -89,12 +97,10 @@
     <string name="noGroup">無分組</string>
     <string name="group">分組</string>
     <string name="uploader">上傳者</string>
-    <string name="do_apply_exclude_tag">啟用濾除標籤？</string>
     <string name="import_db">匯入</string>
     <string name="number_of_result">結果數﹕</string>
     <string name="loaded">已讀取﹕</string>
     <string name="filtered_out">已濾去﹕</string>
     <string name="filtered_tag_is_disabled">(禁用了濾去標籤)</string>
     <string name="select_book_source">選擇書源</string>
-    <string name="book_source">書源</string>
 </resources>

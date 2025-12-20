@@ -17,9 +17,12 @@ import com.example.viewer.activity.BookProfileActivity
 import com.example.viewer.data.database.BookDatabase
 import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.data.repository.GroupRepository
+import com.example.viewer.data.struct.Book
+import com.example.viewer.data.struct.BookWithGroup
 import com.example.viewer.databinding.FragmentMainGalleryBookBinding
 import com.example.viewer.databinding.MainGalleryFragmentAuthorBinding
 import com.example.viewer.fetcher.BasePictureFetcher
+import com.example.viewer.struct.BookSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -67,7 +70,7 @@ class BookGallery (
 
     fun refreshBooks () = groupRecyclerViewAdapter.refreshGroupBooks()
 
-    fun openRandomBook () = openBook(RandomBook.next(context, !Util.isInternetAvailable(context)))
+    fun openRandomBook () = openBook(RandomBook.next(context))
 
     fun scrollToGroup (id: Int) = recyclerView.scrollToPosition(groupRecyclerViewAdapter.getGroupPosition(id))
 
@@ -173,9 +176,9 @@ class BookGallery (
             val imageView: ImageView = itemView.findViewById(R.id.gallery_item)
         }
 
-        private var bookIds: List<String> = getBookIds()
+        private var bookIdentifies: List<BookWithGroup.Companion.BookIdentify> = getBookIdentifies()
         val bookNum: Int
-            get() = bookIds.size
+            get() = bookIdentifies.size
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): BookRecyclerViewHolder {
             val binding = FragmentMainGalleryBookBinding.inflate(layoutInflater, parent, false)
@@ -189,9 +192,10 @@ class BookGallery (
         override fun getItemCount(): Int = bookNum
 
         override fun onBindViewHolder(holder: BookRecyclerViewHolder, position: Int) {
-            val id = bookIds[position]
+            val (id, sourceOrdinal) = bookIdentifies[position]
+
             println("[${this@BookGallery::class.simpleName}.${this::class.simpleName}] binding $id")
-            val bookFolder = File(context.getExternalFilesDir(null), id)
+            val bookFolder = Book.getBookFolder(context, id, sourceOrdinal)
 
             val coverPage = bookRepo.getBookCoverPage(id)
             val cropPosition = bookRepo.getCoverCropPosition(id)
@@ -220,12 +224,12 @@ class BookGallery (
         }
 
         fun refresh () {
-            bookIds = getBookIds()
+            bookIdentifies = getBookIdentifies()
             notifyDataSetChanged()
         }
 
-        private fun getBookIds (): List<String> {
-            return groupRepo.getGroupBookIds(groupId)
+        private fun getBookIdentifies (): List<BookWithGroup.Companion.BookIdentify> {
+            return groupRepo.getGroupBookIdentifies(groupId)
 //            return groupDatabase.getGroupBookIds(groupId).filter {
 //                filter.isFiltered(context, it, bookDatabase)
 //            }

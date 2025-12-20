@@ -69,6 +69,11 @@ class BookProfileActivity: AppCompatActivity() {
                 Pair(width, height).also { coverMetrics = it }
             }
         }
+
+        private var resumeBookId: String? = null
+        fun changeBookWhenResume (bookId: String) {
+            resumeBookId = bookId
+        }
     }
 
     private lateinit var book: Book
@@ -88,18 +93,40 @@ class BookProfileActivity: AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        rootBinding = BookProfileActivityBinding.inflate(layoutInflater)
+        setContentView(rootBinding.root)
+
         bookRepo = BookRepository(baseContext)
 
-        book = bookRepo.getBook(intent.getStringExtra("bookId")!!)
-        isBookStored = runBlocking { bookRepo.isBookStored(book.id) }
+        prepareForBook(intent.getStringExtra("bookId")!!)
+    }
 
+    override fun onResume() {
+        super.onResume()
+        if (resumeBookId != null) {
+            prepareForBook(resumeBookId!!)
+            resumeBookId = null
+        }
+        else if (isBookStored) {
+            // the cover page may updated
+            refreshCoverPage()
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+//        Book.clearTmpBook()
+    }
+
+    private fun prepareForBook (bookId: String) {
+        book = bookRepo.getBook(bookId)
+
+        isBookStored = runBlocking { bookRepo.isBookStored(book.id) }
         excludedTags = ExcludeTagRepository(baseContext).findExcludedTags(book)
 
         //
-        // init ui
+        // setup ui
         //
-
-        rootBinding = BookProfileActivityBinding.inflate(layoutInflater)
 
         rootBinding.coverWrapper.let {
             // adjust cover image size
@@ -161,6 +188,8 @@ class BookProfileActivity: AppCompatActivity() {
                     visibility = View.VISIBLE
                     rootBinding.warningText.text = getString(R.string.contain_offensive_context)
                 }
+
+                visibility = View.INVISIBLE
             }
         }
 
@@ -234,6 +263,7 @@ class BookProfileActivity: AppCompatActivity() {
         }
 
         rootBinding.tagWrapper.apply {
+            removeAllViews()
             lifecycleScope.launch {
                 for (entry in book.getTags().entries) {
                     addView(createTagRow(entry.key, entry.value).root)
@@ -241,22 +271,7 @@ class BookProfileActivity: AppCompatActivity() {
             }
         }
 
-        setContentView(rootBinding.root)
-
         refreshButtons()
-    }
-
-    override fun onResume() {
-        super.onResume()
-        if (isBookStored) {
-            // the cover page may updated
-            refreshCoverPage()
-        }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-//        Book.clearTmpBook()
     }
 
     private fun createTagRow (tagCat: String, tagValues: List<String>) =
@@ -372,7 +387,7 @@ class BookProfileActivity: AppCompatActivity() {
     private fun refreshCoverPage () {
         if (isBookStored) {
             val file = File(
-                "${getExternalFilesDir(null)}/${book.id}",
+                Book.getBookFolder(baseContext, book.id, book.sourceOrdinal),
                 bookRepo.getBookCoverPage(book.id).toString()
             )
             Glide.with(baseContext)
@@ -421,7 +436,7 @@ class BookProfileActivity: AppCompatActivity() {
         }
 
         // create book folder
-        File(getExternalFilesDir(null), book.id).also {
+        Book.getBookFolder(baseContext, book.id, book.sourceOrdinal).also {
             if (!it.exists()) {
                 it.mkdirs()
             }
@@ -444,7 +459,8 @@ class BookProfileActivity: AppCompatActivity() {
             source = BookSource.fromOrdinal(book.sourceOrdinal),
             uploader = book.uploader
         )
-        groupRepo.addBookIdToGroup(GroupRepository.DEFAULT_GROUP_ID, book.id)
+        groupRepo.addBookIdToGroup(GroupRepository.DEFAULT_GROUP_ID, book.id, book.sourceOrdinal)
+        Book.clearTmpBook()
 
         // update ui
         toggleProgressBar(false)
@@ -485,11 +501,11 @@ class BookProfileActivity: AppCompatActivity() {
             p = book.p
         )
 
-        File(getExternalFilesDir(null), newBook.id).also { newFolder ->
+        Book.getBookFolder(baseContext, newBook.id, book.sourceOrdinal).also { newFolder ->
             if (!newFolder.exists()) {
                 newFolder.mkdirs()
             }
-            val originFolder = File(getExternalFilesDir(null), book.id)
+            val originFolder = Book.getBookFolder(baseContext, book.id, book.sourceOrdinal)
             for (originFile in originFolder.listFiles()!!) {
                 val newFile = File(newFolder, originFile.name)
                 originFile.copyTo(newFile)
@@ -497,7 +513,7 @@ class BookProfileActivity: AppCompatActivity() {
         }
 
         bookRepo.addBook(newBook)
-        groupRepo.addBookIdToGroup(GroupRepository.DEFAULT_GROUP_ID, newBook.id)
+        groupRepo.addBookIdToGroup(GroupRepository.DEFAULT_GROUP_ID, newBook.id, newBook.sourceOrdinal)
 
         book = bookRepo.getBook(newBook.id)
         ConfirmDialog(this, layoutInflater).show(
@@ -615,6 +631,7 @@ class BookProfileActivity: AppCompatActivity() {
                 // skip page
                 updateSkipPages(
                     book.id,
+                    book.sourceOrdinal,
                     dialogBinding.profileDialogSkipPagesEditText.text.toString().trim(),
                     skipPages
                 )
@@ -638,7 +655,7 @@ class BookProfileActivity: AppCompatActivity() {
         /**
          * @param text text of the skip page editText
          */
-        private fun updateSkipPages (bookId: String, text: String, originSkipPages: List<Int>) {
+        private fun updateSkipPages (bookId: String, bookSourceOrdinal: Int, text: String, originSkipPages: List<Int>) {
             val coverPage = bookRepo.getBookCoverPage(bookId)
             val updatedSkipPages = skipPageStringToList(text)
 
@@ -648,7 +665,7 @@ class BookProfileActivity: AppCompatActivity() {
 
             val newSkipPages = updatedSkipPages.minus(originSkipPages.toSet())
             if (newSkipPages.isNotEmpty()) {
-                val bookFolder = File(context.getExternalFilesDir(null), bookId)
+                val bookFolder = Book.getBookFolder(context, bookId, bookSourceOrdinal)
                 for (p in newSkipPages) {
                     if (p == coverPage) {
                         continue

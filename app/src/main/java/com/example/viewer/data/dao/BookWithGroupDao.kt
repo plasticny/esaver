@@ -27,8 +27,8 @@ interface BookWithGroupDao {
     @Query("SELECT groupId FROM BookWithGroups WHERE bookId = :id")
     suspend fun queryGroupId (id: String): Int
 
-    @Query("SELECT bookId FROM BookWithGroups WHERE groupId = :groupId ORDER BY bookId")
-    suspend fun queryBookIds (groupId: Int): List<String>
+    @Query("SELECT bookID, bookSourceOrdinal FROM BookWithGroups WHERE groupId = :groupId ORDER BY bookId")
+    suspend fun queryBookIdentifyInGroup (groupId: Int): List<BookWithGroup.Companion.BookIdentify>
 
     @Query("SELECT count(groupId) FROM BookWithGroups WHERE groupId = :id")
     suspend fun countByGroupId (id: Int): Int

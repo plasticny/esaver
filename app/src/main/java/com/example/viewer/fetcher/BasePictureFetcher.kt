@@ -1,9 +1,11 @@
 package com.example.viewer.fetcher
 
 import android.content.Context
+import android.graphics.ImageDecoder
 import android.util.Log
 import com.example.viewer.Util
 import com.example.viewer.data.repository.BookRepository
+import com.example.viewer.data.struct.Book
 import com.example.viewer.struct.BookSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -21,7 +23,6 @@ import java.io.File
 import java.io.FileNotFoundException
 import java.net.ConnectException
 import java.net.SocketTimeoutException
-import kotlin.math.log
 
 abstract class BasePictureFetcher {
     companion object {
@@ -66,12 +67,12 @@ abstract class BasePictureFetcher {
     /**
      * for local book
      */
-    protected constructor (context: Context, bookId: String) {
+    protected constructor (context: Context, bookId: String, bookSource: BookSource) {
         this.context = context
         this.bookId = bookId
 
         pageNum = BookRepository(context).getBookPageNum(bookId)
-        bookFolder = File(context.getExternalFilesDir(null), bookId)
+        bookFolder = Book.getBookFolder(context, bookId, bookSource.ordinal)
         isLocal = true
     }
 
@@ -79,7 +80,7 @@ abstract class BasePictureFetcher {
      * for online book
      * @param bookId system will store this id, and avoid repeat downloading if the current book id is same as previous one
      */
-    protected constructor (context: Context, pageNum: Int, bookId: String? = null) {
+    protected constructor (context: Context, pageNum: Int, bookSource: BookSource, bookId: String? = null) {
         this.context = context
         this.pageNum = pageNum
         this.bookId = bookId
@@ -92,14 +93,20 @@ abstract class BasePictureFetcher {
         // compare previous tmp book id and that of current
         // to determine whether if the tmp folder should be cleared
         val bookIdTxt = File(this.bookFolder, "bookId.txt")
-        if (bookId == null || !bookIdTxt.exists() || bookId != bookIdTxt.readText()) {
+        val fullBookId = bookId?.let {
+            when (bookSource) {
+                BookSource.Wn -> "wn$bookId"
+                BookSource.E, BookSource.Hi -> bookId
+            }
+        }
+        if (bookId == null || !bookIdTxt.exists() || fullBookId!! != bookIdTxt.readText()) {
             println("[${this::class.simpleName}] clear tmp folder")
             for (file in this.bookFolder.listFiles()!!) {
                 file.delete()
             }
             bookId?.let {
                 bookIdTxt.createNewFile()
-                bookIdTxt.writeText(bookId)
+                bookIdTxt.writeText(fullBookId!!)
             }
         }
 
@@ -154,7 +161,7 @@ abstract class BasePictureFetcher {
         }
         downloadingPages.add(page)
 
-        val logTag = "${this@BasePictureFetcher::class.simpleName}.${this@BasePictureFetcher::downloadingPages.name}"
+        val logTag = "${this@BasePictureFetcher::class.simpleName}.${this@BasePictureFetcher::downloadPicture.name}"
 
         // build the download request
         val downloadClient = progressListener?.let {
@@ -187,10 +194,17 @@ abstract class BasePictureFetcher {
                 file.outputStream().use {
                     response.body!!.byteStream().copyTo(it)
                 }
-
-                // this line should be after the write-to-file statement
-                // else a corrupted image might be read
-                downloadingPages.remove(page)
+                try {
+                    ImageDecoder.decodeBitmap(ImageDecoder.createSource(file))
+                } catch (_: Exception) {
+                    file.delete()
+                    throw PictureDownloadFailException()
+                }
+                finally {
+                    // this line should be after the write-to-file statement
+                    // else a corrupted image might be read
+                    downloadingPages.remove(page)
+                }
 
                 Log.i(logTag, "download finished: $page")
 
@@ -215,6 +229,10 @@ abstract class BasePictureFetcher {
             }
         }
     }
+
+    fun isPictureDownloading (page: Int) = downloadingPages.contains(page)
+
+    class PictureDownloadFailException: Exception()
 }
 
 private class ProgressResponseBody (

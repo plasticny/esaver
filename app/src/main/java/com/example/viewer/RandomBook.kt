@@ -1,15 +1,15 @@
 package com.example.viewer
 
 import android.content.Context
-import com.example.viewer.data.database.BookDatabase
 import com.example.viewer.data.repository.BookRepository
+import com.example.viewer.data.struct.Book
 import kotlinx.coroutines.runBlocking
-import java.util.PriorityQueue
-import kotlin.random.Random
+import kotlin.math.floor
+import kotlin.math.min
 
 class RandomBook private constructor(context: Context) {
     companion object {
-        private const val INIT_POOL_SIZE = 5
+        private const val POOL_SIZE = 5
 
         @Volatile
         private var instance: RandomBook? = null
@@ -18,96 +18,73 @@ class RandomBook private constructor(context: Context) {
             instance ?: RandomBook(context).also { instance = it }
         }
 
-        /**
-         * @param onlyDownloaded only return complete downloaded book
-         */
-        fun next (context: Context, onlyDownloaded: Boolean = false) = getInstance(context).next(context, onlyDownloaded)
+        fun next (context: Context) = getInstance(context).next()
+
+        fun getPoolStatus (context: Context): Pair<Boolean, Boolean> =
+            getInstance(context).let { Pair(it.pullH, it.pullNH) }
+
+        fun changePool (context: Context, pullH: Boolean, pullNH: Boolean) {
+            getInstance(context).apply {
+                this.pullH = pullH
+                this.pullNH = pullNH
+            }
+        }
     }
 
     private val bookDataset = BookRepository(context)
 
-    private val bookIdSequence: MutableList<String>
-    private val arrangedBookId: MutableSet<String>
-    private val randomPool = mutableSetOf<String>()
-    private var position = INIT_POOL_SIZE - 1
-
-    init {
-        // sort the book ids by last view time
-        // if the time is the same, random order
-        val pq = PriorityQueue(object: Comparator<Pair<String, Long>> {
-            override fun compare(a: Pair<String, Long>?, b: Pair<String, Long>?): Int {
-                a ?: return 1
-                b ?: return -1
-                if (a.second != b.second) {
-                    return a.second.compareTo(b.second)
-                }
-                return Random.nextInt(-1, 2)
-            }
-        })
-
-        runBlocking {
-            for (bookId in bookDataset.getAllBookIds()) {
-                pq.add(Pair(bookId, bookDataset.getBookLastViewTime(bookId)))
-            }
-        }
-
-        // store result
-        bookIdSequence = pq.map { it.first }.toMutableList()
-        arrangedBookId = bookIdSequence.toMutableSet()
-        randomPool.addAll(bookIdSequence.subList(0, INIT_POOL_SIZE))
+    private val bookIdSequenceH: MutableList<Book.Companion.SequenceItem> by lazy {
+        runBlocking { bookDataset.getBookIdSeqH().toMutableList() }
+    }
+    private val bookIdSequenceNH: MutableList<Book.Companion.SequenceItem> by lazy {
+        runBlocking { bookDataset.getBookIdSeqNH().toMutableList() }
     }
 
-    private fun next (context: Context, onlyDownloaded: Boolean): String {
-        // check new book added
-        getNewAddedBookIds().also {
-            if (it.isNotEmpty()) {
-                bookIdSequence.addAll(position, it.shuffled())
-                arrangedBookId.addAll(it)
-            }
+    private var pullH = true
+    private var pullNH = false
+
+    private fun next (): String {
+        if (!pullH && !pullNH) {
+            throw IllegalStateException()
         }
 
-        return pullId(context, onlyDownloaded).also {
-            randomPool.remove(it)
-            randomPool.add(bookIdSequence[position])
-            movePosition()
+        val seqSize = (if (pullH) bookIdSequenceH.size else 0) + (if (pullNH) bookIdSequenceNH.size else 0)
+        val seqToPick = floor(Math.random() * min(POOL_SIZE, seqSize)).toInt()
+
+        if (!pullH) {
+            return pullIdFromSeq(bookIdSequenceNH, seqToPick)
         }
+        if (!pullNH) {
+            return pullIdFromSeq(bookIdSequenceH, seqToPick)
+        }
+        return pullIdFromAllSeq(seqToPick)
     }
 
-    private fun movePosition () {
-        if (++position > bookIdSequence.lastIndex) {
-            position = 0
-        }
+    private fun pullIdFromSeq (seq: MutableList<Book.Companion.SequenceItem>, toPick: Int): String {
+        val ret = seq.removeAt(toPick)
+        seq.add(Book.Companion.SequenceItem(
+            id = ret.id,
+            lastViewTime = seq.last().lastViewTime + 1
+        ))
+        return ret.id
     }
 
-    private fun getNewAddedBookIds (): List<String> {
-        val res = mutableListOf<String>()
-
-        // the returned book id is supposed to be sorted by added time, asc
-        val allBookIds = runBlocking { bookDataset.getAllBookIds() }
-        for (bookId in allBookIds.reversed()) {
-            if (arrangedBookId.contains(bookId)) {
-                break
+    private fun pullIdFromAllSeq (toPick: Int): String {
+        var idxH = 0
+        var idxNH = 0
+        var j = 0
+        while (j < toPick && idxH <= bookIdSequenceH.lastIndex && idxNH <= bookIdSequenceNH.lastIndex) {
+            if (bookIdSequenceH[idxH].lastViewTime < bookIdSequenceNH[idxNH].lastViewTime) {
+                idxH++
+            } else {
+                idxNH++
             }
-            res.add(bookId)
+            j++
         }
-        return res
-    }
 
-    private fun pullId (context: Context, onlyDownloaded: Boolean): String {
-        // WARNING: this function supposed some book is downloaded
-        println("[RandomBook.drawId] $randomPool")
-
-        if (!onlyDownloaded) {
-            return randomPool.random()
+        if (idxH > bookIdSequenceH.lastIndex || bookIdSequenceH[idxH].lastViewTime < bookIdSequenceNH[idxNH].lastViewTime) {
+            return pullIdFromSeq(bookIdSequenceNH, idxNH)
         }
-        while (true) {
-            val id = randomPool.random()
-            if (runBlocking { Util.isBookDownloaded(context, id) }) {
-                return id
-            }
-            randomPool.remove(id)
-            randomPool.add(bookIdSequence[position])
-            movePosition()
-        }
+        return pullIdFromSeq(bookIdSequenceH, idxH)
     }
 }

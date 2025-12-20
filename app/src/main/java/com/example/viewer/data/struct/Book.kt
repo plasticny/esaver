@@ -3,20 +3,24 @@ package com.example.viewer.data.struct
 import android.content.Context
 import android.graphics.Point
 import android.graphics.PointF
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Ignore
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.example.viewer.Util
+import com.example.viewer.struct.BookSource
 import com.example.viewer.struct.Category
 import java.io.File
 
 @Entity(
     tableName = "Books",
+    primaryKeys = ["id", "sourceOrdinal"],
     indices = [Index(value = ["id"])]
 )
 data class Book (
-    @PrimaryKey val id: String,
+    val id: String,
+    val sourceOrdinal: Int,
     val url: String,
     val title: String, // origin title
     val subTitle: String, // origin sub-title
@@ -24,7 +28,6 @@ data class Book (
     val categoryOrdinal: Int,
     val uploader: String?,
     val tagsJson: String,
-    val sourceOrdinal: Int,
     // user data
     var coverPage: Int,
     var skipPagesJson: String,
@@ -41,9 +44,17 @@ data class Book (
     var p: Int?
 ) {
     companion object {
+        data class SequenceItem (
+            @ColumnInfo("id")
+            val id: String,
+            @ColumnInfo("lastViewTime")
+            val lastViewTime: Long
+        )
+
         private var tmpBook: Book? = null
         private var tmpCoverUrl: String? = null
 
+        // tmp book will be removed once it is saved
         fun setTmpBook (
             id: String,
             url: String,
@@ -94,6 +105,15 @@ data class Book (
             }
             return PointF(tokens[0].toFloat(), tokens[1].toFloat())
         }
+
+        fun getBookFolder (context: Context, id: String, sourceOrdinal: Int) =
+            File(
+                context.getExternalFilesDir(null),
+                when (BookSource.entries[sourceOrdinal]) {
+                    BookSource.Wn -> "wn$id"
+                    BookSource.E, BookSource.Hi -> id
+                }
+            )
     }
 
     init {
@@ -114,11 +134,12 @@ data class Book (
         return coverPageFile.path
     }
 
-    fun getBookFolder (context: Context): File =
-        File(
-            context.getExternalFilesDir(null),
-            if (isTmpBook()) "tmp" else id
-        )
+    fun getBookFolder (context: Context): File {
+        if (isTmpBook()) {
+            return File(context.getExternalFilesDir(null), "tmp")
+        }
+        return Companion.getBookFolder(context, id, sourceOrdinal)
+    }
 
     fun getCoverCropPosition (): PointF? {
         if (coverCropPositionString == null) {

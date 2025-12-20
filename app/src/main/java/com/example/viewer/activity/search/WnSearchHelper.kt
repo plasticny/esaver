@@ -1,12 +1,16 @@
 package com.example.viewer.activity.search
 
+import android.net.Uri
 import com.example.viewer.data.struct.Book
 import com.example.viewer.struct.BookSource
 import com.example.viewer.struct.Category
 import com.google.gson.Gson
+import it.skrape.core.htmlDocument
+import it.skrape.fetcher.HttpFetcher
+import it.skrape.fetcher.response
+import it.skrape.fetcher.skrape
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 
 class WnSearchHelper (
@@ -21,6 +25,7 @@ class WnSearchHelper (
         prev = ENDED
         category = searchMarkData.categories.first()
         isKeywordSearching = category == Category.All && searchMarkData.keyword.isNotEmpty()
+        searchResultString = "N/A"
     }
 
     override fun getNextBlockSearchUrl (): String {
@@ -33,13 +38,26 @@ class WnSearchHelper (
         return createSearchUrl(prev)
     }
 
+    override suspend fun fetchWebpage(webpageUrl: String): Document =
+        withContext(Dispatchers.IO) {
+            skrape(HttpFetcher) {
+                request {
+                    url = webpageUrl
+                }
+                response {
+                    htmlDocument { this }
+                }
+            }.document
+        }
+
     override fun processSearchDoc (doc: Document): List<SearchBookData> {
         // update next
         if (isKeywordSearching) {
-            if (doc.getElementsByClass("thispage").first()!!.text() != next.toString()) {
-                next++
-            } else {
+            val elThisPage = doc.getElementsByClass("thispage").first()
+            if (elThisPage == null || elThisPage.text() == next.toString()) {
                 next = ENDED
+            } else {
+                next++
             }
         } else {
             if (doc.getElementsByClass("next").isNotEmpty()) {
@@ -53,7 +71,7 @@ class WnSearchHelper (
         return doc.getElementsByClass("gallary_item").mapNotNull { galleryItem ->
             val bookUrl = galleryItem.getElementsByTag("a").first()!!.attr("href")
             SearchBookData(
-                id = "wn${bookUrl.slice(18..bookUrl.length - 6)}",
+                id = bookUrl.slice(18..bookUrl.length - 6),
                 url = "https://www.wnacg.com$bookUrl",
                 coverUrl = "https:${galleryItem.getElementsByTag("img").first()!!.attr("src")}",
                 cat = if (searchMarkData.sourceOrdinal != Category.All.ordinal) {
@@ -70,14 +88,15 @@ class WnSearchHelper (
                 title = galleryItem.getElementsByClass("title").first()!!.text(),
                 pageNum = galleryItem.getElementsByClass("info_col").first()!!.text()
                     .trim().split("張").first().toInt(),
-                tags = mapOf()
+                tags = mapOf(),
+                rating = null
             )
         }
     }
 
     override suspend fun storeDetailAsTmpBook (searchBookData: SearchBookData): Boolean {
         val doc = withContext(Dispatchers.IO) {
-            Jsoup.connect(searchBookData.url).get()
+            fetchWebpage(searchBookData.url)
         }
 
         val gson = Gson()
@@ -104,7 +123,7 @@ class WnSearchHelper (
 
     private fun createSearchUrl (searchPageNumber: Int): String {
         return if (isKeywordSearching) {
-            "https://www.wnacg.com/search/index.php?q=${searchMarkData.keyword}&syn=yes&f=_all&s=create_time_DESC&p=${searchPageNumber}"
+            "https://www.wnacg.com/search/?q=${Uri.encode(searchMarkData.keyword)}&syn=yes&f=_all&s=create_time_DESC&p=${searchPageNumber}"
         } else if (category == Category.All) {
             "https://www.wnacg.com/albums-index-page-${searchPageNumber}.html"
         } else {
@@ -121,10 +140,10 @@ class WnSearchHelper (
     private fun cateClassToCategory (cateClass: String): Category {
         val cateIndex = cateClass.slice(5 until cateClass.length)
         return when (cateIndex.toInt()) {
-            1, 2, 12, 16 -> Category.Doujinshi
+            1, 2, 12, 16, 37 -> Category.Doujinshi
             3 -> Category.Cosplay
             9, 13 -> Category.Manga
-            10, 14 -> Category.Magazine
+            7, 10, 14, 17 -> Category.Magazine
             20, 23 -> throw ExcludedCategoryError(cateIndex)
             else -> throw NotImplementedError(cateIndex)
         }
