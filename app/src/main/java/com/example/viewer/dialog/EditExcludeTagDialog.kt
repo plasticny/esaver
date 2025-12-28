@@ -3,7 +3,7 @@ package com.example.viewer.dialog
 import android.content.Context
 import android.view.LayoutInflater
 import android.widget.Toast
-import com.example.viewer.data.struct.ExcludeTag
+import com.example.viewer.data.struct.search.ExcludeTag
 import com.example.viewer.dialog.SearchMarkDialog.DialogData
 import com.example.viewer.dialog.SearchMarkDialog.SearchMarkDialog
 import com.example.viewer.struct.Category

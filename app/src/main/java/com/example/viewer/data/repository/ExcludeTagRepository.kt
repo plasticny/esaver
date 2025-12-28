@@ -4,10 +4,10 @@ import android.content.Context
 import android.util.Log
 import androidx.compose.ui.util.fastMap
 import androidx.sqlite.db.SimpleSQLiteQuery
-import com.example.viewer.data.dao.ExcludeTagDao
+import com.example.viewer.data.dao.search.ExcludeTagDao
 import com.example.viewer.data.database.SearchDatabase
 import com.example.viewer.data.struct.Book
-import com.example.viewer.data.struct.ExcludeTag
+import com.example.viewer.data.struct.search.ExcludeTag
 import com.example.viewer.struct.BookSource
 import com.example.viewer.struct.Category
 import com.google.gson.Gson

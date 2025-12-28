@@ -21,7 +21,7 @@ import com.example.viewer.R
 import com.example.viewer.Util
 import com.example.viewer.activity.search.SearchActivity
 import com.example.viewer.data.repository.SearchRepository
-import com.example.viewer.data.struct.SearchMark
+import com.example.viewer.data.struct.search.SearchMark
 import com.example.viewer.databinding.ComponentListItemBinding
 import com.example.viewer.databinding.FragmentMainSearchBinding
 import com.example.viewer.dialog.BookSourceSelectDialog

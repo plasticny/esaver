@@ -1,7 +1,7 @@
 package com.example.viewer.activity.search
 
 import com.example.viewer.Util
-import com.example.viewer.data.struct.SearchMark
+import com.example.viewer.data.struct.search.SearchMark
 import com.example.viewer.struct.Category
 
 /**

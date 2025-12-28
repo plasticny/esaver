@@ -5,8 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
-import com.example.viewer.data.struct.Book
-import com.example.viewer.data.struct.SearchMark
+import com.example.viewer.data.struct.search.SearchMark
 import com.example.viewer.databinding.DialogSearchMarkBinding
 import com.example.viewer.dialog.BookSourceSelectDialog
 import com.example.viewer.struct.BookSource

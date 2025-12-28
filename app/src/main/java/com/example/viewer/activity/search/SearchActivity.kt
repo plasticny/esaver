@@ -20,7 +20,7 @@ import com.example.viewer.activity.BookProfileActivity
 import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.data.repository.ExcludeTagRepository
 import com.example.viewer.data.repository.SearchRepository
-import com.example.viewer.data.struct.SearchMark
+import com.example.viewer.data.struct.search.SearchMark
 import com.example.viewer.databinding.SearchActivityBinding
 import com.example.viewer.databinding.ActivitySearchBookBinding
 import com.example.viewer.databinding.DialogSearchInfoBinding
@@ -33,7 +33,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import org.jsoup.Jsoup
 
 /**
  * intExtra: searchMarkId; -1 for temporary search mark
