@@ -1,4 +1,4 @@
-package com.example.viewer.activity.viewer
+package com.example.viewer.activity.pictureViewer
 
 import android.os.Bundle
 import android.widget.Toast
@@ -17,7 +17,7 @@ import java.io.File
 import java.io.FileNotFoundException
 import kotlin.math.floor
 
-class OnlineViewerActivity: BaseViewerActivity() {
+class OnlinePictureViewerActivity: BaseViewerActivity() {
     private lateinit var book: Book
     private lateinit var fetcher: BasePictureFetcher
     private lateinit var pictureUrls: MutableList<String?>
@@ -107,7 +107,7 @@ class OnlineViewerActivity: BaseViewerActivity() {
         }
         val picture = withContext(Dispatchers.IO) {
             fetcher.savePicture(page) { total, downloaded ->
-                if (this@OnlineViewerActivity.page == page) {
+                if (this@OnlinePictureViewerActivity.page == page) {
                     CoroutineScope(Dispatchers.Main).launch {
                         viewerActivityBinding.progress.textView.text = getString(
                             R.string.n_percent, floor(downloaded.toDouble() / total * 100).toInt()

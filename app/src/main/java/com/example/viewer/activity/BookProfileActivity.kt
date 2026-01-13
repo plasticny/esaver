@@ -25,8 +25,9 @@ import com.example.viewer.R
 import com.example.viewer.Util
 import com.example.viewer.activity.main.MainActivity
 import com.example.viewer.activity.search.SearchActivity
-import com.example.viewer.activity.viewer.LocalViewerActivity
-import com.example.viewer.activity.viewer.OnlineViewerActivity
+import com.example.viewer.activity.pictureViewer.LocalPictureViewerActivity
+import com.example.viewer.activity.pictureViewer.OnlinePictureViewerActivity
+import com.example.viewer.activity.videoViewer.BaseVideoViewerActivity
 import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.data.repository.ExcludeTagRepository
 import com.example.viewer.data.repository.GroupRepository
@@ -202,13 +203,16 @@ class BookProfileActivity: AppCompatActivity() {
         }
 
         rootBinding.readButton.setOnClickListener {
-            if (isBookStored) {
+            if (book.sourceOrdinal == BookSource.Ru.ordinal) {
+                startActivity(Intent(baseContext, BaseVideoViewerActivity::class.java))
+            }
+            else if (isBookStored) {
                 BookRepository(baseContext).updateBookLastViewTime(book.id)
-                startActivity(Intent(baseContext, LocalViewerActivity::class.java).apply {
+                startActivity(Intent(baseContext, LocalPictureViewerActivity::class.java).apply {
                     putExtra("bookId", book.id)
                 })
             } else {
-                startActivity(Intent(baseContext, OnlineViewerActivity::class.java))
+                startActivity(Intent(baseContext, OnlinePictureViewerActivity::class.java))
             }
         }
 

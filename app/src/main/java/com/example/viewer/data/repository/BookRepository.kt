@@ -114,12 +114,14 @@ class BookRepository (private val context: Context) {
                 coverCropPositionString = null,
                 pageUrlsJson = when (source) {
                     BookSource.E, BookSource.Wn -> gson.toJson(listOf<String>()).toString()
-                    BookSource.Hi -> null
+                    else -> throw NotImplementedError(source.name)
+//                    BookSource.Hi -> null
                 },
                 p = when (source) {
                     BookSource.E -> 0
                     BookSource.Wn -> 1
-                    BookSource.Hi -> null
+                    else -> throw NotImplementedError(source.name)
+//                    BookSource.Hi -> null
                 }
             )
         )
@@ -197,9 +199,9 @@ class BookRepository (private val context: Context) {
 
     fun getBookPageUrls (id: String): Array<String?> {
         val book = queryBook(id)
-        if (book.sourceOrdinal == BookSource.Hi.ordinal) {
-            throw Exception("Page urls are not stored for this book source")
-        }
+//        if (book.sourceOrdinal == BookSource.Hi.ordinal) {
+//            throw Exception("Page urls are not stored for this book source")
+//        }
 
         val stored = Util.readArrayFromJson<String?>(book.pageUrlsJson!!)
         if (stored.size == book.pageNum) {

@@ -26,15 +26,49 @@ class ESearchHelper (
         prev = if (this.prev == NOT_SET) null else this.prev.toString()
     )
 
-    override suspend fun fetchWebpage(webpageUrl: String): Document =
-        withContext(Dispatchers.IO) {
-            Jsoup.connect(webpageUrl).get()
+    override suspend fun fetchBooks(searchUrl: String, isSearchMarkChanged: () -> Boolean): List<SearchBookData>? {
+        val doc = withContext(Dispatchers.IO) {
+            Jsoup.connect(searchUrl).get()
         }
+        return if (isSearchMarkChanged()) null else processSearchDoc(doc)
+    }
+
+    override suspend fun storeDetailAsTmpBook(searchBookData: SearchBookData): Boolean {
+        val doc = try {
+            EPictureFetcher.fetchWebpage(searchBookData.url, true)
+        } catch (_: HttpStatusException) {
+            return false
+        }
+
+        val gson = Gson()
+        val tags = doc.select("#taglist tr").run {
+            val tags = mutableMapOf<String, List<String>>()
+            forEach { tr ->
+                val category = tr.selectFirst(".tc")!!.text().trim().dropLast(1)
+                tags[category] = tr.select(".gt,.gtl").map { it.text().trim() }
+            }
+            tags
+        }
+
+        Book.setTmpBook(
+            id = searchBookData.id,
+            url = searchBookData.url,
+            title = doc.selectFirst("#gj")!!.text().trim().ifEmpty { searchBookData.title },
+            subTitle = searchBookData.title,
+            pageNum = searchBookData.pageNum,
+            categoryOrdinal = searchBookData.cat.ordinal,
+            uploader = doc.selectFirst("#gdn a")?.text(),
+            tagsJson = gson.toJson(tags),
+            sourceOrdinal = BookSource.E.ordinal,
+            coverUrl = searchBookData.coverUrl
+        )
+        return true
+    }
 
     /**
      * This method will access and change the private variable next and prev
      */
-    override fun processSearchDoc (doc: Document): List<SearchBookData> {
+    private fun processSearchDoc (doc: Document): List<SearchBookData> {
         // update next and prev
         if (next != ENDED) {
             next = doc.selectFirst("#unext")?.attribute("href")?.let {
@@ -107,38 +141,6 @@ class ESearchHelper (
         }
     }
 
-    override suspend fun storeDetailAsTmpBook(searchBookData: SearchBookData): Boolean {
-        val doc = try {
-            EPictureFetcher.fetchWebpage(searchBookData.url, true)
-        } catch (_: HttpStatusException) {
-            return false
-        }
-
-        val gson = Gson()
-        val tags = doc.select("#taglist tr").run {
-            val tags = mutableMapOf<String, List<String>>()
-            forEach { tr ->
-                val category = tr.selectFirst(".tc")!!.text().trim().dropLast(1)
-                tags[category] = tr.select(".gt,.gtl").map { it.text().trim() }
-            }
-            tags
-        }
-
-        Book.setTmpBook(
-            id = searchBookData.id,
-            url = searchBookData.url,
-            title = doc.selectFirst("#gj")!!.text().trim().ifEmpty { searchBookData.title },
-            subTitle = searchBookData.title,
-            pageNum = searchBookData.pageNum,
-            categoryOrdinal = searchBookData.cat.ordinal,
-            uploader = doc.selectFirst("#gdn a")?.text(),
-            tagsJson = gson.toJson(tags),
-            sourceOrdinal = BookSource.E.ordinal,
-            coverUrl = searchBookData.coverUrl
-        )
-        return true
-    }
-
     private fun getSearchUrl (next: String? = null, prev: String? = null): String {
         assert(next == null || prev == null)
 
@@ -148,9 +150,7 @@ class ESearchHelper (
                 it.value
             }
         } else {
-            listOf(
-                Category.NonH, Category.Manga, Category.ArtistCG, Category.Doujinshi
-            ).sumOf { it.value }
+            Category.ECategories.sumOf { it.value }
         }
 
         // f search

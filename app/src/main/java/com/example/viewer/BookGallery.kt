@@ -194,7 +194,7 @@ class BookGallery (
         override fun onBindViewHolder(holder: BookRecyclerViewHolder, position: Int) {
             val (id, sourceOrdinal) = bookIdentifies[position]
 
-            println("[${this@BookGallery::class.simpleName}.${this::class.simpleName}] binding $id")
+//            println("[${this@BookGallery::class.simpleName}.${this::class.simpleName}] binding $id")
             val bookFolder = Book.getBookFolder(context, id, sourceOrdinal)
 
             val coverPage = bookRepo.getBookCoverPage(id)

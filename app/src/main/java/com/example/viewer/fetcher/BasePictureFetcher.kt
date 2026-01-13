@@ -1,6 +1,7 @@
 package com.example.viewer.fetcher
 
 import android.content.Context
+import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
 import android.util.Log
 import com.example.viewer.Util
@@ -33,7 +34,7 @@ abstract class BasePictureFetcher {
             println("[BasePictureFetcher.getFetcher] $source")
             return when (source) {
                 BookSource.E -> EPictureFetcher(context, bookId)
-                BookSource.Hi -> HiPictureFetcher(context, bookId)
+//                BookSource.Hi -> HiPictureFetcher(context, bookId)
                 BookSource.Wn -> WnPictureFetcher(context, bookId)
                 else -> throw NotImplementedError(source.name)
             }
@@ -96,7 +97,9 @@ abstract class BasePictureFetcher {
         val fullBookId = bookId?.let {
             when (bookSource) {
                 BookSource.Wn -> "wn$bookId"
-                BookSource.E, BookSource.Hi -> bookId
+                BookSource.E -> bookId
+                else -> throw NotImplementedError(bookSource.name)
+//                BookSource.Hi -> bookId
             }
         }
         if (bookId == null || !bookIdTxt.exists() || fullBookId!! != bookIdTxt.readText()) {
@@ -194,17 +197,26 @@ abstract class BasePictureFetcher {
                 file.outputStream().use {
                     response.body!!.byteStream().copyTo(it)
                 }
-                try {
-                    ImageDecoder.decodeBitmap(ImageDecoder.createSource(file))
-                } catch (_: Exception) {
-                    file.delete()
-                    throw PictureDownloadFailException()
+                BitmapFactory.decodeFile(file.absolutePath).let {
+                    if (it == null) {
+                        file.delete()
+                        throw PictureDownloadFailException()
+                    }
                 }
-                finally {
+                // this line should be after the write-to-file statement
+                // else a corrupted image might be read
+                downloadingPages.remove(page)
+//                try {
+//                    ImageDecoder.decodeBitmap(ImageDecoder.createSource(file))
+//                } catch (_: Exception) {
+//                    file.delete()
+//                    throw PictureDownloadFailException()
+//                }
+//                finally {
                     // this line should be after the write-to-file statement
                     // else a corrupted image might be read
-                    downloadingPages.remove(page)
-                }
+//                    downloadingPages.remove(page)
+//                }
 
                 Log.i(logTag, "download finished: $page")
 

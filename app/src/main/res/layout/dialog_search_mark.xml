@@ -92,24 +92,32 @@
 
                 <!--  category  -->
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:textColor="@color/grey"
-                    android:textSize="16sp"
-                    android:text="@string/category"/>
-
-                <GridLayout
-                    android:id="@+id/category_wrapper"
+                <LinearLayout
+                    android:id="@+id/category_field_wrapper"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:columnCount="2">
+                    android:layout_marginTop="8dp"
+                    android:orientation="vertical">
 
-                    <!--  some button will be added here  -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/grey"
+                        android:textSize="16sp"
+                        android:text="@string/category"/>
 
-                </GridLayout>
+                    <GridLayout
+                        android:id="@+id/category_wrapper"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:columnCount="2">
+
+                        <!--  some button will be added here  -->
+
+                    </GridLayout>
+
+                </LinearLayout>
 
                 <!--  keyword  -->
 

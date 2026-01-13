@@ -87,7 +87,8 @@ class SearchMarkFragment: Fragment() {
                             categories = when (searchBarSource) {
                                 BookSource.E -> Category.ECategories
                                 BookSource.Wn -> arrayOf(Category.All)
-                                else -> throw NotImplementedError()
+                                BookSource.Ru -> arrayOf()
+                                BookSource.Hi -> throw NotImplementedError()
                             }.toList()
                         )
                     }
@@ -113,14 +114,17 @@ class SearchMarkFragment: Fragment() {
                     }
                 }
 
-                when (searchBarSource.ordinal) {
-                    BookSource.E.ordinal -> dialog.showESearchMark(
+                when (searchBarSource) {
+                    BookSource.E -> dialog.showESearchMark(
                         keyword = rootBinding.searchEditText.text.toString().trim()
                     )
-                    BookSource.Wn.ordinal -> dialog.showWnSearchMark(
+                    BookSource.Wn -> dialog.showWnSearchMark(
                         keyword = rootBinding.searchEditText.text.toString().trim()
                     )
-                    else -> throw IllegalStateException("unexpected ordinal")
+                    BookSource.Ru -> dialog.showRuSearchMark(
+                        keyword = rootBinding.searchEditText.text.toString().trim()
+                    )
+                    else -> throw IllegalStateException("unexpected source")
                 }
 
                 dialog.apply {
@@ -130,31 +134,31 @@ class SearchMarkFragment: Fragment() {
             }
         }
 
-        rootBinding.addButton.setOnClickListener {
-            val dialog = SearchMarkDialog(parent.context, layoutInflater).apply {
-                title = "新增搜尋標記"
-                confirmCb = { data ->
-                    searchRepo.addSearchMark(
-                        name = data.name,
-                        sourceOrdinal = data.sourceOrdinal,
-                        categories = data.categories.toList(),
-                        keyword = data.keyword,
-                        tags = data.tags,
-                        uploader = data.uploader,
-                        doExclude = data.doExclude
-                    )
-                    refreshSearchMarkWrapper()
-                }
-            }
-
-            when (searchBarSource.ordinal) {
-                BookSource.E.ordinal -> dialog.showESearchMark()
-                BookSource.Wn.ordinal -> dialog.showWnSearchMark()
-                else -> throw IllegalStateException("unexpected ordinal")
-            }
-
-            dialog.showConfirmButton = true
-        }
+//        rootBinding.addButton.setOnClickListener {
+//            val dialog = SearchMarkDialog(parent.context, layoutInflater).apply {
+//                title = "新增搜尋標記"
+//                confirmCb = { data ->
+//                    searchRepo.addSearchMark(
+//                        name = data.name,
+//                        sourceOrdinal = data.sourceOrdinal,
+//                        categories = data.categories.toList(),
+//                        keyword = data.keyword,
+//                        tags = data.tags,
+//                        uploader = data.uploader,
+//                        doExclude = data.doExclude
+//                    )
+//                    refreshSearchMarkWrapper()
+//                }
+//            }
+//
+//            when (searchBarSource.ordinal) {
+//                BookSource.E.ordinal -> dialog.showESearchMark()
+//                BookSource.Wn.ordinal -> dialog.showWnSearchMark()
+//                else -> throw IllegalStateException("unexpected ordinal")
+//            }
+//
+//            dialog.showConfirmButton = true
+//        }
 
         rootBinding.toolBarFilterOutButton.setOnClickListener {
             FilterOutDialog(parent.context, layoutInflater).show()

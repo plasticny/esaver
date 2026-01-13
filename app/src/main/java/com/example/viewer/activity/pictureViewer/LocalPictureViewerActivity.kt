@@ -1,4 +1,4 @@
-package com.example.viewer.activity.viewer
+package com.example.viewer.activity.pictureViewer
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -27,7 +27,7 @@ import kotlin.math.floor
 /**
  * string extra: bookId
  */
-class LocalViewerActivity: BaseViewerActivity() {
+class LocalPictureViewerActivity: BaseViewerActivity() {
     companion object {
         private const val ROTATE_LEFT = -90F
         private const val ROTATE_RIGHT = 90F

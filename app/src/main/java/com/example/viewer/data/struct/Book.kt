@@ -109,9 +109,11 @@ data class Book (
         fun getBookFolder (context: Context, id: String, sourceOrdinal: Int) =
             File(
                 context.getExternalFilesDir(null),
-                when (BookSource.entries[sourceOrdinal]) {
+                when (val source = BookSource.entries[sourceOrdinal]) {
                     BookSource.Wn -> "wn$id"
-                    BookSource.E, BookSource.Hi -> id
+                    BookSource.E -> id
+                    else -> throw NotImplementedError(source.name)
+//                    BookSource.Hi -> id
                 }
             )
     }

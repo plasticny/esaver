@@ -75,7 +75,8 @@ class HiPictureFetcher: BasePictureFetcher {
     /**
      * local book
      */
-    constructor (context: Context, bookId: String): super(context, bookId, BookSource.Hi) {
+//    constructor (context: Context, bookId: String): super(context, bookId, BookSource.Hi) {
+    constructor (context: Context, bookId: String): super(context, bookId, BookSource.E) {
         hiBookId = bookId
         init()
     }
@@ -83,12 +84,14 @@ class HiPictureFetcher: BasePictureFetcher {
     /**
      * online book
      */
-    constructor (context: Context, bookId: String, pageNum: Int): super(context, pageNum, BookSource.Hi) {
-        hiBookId = bookId
-        init()
-    }
+//    constructor (context: Context, bookId: String, pageNum: Int): super(context, pageNum, BookSource.Hi) {
+//        hiBookId = bookId
+//        init()
+//    }
 
     private fun init () {
+        NotImplementedError("HI is suspended")
+
         if (pageNum > (bookFolder.listFiles()?.size ?: 0)) {
             println("[HiPictureFetcher] get data for constructing url")
 
