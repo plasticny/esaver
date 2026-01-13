@@ -6,7 +6,7 @@ import androidx.core.view.children
 import com.example.viewer.R
 import com.example.viewer.databinding.DialogSearchMarkBinding
 import com.example.viewer.databinding.DialogSearchMarkTagBinding
-import com.example.viewer.struct.BookSource
+import com.example.viewer.struct.ItemSource
 import com.example.viewer.struct.Category
 
 class EHandler (
@@ -21,7 +21,7 @@ class EHandler (
     private val uploader: String = "",
     private val doExclude: Boolean = true
 ): BaseHandler(context, layoutInflater, owner, ownerRootBinding) {
-    override val source = BookSource.E
+    override val source = ItemSource.E
 
     private var selectedCats: MutableSet<Category> = categories.toMutableSet()
 

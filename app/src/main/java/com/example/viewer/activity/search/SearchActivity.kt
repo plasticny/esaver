@@ -16,17 +16,17 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.viewer.R
 import com.example.viewer.Util
-import com.example.viewer.activity.BookProfileActivity
-import com.example.viewer.data.repository.BookRepository
+import com.example.viewer.activity.ItemProfileActivity
 import com.example.viewer.data.repository.ExcludeTagRepository
+import com.example.viewer.data.repository.ItemRepository
 import com.example.viewer.data.repository.SearchRepository
 import com.example.viewer.data.struct.search.SearchMark
 import com.example.viewer.databinding.SearchActivityBinding
-import com.example.viewer.databinding.ActivitySearchBookBinding
+import com.example.viewer.databinding.ComponentSearchItemBinding
 import com.example.viewer.databinding.DialogSearchInfoBinding
 import com.example.viewer.dialog.SearchMarkDialog.SearchMarkDialog
 import com.example.viewer.dialog.SimpleEditTextDialog
-import com.example.viewer.struct.BookSource
+import com.example.viewer.struct.ItemSource
 import com.example.viewer.struct.Category
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -77,16 +77,16 @@ class SearchActivity: AppCompatActivity() {
     private var isTemporarySearch = false
     private var resetting = true
 
-    private var totalBookLoaded = -1
-    private var totalBookFiltered = -1
+    private var totalItemLoaded = -1
+    private var totalItemFiltered = -1
     private var lastNextHistory: String? = null
 
     // recycler view item metrics
     private var coverImageWidth: Int = -1
     private var coverImageHeight: Int = -1
 
-    private val recyclerViewAdapter: BookRecyclerViewAdapter
-        get() = rootBinding.recyclerView.adapter as BookRecyclerViewAdapter
+    private val recyclerViewAdapter: ItemRecyclerViewAdapter
+        get() = rootBinding.recyclerView.adapter as ItemRecyclerViewAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -113,7 +113,7 @@ class SearchActivity: AppCompatActivity() {
 
         rootBinding.recyclerView.apply {
             layoutManager = GridLayoutManager(context, 2)
-            adapter = BookRecyclerViewAdapter()
+            adapter = ItemRecyclerViewAdapter()
             addOnScrollListener(object: RecyclerView.OnScrollListener() {
                 private val lm = layoutManager as GridLayoutManager
                 private var loadingTriggered = false
@@ -129,7 +129,7 @@ class SearchActivity: AppCompatActivity() {
                         CoroutineScope(Dispatchers.IO).launch {
                             runBlocking {
                                 loadingTriggered = true
-                                loadNextBooks()
+                                loadNextItems()
                                 loadingTriggered = false
                             }
                         }
@@ -138,7 +138,7 @@ class SearchActivity: AppCompatActivity() {
                         CoroutineScope(Dispatchers.IO).launch {
                             runBlocking {
                                 loadingTriggered = true
-                                loadPrevBooks()
+                                loadPrevItems()
                                 loadingTriggered = false
                             }
                         }
@@ -159,7 +159,7 @@ class SearchActivity: AppCompatActivity() {
                         CoroutineScope(Dispatchers.IO).launch {
                             runBlocking {
                                 loadingTriggered = true
-                                loadNextBooks()
+                                loadNextItems()
                                 loadingTriggered = false
                             }
                         }
@@ -171,7 +171,7 @@ class SearchActivity: AppCompatActivity() {
                         CoroutineScope(Dispatchers.IO).launch {
                             runBlocking {
                                 loadingTriggered = true
-                                loadPrevBooks()
+                                loadPrevItems()
                                 loadingTriggered = false
                             }
                         }
@@ -242,7 +242,7 @@ class SearchActivity: AppCompatActivity() {
             }
 
             when (searchMarkData.sourceOrdinal) {
-                BookSource.E.ordinal -> dialog.showESearchMark(
+                ItemSource.E.ordinal -> dialog.showESearchMark(
                     name = searchMarkData.name,
                     categories = searchMarkData.categories,
                     keyword = searchMarkData.keyword,
@@ -250,7 +250,7 @@ class SearchActivity: AppCompatActivity() {
                     uploader = searchMarkData.uploader ?: "",
                     doExclude = searchMarkData.doExclude
                 )
-                BookSource.Wn.ordinal -> dialog.showWnSearchMark(
+                ItemSource.Wn.ordinal -> dialog.showWnSearchMark(
                     name = searchMarkData.name,
                     category = searchMarkData.categories.also { assert(it.size == 1) }.first(),
                     keyword = searchMarkData.keyword
@@ -307,9 +307,8 @@ class SearchActivity: AppCompatActivity() {
         // after paused, the exclude tags may updated, do the filter again
         excludeTagRepo.lastExcludeTagUpdateTime().let { newTime ->
             if (newTime != lastExcludeTagUpdateTime) {
-                println("[${this::class.simpleName}.${this::onResume.name}] re-filter books")
-                recyclerViewAdapter.getBooks().let {
-                    recyclerViewAdapter.refreshBooks(
+                recyclerViewAdapter.getItems().let {
+                    recyclerViewAdapter.refreshItems(
                         if (searchMarkData.doExclude) {
                             excludeTagFilter(it)
                         } else it
@@ -325,8 +324,8 @@ class SearchActivity: AppCompatActivity() {
 
         searchHelper = SearchHelper.getSearchHelper(baseContext, searchMarkData)
 
-        totalBookLoaded = 0
-        totalBookFiltered = 0
+        totalItemLoaded = 0
+        totalItemFiltered = 0
         lastNextHistory = searchRepo.getLastNext(searchMarkData.id)
 
         rootBinding.searchMarkName.text = searchMarkData.name
@@ -342,13 +341,13 @@ class SearchActivity: AppCompatActivity() {
         if (excludeTagRepo.doExclude(searchMarkData.sourceOrdinal, searchMarkData.categories, searchMarkData.tags)) {
             Toast.makeText(baseContext, "所有書都被濾除了", Toast.LENGTH_SHORT).show()
         } else {
-            loadNextBooks()
+            loadNextItems()
         }
 
         resetting = false
     }
 
-    private suspend fun loadNextBooks () {
+    private suspend fun loadNextItems () {
         if (!searchHelper.hasNextBlock) {
             throw IllegalStateException("no next search block")
         }
@@ -368,18 +367,18 @@ class SearchActivity: AppCompatActivity() {
         withContext(Dispatchers.Main) {
             rootBinding.searchProgressBar.wrapper.visibility = ProgressBar.VISIBLE
         }
-        val books = fetchNextBooks()
+        val items = fetchNextItems()
         withContext(Dispatchers.Main) {
             rootBinding.searchProgressBar.wrapper.visibility = ProgressBar.GONE
         }
         loadingMore = false
 
         if (mySearchId == searchMarkData.id) {
-            recyclerViewAdapter.addNextBooks(books)
+            recyclerViewAdapter.addNextItems(items)
         }
     }
 
-    private suspend fun loadPrevBooks () {
+    private suspend fun loadPrevItems () {
         if (!searchHelper.hasPrevBlock) {
             throw IllegalStateException("no prev search block")
         }
@@ -399,89 +398,89 @@ class SearchActivity: AppCompatActivity() {
         withContext(Dispatchers.Main) {
             rootBinding.searchProgressBar.wrapper.visibility = ProgressBar.VISIBLE
         }
-        val books = fetchPrevBooks()
+        val items = fetchPrevItems()
         withContext(Dispatchers.Main) {
             rootBinding.searchProgressBar.wrapper.visibility = ProgressBar.GONE
         }
         loadingMore = false
 
         if (mySearchId == searchMarkData.id) {
-            recyclerViewAdapter.addPrevBooks(books)
+            recyclerViewAdapter.addPrevItems(items)
         }
     }
 
-    private suspend fun fetchNextBooks (): List<SearchBookData> {
+    private suspend fun fetchNextItems (): List<SearchItemData> {
         val mySearchId = searchMarkData.id
-        var books = listOf<SearchBookData>()
+        var items = listOf<SearchItemData>()
 
         do {
             searchRepo.storeLastNext(searchMarkData.id, searchHelper.nextToStore)
 
-            val fetchedBooks = searchHelper.fetchBooks(
+            val fetchedItems = searchHelper.fetchItems(
                 searchHelper.getNextBlockSearchUrl().also {
-                    println("[SearchActivity.fetchBooks] fetch book from\n$it")
+                    println("[SearchActivity.fetchItems] fetch item from\n$it")
                 }
-            ) { mySearchId != searchMarkData.id }?.also { totalBookLoaded += it.size }
+            ) { mySearchId != searchMarkData.id }?.also { totalItemLoaded += it.size }
 
-            if (fetchedBooks == null) {
+            if (fetchedItems == null) {
                 break
             }
 
-            books = if (searchMarkData.doExclude) {
-                excludeTagFilter(fetchedBooks).also {
-                    totalBookFiltered += (fetchedBooks.size - it.size)
+            items = if (searchMarkData.doExclude) {
+                excludeTagFilter(fetchedItems).also {
+                    totalItemFiltered += (fetchedItems.size - it.size)
                 }
-            } else fetchedBooks
-        } while (books.isEmpty() && searchHelper.hasNextBlock && mySearchId == searchMarkData.id)
+            } else fetchedItems
+        } while (items.isEmpty() && searchHelper.hasNextBlock && mySearchId == searchMarkData.id)
 
-        return books
+        return items
     }
 
-    private suspend fun fetchPrevBooks (): List<SearchBookData> {
+    private suspend fun fetchPrevItems (): List<SearchItemData> {
         val mySearchId = searchMarkData.id
-        var books = listOf<SearchBookData>()
+        var items = listOf<SearchItemData>()
 
         do {
-            val fetchedBooks = searchHelper.fetchBooks(
+            val fetchedItems = searchHelper.fetchItems(
                 searchHelper.getPrevBlockSearchUrl().also {
-                    println("[SearchActivity.fetchBooks] fetch book from\n$it")
+                    println("[SearchActivity.fetchItems] fetch item from\n$it")
                 }
-            ) { mySearchId != searchMarkData.id }?.also { totalBookLoaded += it.size }
+            ) { mySearchId != searchMarkData.id }?.also { totalItemLoaded += it.size }
 
-            if (fetchedBooks == null) {
+            if (fetchedItems == null) {
                 break
             }
 
-            books = if (searchMarkData.doExclude) {
-                excludeTagFilter(fetchedBooks).also {
-                    totalBookFiltered += (fetchedBooks.size - it.size)
+            items = if (searchMarkData.doExclude) {
+                excludeTagFilter(fetchedItems).also {
+                    totalItemFiltered += (fetchedItems.size - it.size)
                 }
-            } else fetchedBooks
-        } while (books.isEmpty() && searchHelper.hasPrevBlock && mySearchId == searchMarkData.id)
+            } else fetchedItems
+        } while (items.isEmpty() && searchHelper.hasPrevBlock && mySearchId == searchMarkData.id)
 
-        return books
+        return items
     }
 
-    private fun excludeTagFilter (books: List<SearchBookData>): List<SearchBookData> =
-        books.filterNot {
+    private fun excludeTagFilter (items: List<SearchItemData>): List<SearchItemData> =
+        items.filterNot {
             excludeTagRepo.doExclude(
                 searchMarkData.sourceOrdinal,
                 listOf(it.cat),
                 it.tags
             ).also { excluded ->
                 if (excluded) {
-                    println("[${this::class.simpleName}.${this::excludeTagFilter.name}] ${it.id} is excluded")
+                    println("[${this::class.simpleName}.${this::excludeTagFilter.name}] ${it.title} is excluded")
                 }
             }
         }
 
     /**
-     * fetch detail information of the book, and store as tmp book
+     * fetch detail information of the item, and store as tmp ProfileItem
      * @return do the store success
      */
-    private suspend fun storeTmpBook (searchBookData: SearchBookData): Boolean {
+    private suspend fun storeTmpProfileItem (searchItemData: SearchItemData): Boolean {
         rootBinding.screenProgressBarWrapper.visibility = View.VISIBLE
-        val ret = searchHelper.storeDetailAsTmpBook(searchBookData)
+        val ret = searchHelper.storeDetailAsTmpProfileItem(searchItemData)
         rootBinding.screenProgressBarWrapper.visibility = View.GONE
         return ret
     }
@@ -492,8 +491,8 @@ class SearchActivity: AppCompatActivity() {
 
         dialogBinding.apply {
             resultNumber.text = searchHelper.searchResultString
-            loadedNumber.text = totalBookLoaded.toString()
-            filteredNumber.text = totalBookFiltered.toString()
+            loadedNumber.text = totalItemLoaded.toString()
+            filteredNumber.text = totalItemFiltered.toString()
             filteredDisabledLabel.visibility = if (searchMarkData.doExclude) View.GONE else View.VISIBLE
         }
 
@@ -505,7 +504,7 @@ class SearchActivity: AppCompatActivity() {
                 recyclerViewAdapter.clear()
                 CoroutineScope(Dispatchers.IO).launch {
                     runBlocking {
-                        loadNextBooks()
+                        loadNextItems()
                         resetting = false
                     }
                 }
@@ -520,95 +519,92 @@ class SearchActivity: AppCompatActivity() {
     // define recycler view adapter
     //
 
-    inner class BookRecyclerViewAdapter: RecyclerView.Adapter<BookRecyclerViewAdapter.ViewHolder>() {
-        inner class ViewHolder (val binding: ActivitySearchBookBinding): RecyclerView.ViewHolder(binding.root)
+    inner class ItemRecyclerViewAdapter: RecyclerView.Adapter<ItemRecyclerViewAdapter.ViewHolder>() {
+        inner class ViewHolder (val binding: ComponentSearchItemBinding): RecyclerView.ViewHolder(binding.root)
 
-        private val bookRecords = mutableListOf<SearchBookData>()
+        private val itemRecords = mutableListOf<SearchItemData>()
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-            val binding = ActivitySearchBookBinding.inflate(layoutInflater, parent, false)
-            binding.searchBookImageView.layoutParams = binding.searchBookImageView.layoutParams.apply {
+            val binding = ComponentSearchItemBinding.inflate(layoutInflater, parent, false)
+            binding.searchItemImageView.layoutParams = binding.searchItemImageView.layoutParams.apply {
                 height = coverImageHeight
                 width = coverImageWidth
             }
             return ViewHolder(binding)
         }
 
-        override fun getItemCount(): Int = bookRecords.size
+        override fun getItemCount(): Int = itemRecords.size
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             val binding = holder.binding
-            val bookRecord = bookRecords[position]
+            val itemRecord = itemRecords[position]
 
-            binding.searchBookImageView.let {
-                Glide.with(it.context).load(bookRecord.coverUrl).into(it)
+            binding.searchItemImageView.let {
+                Glide.with(it.context).load(itemRecord.coverUrl).into(it)
             }
 
-            binding.searchBookTitleTextView.text = bookRecord.title
+            binding.searchItemTitleTextView.text = itemRecord.title
 
             binding.pageNumTextView.apply {
-                text = context.getString(R.string.n_page, bookRecord.pageNum)
+                text = context.getString(R.string.n_page, itemRecord.pageNum)
             }
 
             binding.ratingTextView.apply {
-                text = if (bookRecord.rating != null) {
-                    context.getString(R.string.n_score, bookRecord.rating)
+                text = if (itemRecord.rating != null) {
+                    context.getString(R.string.n_score, itemRecord.rating)
                 } else ""
             }
 
-            binding.searchBookCatTextView.apply {
-                text = getString(bookRecord.cat.displayText)
-                setTextColor(context.getColor(bookRecord.cat.color))
+            binding.searchItemCatTextView.apply {
+                text = getString(itemRecord.cat.displayText)
+                setTextColor(context.getColor(itemRecord.cat.color))
             }
 
             binding.root.apply {
                 setOnClickListener {
                     lifecycleScope.launch {
-                        val bookDb = BookRepository(baseContext)
-                        val intent = Intent(context, BookProfileActivity::class.java)
-                        intent.putExtra(
-                            "bookId",
-                            if (bookDb.isBookStored(bookRecord.id)) {
-                                bookRecord.id
-                            } else {
-                                storeTmpBook(bookRecord).let {
-                                    if (!it) {
-                                        // store failed
-                                        Toast.makeText(baseContext, "這本書出現錯誤，無法打開", Toast.LENGTH_SHORT).show()
-                                        return@launch
-                                    }
-                                }
-                                "-1"
-                            }
+                        val intent = Intent(context, ItemProfileActivity::class.java)
+                        val itemId = ItemRepository(context).isItemStored(
+                            itemRecord, ItemSource.fromOrdinal(searchMarkData.sourceOrdinal)
                         )
+                        if (itemId == -1L) {
+                            storeTmpProfileItem(itemRecord).let {
+                                if (!it) {
+                                    // store failed
+                                    Toast.makeText(baseContext, "這本書出現錯誤，無法打開", Toast.LENGTH_SHORT).show()
+                                    return@launch
+                                }
+                            }
+                        }
+                        intent.putExtra("itemId", itemId)
                         startActivity(intent)
                     }
                 }
             }
         }
 
-        fun getBooks (): List<SearchBookData> = bookRecords
+        fun getItems (): List<SearchItemData> = itemRecords
 
-        fun addNextBooks (books: List<SearchBookData>) {
-            val positionStart = bookRecords.size
-            bookRecords.addAll(books)
-            notifyItemRangeInserted(positionStart, books.size)
+        fun addNextItems (items: List<SearchItemData>) {
+            val positionStart = itemRecords.size
+            itemRecords.addAll(items)
+            notifyItemRangeInserted(positionStart, items.size)
         }
 
-        fun addPrevBooks (books: List<SearchBookData>) {
-            bookRecords.addAll(0, books)
-            notifyItemRangeInserted(0, books.size)
+        fun addPrevItems (items: List<SearchItemData>) {
+            itemRecords.addAll(0, items)
+            notifyItemRangeInserted(0, items.size)
         }
 
-        fun refreshBooks (books: List<SearchBookData>) {
-            bookRecords.clear()
-            bookRecords.addAll(books)
+        fun refreshItems (items: List<SearchItemData>) {
+            itemRecords.clear()
+            itemRecords.addAll(items)
             notifyDataSetChanged()
         }
 
         fun clear () {
-            val size = bookRecords.size
-            bookRecords.clear()
+            val size = itemRecords.size
+            itemRecords.clear()
             notifyItemRangeRemoved(0, size)
         }
     }

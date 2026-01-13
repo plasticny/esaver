@@ -1,17 +1,17 @@
-package com.example.viewer.data.struct
+package com.example.viewer.data.struct.item
 
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
 @Entity(
-    tableName = "BookGroups",
+    tableName = "ItemGroups",
     indices = [
         Index(value = ["id"]),
         Index(value = ["itemOrder"], unique = true)
     ]
 )
-data class Group (
+data class ItemGroup(
     @PrimaryKey
     val id: Int,
     var name: String,

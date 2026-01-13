@@ -6,9 +6,8 @@ import androidx.compose.ui.util.fastMap
 import androidx.sqlite.db.SimpleSQLiteQuery
 import com.example.viewer.data.dao.search.ExcludeTagDao
 import com.example.viewer.data.database.SearchDatabase
-import com.example.viewer.data.struct.Book
 import com.example.viewer.data.struct.search.ExcludeTag
-import com.example.viewer.struct.BookSource
+import com.example.viewer.struct.ItemSource
 import com.example.viewer.struct.Category
 import com.google.gson.Gson
 import kotlinx.coroutines.runBlocking
@@ -118,7 +117,7 @@ class ExcludeTagRepository (context: Context) {
         tags: Map<String, List<String>>,
         verbose: Boolean = false
     ): Boolean {
-        if (sourceOrdinal != BookSource.E.ordinal) {
+        if (sourceOrdinal != ItemSource.E.ordinal) {
             return false
         }
 
@@ -211,16 +210,17 @@ class ExcludeTagRepository (context: Context) {
         return false
     }
 
-    fun findExcludedTags (book: Book): Map<String, Set<String>> {
+    fun findExcludedTags (
+        tags: Map<String, List<String>>,
+        category: Category
+    ): Map<String, Set<String>> {
         val res = mutableMapOf<String, MutableSet<String>>()
-
-        val bookTags = book.getTags()
-        for (excludeTag in getAllExcludeTag(listOf(book.getCategory()))) {
+        for (excludeTag in getAllExcludeTag(listOf(category))) {
             for ((c, t) in excludeTag.getTags()) {
-                if (!bookTags.containsKey(c)) {
+                if (!tags.containsKey(c)) {
                     continue
                 }
-                if (!bookTags.getValue(c).toSet().containsAll(t)) {
+                if (!tags.getValue(c).toSet().containsAll(t)) {
                     continue
                 }
                 if (!res.containsKey(c)) {
@@ -229,7 +229,6 @@ class ExcludeTagRepository (context: Context) {
                 res.getValue(c).addAll(t)
             }
         }
-
         return res
     }
 
