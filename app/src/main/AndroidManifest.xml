@@ -38,7 +38,7 @@
             android:name=".activity.search.SearchActivity"/>
         <activity
             android:excludeFromRecents="true"
-            android:name=".activity.BookProfileActivity"
+            android:name=".activity.ItemProfileActivity"
             android:theme="@style/Theme.Viewer" />
         <activity
             android:excludeFromRecents="true"

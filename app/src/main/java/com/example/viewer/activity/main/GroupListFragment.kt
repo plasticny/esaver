@@ -21,7 +21,7 @@ import androidx.fragment.app.setFragmentResult
 import androidx.navigation.fragment.findNavController
 import com.example.viewer.R
 import com.example.viewer.data.repository.GroupRepository
-import com.example.viewer.data.struct.Group
+import com.example.viewer.data.struct.item.ItemGroup
 import com.example.viewer.databinding.ComponentListItemWithButtonBinding
 import com.example.viewer.databinding.FragmentMainSortGroupBinding
 import com.example.viewer.dialog.SimpleEditTextDialog
@@ -75,7 +75,7 @@ class GroupListFragment: Fragment() {
     }
 
     @SuppressLint("ClickableViewAccessibility")
-    private fun buildItem (group: Group): ComponentListItemWithButtonBinding {
+    private fun buildItem (group: ItemGroup): ComponentListItemWithButtonBinding {
         val binding = ComponentListItemWithButtonBinding.inflate(layoutInflater, rootBinding.groupContainer, false)
 
         binding.name.text = group.name

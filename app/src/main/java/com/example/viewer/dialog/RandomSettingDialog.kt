@@ -3,10 +3,10 @@ package com.example.viewer.dialog
 import android.app.AlertDialog
 import android.content.Context
 import android.view.LayoutInflater
-import com.example.viewer.RandomBook
+import com.example.viewer.ItemRNG
 import com.example.viewer.databinding.DialogRandomBookSettingBinding
 
-class RandomBookSettingDialog (
+class RandomSettingDialog (
     private val context: Context,
     layoutInflater: LayoutInflater
 ) {
@@ -14,7 +14,7 @@ class RandomBookSettingDialog (
     private val dialog = AlertDialog.Builder(context).setView(dialogBinding.root).create()
 
     fun show (onConfirm: () -> Unit) {
-        RandomBook.getPoolStatus(context).let { (pullH, pullNH) ->
+        ItemRNG.getPoolStatus(context).let { (pullH, pullNH) ->
             dialogBinding.includeHSwitch.isChecked = pullH
             dialogBinding.includeNonHSwitch.isChecked = pullNH
         }
@@ -24,7 +24,7 @@ class RandomBookSettingDialog (
         }
 
         dialogBinding.confirmButton.setOnClickListener {
-            RandomBook.changePool(
+            ItemRNG.changePool(
                 context,
                 dialogBinding.includeHSwitch.isChecked,
                 dialogBinding.includeNonHSwitch.isChecked

@@ -6,12 +6,12 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
-import com.example.viewer.data.dao.ExcludeTagDao
-import com.example.viewer.data.dao.SearchHistoryDao
-import com.example.viewer.data.dao.SearchMarkDao
-import com.example.viewer.data.struct.ExcludeTag
-import com.example.viewer.data.struct.SearchHistory
-import com.example.viewer.data.struct.SearchMark
+import com.example.viewer.data.dao.search.ExcludeTagDao
+import com.example.viewer.data.dao.search.SearchHistoryDao
+import com.example.viewer.data.dao.search.SearchMarkDao
+import com.example.viewer.data.struct.search.ExcludeTag
+import com.example.viewer.data.struct.search.SearchHistory
+import com.example.viewer.data.struct.search.SearchMark
 
 @Database(
     entities = [SearchMark::class, ExcludeTag::class, SearchHistory::class],

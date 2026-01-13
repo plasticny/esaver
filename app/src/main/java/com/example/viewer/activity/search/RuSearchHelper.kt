@@ -1,10 +1,11 @@
 package com.example.viewer.activity.search
 
 import android.content.Context
-import com.example.viewer.data.struct.Book
 import com.example.viewer.preference.KeyPreference
-import com.example.viewer.struct.BookSource
+import com.example.viewer.struct.ItemSource
 import com.example.viewer.struct.Category
+import com.example.viewer.struct.ItemType
+import com.example.viewer.struct.ProfileItem
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
@@ -15,7 +16,7 @@ import okhttp3.Request
 class RuSearchHelper (
     context: Context,
     searchMarkData: SearchMarkData
-): SearchHelper(searchMarkData) {
+): SearchHelper(context, searchMarkData) {
     private val baseUrl = buildBaseUrl(context, searchMarkData)
     private val client = OkHttpClient()
 
@@ -23,7 +24,7 @@ class RuSearchHelper (
     private var count = 0
 
     init {
-        assert(searchMarkData.sourceOrdinal == BookSource.Ru.ordinal)
+        assert(searchMarkData.sourceOrdinal == ItemSource.Ru.ordinal)
         next = 0 // first pid is 0
         prev = ENDED
         searchResultString = "N/A"
@@ -38,10 +39,10 @@ class RuSearchHelper (
         throw NotImplementedError()
     }
 
-    override suspend fun fetchBooks(
+    override suspend fun fetchItems(
         searchUrl: String,
         isSearchMarkChanged: () -> Boolean
-    ): List<SearchBookData>? {
+    ): List<SearchItemData>? {
         if (total == null) {
             val xml = withContext(Dispatchers.IO) {
                 val client = OkHttpClient()
@@ -64,8 +65,7 @@ class RuSearchHelper (
         next = if (count < total!!) next + 1 else ENDED
 
         return records.map {
-            SearchBookData(
-                id = it.id.toString(),
+            SearchItemData(
                 url = it.file_url,
                 coverUrl = it.sample_url,
                 cat = Category.Doujinshi,
@@ -79,19 +79,24 @@ class RuSearchHelper (
         }
     }
 
-    override suspend fun storeDetailAsTmpBook(searchBookData: SearchBookData): Boolean {
-        Book.setTmpBook(
-            id = searchBookData.id,
-            url = searchBookData.url,
-            title = searchBookData.title,
-            subTitle = searchBookData.title,
-            pageNum = searchBookData.pageNum,
-            categoryOrdinal = searchBookData.cat.ordinal,
+    override suspend fun storeDetailAsTmpProfileItem(searchItemData: SearchItemData): Boolean {
+        ProfileItem.setTmp(ProfileItem(
+            id = -1,
+            url = searchItemData.url,
+            title = searchItemData.title,
+            subTitle = searchItemData.title,
+            customTitle = null,
+            tags = searchItemData.tags,
+            excludedTags = mapOf(),
+            source = ItemSource.Ru,
+            type = ItemType.Video,
+            category = searchItemData.cat,
+            coverPage = 0,
+            coverUrl = searchItemData.coverUrl,
+            coverCropPosition = null,
             uploader = null,
-            tagsJson = Gson().toJson(searchBookData.tags),
-            sourceOrdinal = BookSource.Ru.ordinal,
-            coverUrl = searchBookData.coverUrl
-        )
+            isTmp = true
+        ))
         return true
     }
 

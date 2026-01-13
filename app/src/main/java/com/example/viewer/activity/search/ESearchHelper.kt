@@ -1,10 +1,12 @@
 package com.example.viewer.activity.search
 
-import com.example.viewer.data.struct.Book
+import android.content.Context
+import com.example.viewer.data.repository.ExcludeTagRepository
 import com.example.viewer.fetcher.EPictureFetcher
-import com.example.viewer.struct.BookSource
+import com.example.viewer.struct.ItemSource
 import com.example.viewer.struct.Category
-import com.google.gson.Gson
+import com.example.viewer.struct.ItemType
+import com.example.viewer.struct.ProfileItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jsoup.HttpStatusException
@@ -12,10 +14,11 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 
 class ESearchHelper (
+    context: Context,
     searchMarkData: SearchMarkData
-): SearchHelper(searchMarkData) {
+): SearchHelper(context, searchMarkData) {
     init {
-        assert(searchMarkData.sourceOrdinal == BookSource.E.ordinal)
+        assert(searchMarkData.sourceOrdinal == ItemSource.E.ordinal)
     }
 
     override fun getNextBlockSearchUrl(): String = getSearchUrl(
@@ -26,21 +29,20 @@ class ESearchHelper (
         prev = if (this.prev == NOT_SET) null else this.prev.toString()
     )
 
-    override suspend fun fetchBooks(searchUrl: String, isSearchMarkChanged: () -> Boolean): List<SearchBookData>? {
+    override suspend fun fetchItems(searchUrl: String, isSearchMarkChanged: () -> Boolean): List<SearchItemData>? {
         val doc = withContext(Dispatchers.IO) {
             Jsoup.connect(searchUrl).get()
         }
         return if (isSearchMarkChanged()) null else processSearchDoc(doc)
     }
 
-    override suspend fun storeDetailAsTmpBook(searchBookData: SearchBookData): Boolean {
+    override suspend fun storeDetailAsTmpProfileItem(searchItemData: SearchItemData): Boolean {
         val doc = try {
-            EPictureFetcher.fetchWebpage(searchBookData.url, true)
+            EPictureFetcher.fetchWebpage(searchItemData.url, true)
         } catch (_: HttpStatusException) {
             return false
         }
 
-        val gson = Gson()
         val tags = doc.select("#taglist tr").run {
             val tags = mutableMapOf<String, List<String>>()
             forEach { tr ->
@@ -50,25 +52,36 @@ class ESearchHelper (
             tags
         }
 
-        Book.setTmpBook(
-            id = searchBookData.id,
-            url = searchBookData.url,
-            title = doc.selectFirst("#gj")!!.text().trim().ifEmpty { searchBookData.title },
-            subTitle = searchBookData.title,
-            pageNum = searchBookData.pageNum,
-            categoryOrdinal = searchBookData.cat.ordinal,
+        ProfileItem.setTmp(ProfileItem(
+            id = -1,
+            url = searchItemData.url,
+            title = doc.selectFirst("#gj")!!.text().trim().ifEmpty { searchItemData.title },
+            subTitle = searchItemData.title,
+            customTitle = null,
+            tags = tags,
+            excludedTags = ExcludeTagRepository(context).findExcludedTags(
+                tags, searchItemData.cat
+            ),
+            source = ItemSource.E,
+            type = ItemType.Book,
+            category = searchItemData.cat,
+            coverPage = 0,
+            coverUrl = searchItemData.coverUrl,
+            coverCropPosition = null,
             uploader = doc.selectFirst("#gdn a")?.text(),
-            tagsJson = gson.toJson(tags),
-            sourceOrdinal = BookSource.E.ordinal,
-            coverUrl = searchBookData.coverUrl
-        )
+            isTmp = true,
+            bookData = ProfileItem.BookData(
+                id = searchItemData.bookId!!,
+                pageNum = searchItemData.pageNum
+            )
+        ))
         return true
     }
 
     /**
      * This method will access and change the private variable next and prev
      */
-    private fun processSearchDoc (doc: Document): List<SearchBookData> {
+    private fun processSearchDoc (doc: Document): List<SearchItemData> {
         // update next and prev
         if (next != ENDED) {
             next = doc.selectFirst("#unext")?.attribute("href")?.let {
@@ -94,13 +107,7 @@ class ESearchHelper (
             }
 
             val url = book.selectFirst(".gl1e a")!!.attr("href")
-            SearchBookData(
-                id = url.let {
-                    (if (url.last() == '/') url.dropLast(1) else url)
-                        .split("/").let {
-                            it[it.lastIndex - 1]
-                        }
-                },
+            SearchItemData(
                 url = url,
                 coverUrl = book.selectFirst(".gl1e img")!!.attr("src"),
                 cat = Category.fromName(book.selectFirst(".cn")!!.text()),
@@ -136,6 +143,12 @@ class ESearchHelper (
                         }
                     }
                     throw IllegalStateException()
+                },
+                bookId = url.let {
+                    (if (url.last() == '/') url.dropLast(1) else url)
+                        .split("/").let {
+                            it[it.lastIndex - 1]
+                        }
                 }
             )
         }

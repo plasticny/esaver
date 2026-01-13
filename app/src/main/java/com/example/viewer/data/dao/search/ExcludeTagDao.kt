@@ -1,4 +1,4 @@
-package com.example.viewer.data.dao
+package com.example.viewer.data.dao.search
 
 import androidx.room.Dao
 import androidx.room.Insert
@@ -6,7 +6,7 @@ import androidx.room.Query
 import androidx.room.RawQuery
 import androidx.room.Update
 import androidx.sqlite.db.SupportSQLiteQuery
-import com.example.viewer.data.struct.ExcludeTag
+import com.example.viewer.data.struct.search.ExcludeTag
 
 @Dao
 interface ExcludeTagDao {

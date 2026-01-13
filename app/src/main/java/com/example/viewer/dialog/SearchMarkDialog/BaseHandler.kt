@@ -9,7 +9,7 @@ import androidx.core.view.setMargins
 import com.example.viewer.Util
 import com.example.viewer.databinding.DialogSearchMarkBinding
 import com.example.viewer.databinding.DialogSearchMarkTagBinding
-import com.example.viewer.struct.BookSource
+import com.example.viewer.struct.ItemSource
 import com.example.viewer.struct.Category
 
 abstract class BaseHandler (
@@ -23,7 +23,7 @@ abstract class BaseHandler (
         val TAGS_DISPLAY = mutableListOf("-").also { it.addAll(Util.TAG_TRANSLATION_MAP.values) }.toList()
     }
 
-    abstract val source: BookSource
+    abstract val source: ItemSource
 
     abstract fun setupUi ()
     abstract fun buildDialogData (): DialogData

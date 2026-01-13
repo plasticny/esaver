@@ -1,14 +1,12 @@
 package com.example.viewer.fetcher
 
 import android.content.Context
-import android.widget.Toast
 import com.example.viewer.Util
-import com.example.viewer.struct.BookSource
+import com.example.viewer.struct.ItemSource
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import java.io.File
 import java.net.URL
 
@@ -76,8 +74,8 @@ class HiPictureFetcher: BasePictureFetcher {
      * local book
      */
 //    constructor (context: Context, bookId: String): super(context, bookId, BookSource.Hi) {
-    constructor (context: Context, bookId: String): super(context, bookId, BookSource.E) {
-        hiBookId = bookId
+    constructor (context: Context, itemId: Long): super(context, itemId, ItemSource.E) {
+        hiBookId = "bookId"
         init()
     }
 

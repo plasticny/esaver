@@ -1,9 +1,9 @@
-package com.example.viewer.data.dao
+package com.example.viewer.data.dao.search
 
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
-import com.example.viewer.data.struct.SearchHistory
+import com.example.viewer.data.struct.search.SearchHistory
 
 @Dao
 interface SearchHistoryDao {

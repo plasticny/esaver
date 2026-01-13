@@ -10,16 +10,14 @@ import android.widget.GridLayout.UNDEFINED
 import androidx.appcompat.app.AlertDialog
 import com.example.viewer.R
 import com.example.viewer.Util
-import com.example.viewer.data.database.BookDatabase
 import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.databinding.BookmarkDialogBinding
 import com.example.viewer.databinding.BookmarkItemBinding
-import kotlinx.coroutines.runBlocking
 
 class BookmarkDialog (
     context: Context,
     private val layoutInflater: LayoutInflater,
-    private val bookId: String,
+    private val itemId: Long,
     private val curPage: Int,
     private val onJumpToClicked: (page: Int) -> Unit
 ) {
@@ -39,14 +37,14 @@ class BookmarkDialog (
                 if (doCurPageMarked) {
                     return@setOnClickListener
                 }
-                bookDatabase.addBookMark(bookId, curPage)
+                bookDatabase.addBookMark(itemId, curPage)
                 refreshBookMarks()
             }
         }
 
         dialogBinding.removeButton.setOnClickListener {
             selectedBookMarkBinding?.let {
-                bookDatabase.removeBookMark(bookId, it.bookmarkTextView.text.toString().toInt() - 1)
+                bookDatabase.removeBookMark(itemId, it.bookmarkTextView.text.toString().toInt() - 1)
                 refreshBookMarks()
             }
         }
@@ -62,7 +60,7 @@ class BookmarkDialog (
     }
 
     private fun refreshBookMarks () {
-        val bookmarkBindings = bookDatabase.getBookMarks(bookId).also {
+        val bookmarkBindings = bookDatabase.getBookMarks(itemId).also {
             doCurPageMarked = it.contains(curPage)
             toggleButtonStyle(dialogBinding.addButton, !doCurPageMarked)
         }.map { page ->

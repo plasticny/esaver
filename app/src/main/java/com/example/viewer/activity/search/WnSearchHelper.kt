@@ -1,10 +1,12 @@
 package com.example.viewer.activity.search
 
+import android.content.Context
 import android.net.Uri
-import com.example.viewer.data.struct.Book
-import com.example.viewer.struct.BookSource
+import com.example.viewer.data.repository.ExcludeTagRepository
+import com.example.viewer.struct.ItemSource
 import com.example.viewer.struct.Category
-import com.google.gson.Gson
+import com.example.viewer.struct.ItemType
+import com.example.viewer.struct.ProfileItem
 import it.skrape.core.htmlDocument
 import it.skrape.fetcher.HttpFetcher
 import it.skrape.fetcher.response
@@ -14,13 +16,14 @@ import kotlinx.coroutines.withContext
 import org.jsoup.nodes.Document
 
 class WnSearchHelper (
+    context: Context,
     searchMarkData: SearchMarkData
-): SearchHelper(searchMarkData) {
+): SearchHelper(context, searchMarkData) {
     private val isKeywordSearching: Boolean
     private val category: Category
 
     init {
-        assert(searchMarkData.sourceOrdinal == BookSource.Wn.ordinal)
+        assert(searchMarkData.sourceOrdinal == ItemSource.Wn.ordinal)
         next = 1
         prev = ENDED
         category = searchMarkData.categories.first()
@@ -38,44 +41,49 @@ class WnSearchHelper (
         return createSearchUrl(prev)
     }
 
-    override suspend fun fetchBooks(
+    override suspend fun fetchItems(
         searchUrl: String,
         isSearchMarkChanged: () -> Boolean
-    ): List<SearchBookData>? {
+    ): List<SearchItemData>? {
         val doc = withContext(Dispatchers.IO) {
             fetchWebpage(searchUrl)
         }
         return if (isSearchMarkChanged()) null else processSearchDoc(doc)
     }
 
-    override suspend fun storeDetailAsTmpBook (searchBookData: SearchBookData): Boolean {
+    override suspend fun storeDetailAsTmpProfileItem (searchItemData: SearchItemData): Boolean {
         val doc = withContext(Dispatchers.IO) {
-            fetchWebpage(searchBookData.url)
+            fetchWebpage(searchItemData.url)
         }
-
-        val gson = Gson()
 
         val tags: Map<String, List<String>> = mapOf(
             "標籤" to doc.select(".addtags > .tagshow").map { it.text() }
         )
-
-        Book.setTmpBook(
-            id = searchBookData.id,
-            url = searchBookData.url,
-            title = searchBookData.title,
+        ProfileItem.setTmp(ProfileItem(
+            id = -1,
+            url = searchItemData.url,
+            title = searchItemData.title,
             subTitle = "",
-            pageNum = searchBookData.pageNum,
-            categoryOrdinal = searchBookData.cat.ordinal,
+            customTitle = null,
+            tags = tags,
+            excludedTags = ExcludeTagRepository(context).findExcludedTags(tags, searchItemData.cat),
+            source = ItemSource.Wn,
+            type = ItemType.Book,
+            category = searchItemData.cat,
+            coverPage = 0,
+            coverUrl = searchItemData.coverUrl,
+            coverCropPosition = null,
             uploader = doc.selectFirst(".uwuinfo p")?.text(),
-            tagsJson = gson.toJson(tags),
-            sourceOrdinal = BookSource.Wn.ordinal,
-            coverUrl = searchBookData.coverUrl
-        )
-
+            isTmp = true,
+            bookData = ProfileItem.BookData(
+                id = searchItemData.bookId!!,
+                pageNum = searchItemData.pageNum
+            )
+        ))
         return true
     }
 
-    private fun processSearchDoc (doc: Document): List<SearchBookData> {
+    private fun processSearchDoc (doc: Document): List<SearchItemData> {
         // update next
         if (isKeywordSearching) {
             val elThisPage = doc.getElementsByClass("thispage").first()
@@ -95,8 +103,7 @@ class WnSearchHelper (
 
         return doc.getElementsByClass("gallary_item").mapNotNull { galleryItem ->
             val bookUrl = galleryItem.getElementsByTag("a").first()!!.attr("href")
-            SearchBookData(
-                id = bookUrl.slice(18..bookUrl.length - 6),
+            SearchItemData(
                 url = "https://www.wnacg.com$bookUrl",
                 coverUrl = "https:${galleryItem.getElementsByTag("img").first()!!.attr("src")}",
                 cat = if (searchMarkData.sourceOrdinal != Category.All.ordinal) {
@@ -114,7 +121,8 @@ class WnSearchHelper (
                 pageNum = galleryItem.getElementsByClass("info_col").first()!!.text()
                     .trim().split("張").first().toInt(),
                 tags = mapOf(),
-                rating = null
+                rating = null,
+                bookId = bookUrl.slice(18..bookUrl.length - 6)
             )
         }
     }

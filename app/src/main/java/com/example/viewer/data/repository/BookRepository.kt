@@ -4,82 +4,39 @@ import android.content.Context
 import android.graphics.PointF
 import androidx.room.Transaction
 import com.example.viewer.Util
-import com.example.viewer.data.dao.BookDao
-import com.example.viewer.data.dao.BookWithGroupDao
-import com.example.viewer.data.database.BookDatabase
-import com.example.viewer.data.struct.Book
-import com.example.viewer.data.struct.BookWithGroup
-import com.example.viewer.struct.BookSource
+import com.example.viewer.data.dao.item.ItemCommonCustomDao
+import com.example.viewer.data.dao.item.ItemDao
+import com.example.viewer.data.dao.item.SourceDataEDao
+import com.example.viewer.data.dao.item.SourceDataWnDao
+import com.example.viewer.data.database.ItemDatabase
+import com.example.viewer.data.repository.ItemRepository
+import com.example.viewer.data.struct.item.Item
+import com.example.viewer.data.struct.item.ItemCommonCustom
+import com.example.viewer.data.struct.item.SourceDataE
+import com.example.viewer.data.struct.item.SourceDataWn
+//import com.example.viewer.data.dao.BookDao
+//import com.example.viewer.data.dao.BookWithGroupDao
+//import com.example.viewer.data.database.BookDatabase
+//import com.example.viewer.data.struct.Book
+//import com.example.viewer.data.struct.BookWithGroup
+import com.example.viewer.struct.ItemSource
 import com.example.viewer.struct.Category
+import com.example.viewer.struct.ItemType
 import com.google.gson.Gson
 import kotlinx.coroutines.runBlocking
 
 class BookRepository (private val context: Context) {
-    companion object {
-        private var listLastUpdateTime = 0L
-        fun getListLastUpdateTime () = listLastUpdateTime
-    }
-
-    private val bookDao: BookDao
-    private val bookWithGroupDao: BookWithGroupDao
+    private val itemDao: ItemDao
+    private val itemCommonCustomDao: ItemCommonCustomDao
+    private val sourceDataEDao: SourceDataEDao
+    private val sourceDataWnDao: SourceDataWnDao
 
     init {
-        BookDatabase.getInstance(context).run {
-            bookDao = this.bookDao()
-            bookWithGroupDao = this.bookWithGroupDao()
-        }
-    }
-
-    fun addBookFromPreference (
-        id: String,
-        url: String,
-        category: Category,
-        title: String,
-        subtitle: String = "",
-        pageNum: Int,
-        tags: Map<String, List<String>>,
-        source: BookSource,
-        groupId: Int,
-        uploader: String?,
-        coverPage: Int,
-        skipPages: List<Int>,
-        lastViewTime: Long,
-        bookMarks: List<Int>,
-        pageUrls: List<String>?,
-        p: Int?
-    ) {
-        val gson = Gson()
-        runBlocking {
-            bookDao.insert(
-                Book(
-                    id = id,
-                    url = url,
-                    title = title,
-                    subTitle = subtitle,
-                    pageNum = pageNum,
-                    categoryOrdinal = category.ordinal,
-                    uploader = uploader,
-                    tagsJson = gson.toJson(tags).toString(),
-                    sourceOrdinal = source.ordinal,
-                    coverPage = coverPage,
-                    skipPagesJson = gson.toJson(skipPages).toString(),
-                    lastViewTime = lastViewTime,
-                    bookMarksJson = gson.toJson(bookMarks).toString(),
-                    customTitle = null,
-                    coverCropPositionString = null,
-                    pageUrlsJson = pageUrls?.let {
-                        gson.toJson(it).toString()
-                    },
-                    p = p
-                )
-            )
-            bookWithGroupDao.insert(
-                BookWithGroup(
-                    bookId = id,
-                    bookSourceOrdinal = source.ordinal,
-                    groupId = groupId
-                )
-            )
+        ItemDatabase.getInstance(context).run {
+            itemDao = this.itemDao()
+            itemCommonCustomDao = this.itemCommonCustomDao()
+            sourceDataEDao = this.sourceDataEDao()
+            sourceDataWnDao = this.sourceDataWnDao()
         }
     }
 
@@ -91,202 +48,288 @@ class BookRepository (private val context: Context) {
         subtitle: String = "",
         pageNum: Int,
         tags: Map<String, List<String>>,
-        source: BookSource,
+        source: ItemSource,
         uploader: String?
-    ) = runBlocking {
+    ): Long = runBlocking {
         val gson = Gson()
-        bookDao.insert(
-            Book(
-                id = id,
-                url = url,
+
+        val internalId = ItemRepository(context).addItem(
+            Item(
+                typeOrdinal = ItemType.Book.ordinal,
+                sourceOrdinal = source.ordinal,
+                lastViewTime = -1L,
+                groupId = GroupRepository.DEFAULT_GROUP_ID,
+                categoryOrdinal = category.ordinal,
+                orderInGroup = id.toInt()
+            )
+        )
+        val emptyIntListJson = gson.toJson(listOf<Int>()).toString()
+
+        when (source) {
+            ItemSource.E -> sourceDataEDao.insert(SourceDataE(
+                internalId = internalId,
+                bookId = id,
+                url= url,
                 title = title,
                 subTitle = subtitle,
                 pageNum = pageNum,
-                categoryOrdinal = category.ordinal,
                 uploader = uploader,
                 tagsJson = gson.toJson(tags).toString(),
-                sourceOrdinal = source.ordinal,
-                coverPage = 0,
-                skipPagesJson = gson.toJson(listOf<Int>()).toString(),
-                lastViewTime = -1L,
-                bookMarksJson = gson.toJson(listOf<Int>()).toString(),
-                customTitle = null,
-                coverCropPositionString = null,
-                pageUrlsJson = when (source) {
-                    BookSource.E, BookSource.Wn -> gson.toJson(listOf<String>()).toString()
-                    else -> throw NotImplementedError(source.name)
-//                    BookSource.Hi -> null
-                },
-                p = when (source) {
-                    BookSource.E -> 0
-                    BookSource.Wn -> 1
-                    else -> throw NotImplementedError(source.name)
-//                    BookSource.Hi -> null
-                }
-            )
-        )
-        listLastUpdateTime = System.currentTimeMillis()
+                skipPagesJson = emptyIntListJson,
+                bookMarksJson = emptyIntListJson,
+                pageUrlsJson = gson.toJson(listOf<String>()).toString(),
+                p = 0
+            ))
+            ItemSource.Wn -> sourceDataWnDao.insert(SourceDataWn(
+                internalId = internalId,
+                bookId = id,
+                url = url,
+                title = title,
+                pageNum = pageNum,
+                uploader = uploader!!,
+                tagsJson = gson.toJson(tags).toString(),
+                skipPagesJson = emptyIntListJson,
+                bookMarksJson = emptyIntListJson,
+                pageUrlsJson = gson.toJson(listOf<String>()).toString(),
+                p = 1
+            ))
+            ItemSource.Ru -> throw IllegalArgumentException()
+            ItemSource.Hi -> throw NotImplementedError()
+        }
+
+        internalId
     }
-
-    fun addBook (book: Book) = runBlocking { bookDao.insert(book) }
-
-    fun getBook (id: String): Book =
-        if (id == "-1") { Book.getTmpBook() } else runBlocking { bookDao.queryById(id) }
 
     @Transaction
-    fun removeBook (book: Book): Boolean {
-        runBlocking { bookDao.deleteById(book.id) }
+    fun saveAsBook (internalId: Long): Long = runBlocking {
+        val originItem = itemDao.queryAll(internalId)
+        if (originItem.typeOrdinal != ItemType.Book.ordinal) {
+            throw IllegalStateException()
+        }
+        val source = ItemSource.fromOrdinal(originItem.sourceOrdinal)
+        val bookId = getBookId(internalId, source)
 
-        val bookFolder = book.getBookFolder(context)
-        for (file in bookFolder.listFiles()!!) {
-            if(!file.delete()) {
-                throw Exception("delete image failed")
+        val newId = itemDao.insert(Item(
+            typeOrdinal = ItemType.Book.ordinal,
+            sourceOrdinal = originItem.sourceOrdinal,
+            categoryOrdinal = originItem.categoryOrdinal,
+            lastViewTime = -1L,
+            groupId = originItem.groupId,
+            orderInGroup = bookId.toInt()
+        ))
+        itemCommonCustomDao.insert(
+            itemCommonCustomDao.queryAll(internalId).apply {
+                this.internalId = newId
+                this.customTitle = "${this.customTitle}_copy"
             }
-        }
-        if(!bookFolder.delete()) {
-            throw Exception("delete book folder failed")
-        }
-
-        GroupRepository(context).removeIfEmpty(
-            runBlocking { bookWithGroupDao.queryGroupId(book.id) }
         )
 
-        listLastUpdateTime = System.currentTimeMillis()
+        when (source) {
+            ItemSource.E -> {
+                sourceDataEDao.insert(
+                    sourceDataEDao.queryAll(internalId).apply {
+                        this.internalId = newId
+                    }
+                )
+            }
+            ItemSource.Wn -> {
+                sourceDataWnDao.insert(
+                    sourceDataWnDao.queryAll(internalId).apply {
+                        this.internalId = newId
+                    }
+                )
+            }
+            ItemSource.Hi, ItemSource.Ru -> throw IllegalStateException()
+        }
 
-        return true
+        ItemRepository.updateListLastUpdateTime()
+
+        newId
     }
 
-    fun isBookStored (id: String) = runBlocking { bookDao.countId(id) != 0 }
-
-    fun getBookMarks (id: String): List<Int> {
-        val book = runBlocking { bookDao.queryById(id) }
-        return Util.readListFromJson(book.bookMarksJson)
+    fun getESourceData (internalId: Long): SourceDataE = runBlocking {
+        sourceDataEDao.queryAll(internalId)
     }
 
-    fun addBookMark (id: String, page: Int) {
-        val gson = Gson()
-        val dao = bookDao
-
-        val book = runBlocking { dao.queryById(id) }
-        val bookmarks = Util.readListFromJson<Int>(book.bookMarksJson).toMutableList()
-        bookmarks.add(page)
-        book.bookMarksJson = gson.toJson(bookmarks.toList()).toString()
-
-        runBlocking { dao.update(book) }
+    fun getWnSourceData (internalId: Long): SourceDataWn = runBlocking {
+        sourceDataWnDao.queryAll(internalId)
     }
 
-    fun removeBookMark (id: String, page: Int) {
-        val gson = Gson()
-        val dao = bookDao
+    fun getBookId (internalId: Long, source: ItemSource? = null): String = runBlocking {
+        when (source ?: ItemSource.fromOrdinal(itemDao.querySourceOrdinal(internalId))) {
+            ItemSource.E -> sourceDataEDao.queryBookId(internalId)
+            ItemSource.Wn -> sourceDataWnDao.queryBookId(internalId)
+            ItemSource.Hi, ItemSource.Ru -> throw IllegalStateException()
+        }
+    }
 
-        val book = runBlocking { dao.queryById(id) }
-        val bookmarks = Util.readListFromJson<Int>(book.bookMarksJson).toMutableList()
+    fun getBookMarks (internalId: Long): List<Int> {
+        val sourceOrdinal = runBlocking { itemDao.querySourceOrdinal(internalId) }
+        val bookMarksJson = when (ItemSource.fromOrdinal(sourceOrdinal)) {
+            ItemSource.E -> runBlocking { sourceDataEDao.queryBookMarksJson(internalId) }
+            ItemSource.Wn -> runBlocking { sourceDataWnDao.queryBookMarksJson(internalId) }
+            ItemSource.Hi, ItemSource.Ru -> throw IllegalStateException()
+        }
+        return Util.readListFromJson(bookMarksJson)
+    }
+
+    fun addBookMark (internalId: Long, page: Int) {
+        val bookmarks = getBookMarks(internalId).toMutableList().also { it.add(page) }
+        val bookMarksJson = Gson().toJson(bookmarks.toList()).toString()
+
+        val sourceOrdinal = runBlocking { itemDao.querySourceOrdinal(internalId) }
+        when (ItemSource.fromOrdinal(sourceOrdinal)) {
+            ItemSource.E -> runBlocking { sourceDataEDao.updateBookMarksJson(internalId, bookMarksJson) }
+            ItemSource.Wn -> runBlocking { sourceDataWnDao.updateBookMarksJson(internalId, bookMarksJson) }
+            ItemSource.Hi, ItemSource.Ru -> throw IllegalStateException()
+        }
+    }
+
+    fun removeBookMark (internalId: Long, page: Int) {
+        val bookmarks = getBookMarks(internalId).toMutableList()
         if (!bookmarks.remove(page)) {
             throw Exception("the bookmark page $page is not exist")
         }
-        book.bookMarksJson = gson.toJson(bookmarks.toList()).toString()
+        val bookMarksJson = Gson().toJson(bookmarks.toList()).toString()
 
-        runBlocking { dao.update(book) }
+        val sourceOrdinal = runBlocking { itemDao.querySourceOrdinal(internalId) }
+        when (ItemSource.fromOrdinal(sourceOrdinal)) {
+            ItemSource.E -> runBlocking { sourceDataEDao.updateBookMarksJson(internalId, bookMarksJson) }
+            ItemSource.Wn -> runBlocking { sourceDataWnDao.updateBookMarksJson(internalId, bookMarksJson) }
+            ItemSource.Hi, ItemSource.Ru -> throw IllegalStateException()
+        }
     }
 
-    fun getAllBookIds () = runBlocking { bookDao.getAllBookIds() }
+    fun getBookUrl (internalId: Long): String = runBlocking {
+        val sourceOrdinal = itemDao.querySourceOrdinal(internalId)
+        return@runBlocking when (ItemSource.fromOrdinal(sourceOrdinal)) {
+            ItemSource.E -> sourceDataEDao.queryUrl(internalId)
+            ItemSource.Wn -> sourceDataWnDao.queryUrl(internalId)
+            ItemSource.Hi, ItemSource.Ru -> throw IllegalStateException()
+        }
+    }
 
-    fun getBookIdSeqH () = runBlocking { bookDao.getBookIdSeqH() }
-
-    fun getBookIdSeqNH () = runBlocking { bookDao.getBookIdSeqNH() }
-
-    fun getBookUrl (id: String) = runBlocking { bookDao.getUrl(id) }
-
-    fun getBookPageUrls (id: String): Array<String?> {
-        val book = queryBook(id)
-//        if (book.sourceOrdinal == BookSource.Hi.ordinal) {
-//            throw Exception("Page urls are not stored for this book source")
-//        }
-
-        val stored = Util.readArrayFromJson<String?>(book.pageUrlsJson!!)
-        if (stored.size == book.pageNum) {
-            return stored
+    fun getBookPageUrls (internalId: Long): Array<String?> {
+        val (pageUrlJson, pageNum) = runBlocking {
+            val sourceOrdinal = itemDao.querySourceOrdinal(internalId)
+            return@runBlocking when (ItemSource.fromOrdinal(sourceOrdinal)) {
+                ItemSource.E -> sourceDataEDao.queryPageUrlJson(internalId) to sourceDataEDao.queryPageNum(internalId)
+                ItemSource.Wn -> sourceDataWnDao.queryPageUrlJson(internalId) to sourceDataWnDao.queryPageNum(internalId)
+                ItemSource.Hi, ItemSource.Ru -> throw IllegalStateException()
+            }
         }
 
-        return arrayOfNulls<String>(book.pageNum).apply {
+        val stored = Util.readArrayFromJson<String?>(pageUrlJson)
+        if (stored.size == pageNum) {
+            return stored
+        }
+        return arrayOfNulls<String>(pageNum).apply {
             for ((i, v) in stored.withIndex()) {
                 this[i] = v
             }
         }
     }
-    fun setBookPageUrls (id: String, urls: Array<String?>) {
-        val dao = bookDao
-        val book = queryBook(id)
-        book.pageUrlsJson = Gson().toJson(urls).toString()
-        runBlocking { dao.update(book) }
-    }
-
-    fun getBookP (id: String): Int = runBlocking { bookDao.getP(id)!! }
-    fun increaseBookP (id: String): Int {
-        val dao = bookDao
-        val book = queryBook(id)
-        book.p = book.p!! + 1
-        runBlocking { dao.update(book) }
-        return book.p!!
-    }
-
-    fun getBookPageNum (id: String): Int = runBlocking { bookDao.getPageNum(id) }
-
-    fun getBookSource (id: String): BookSource =
-        BookSource.fromOrdinal(runBlocking { bookDao.getSourceOrdinal(id) })
-
-    fun getBookCoverPage (id: String): Int = runBlocking { bookDao.getCoverPage(id) }
-    fun setBookCoverPage (id: String, v: Int) {
-        val dao = bookDao
-        val book = queryBook(id)
-        book.coverPage = v
-        runBlocking { dao.update(book) }
-        listLastUpdateTime = System.currentTimeMillis()
-    }
-
-    fun getBookSkipPages (id: String): List<Int> = Util.readListFromJson(
-        runBlocking { bookDao.getSkipPagesJson(id) }.also { println(it) }
-    )
-    fun setBookSkipPages (id: String, v: List<Int>) {
-        val dao = bookDao
-        val book = queryBook(id)
-        book.skipPagesJson = Gson().toJson(v).toString()
-        runBlocking { dao.update(book) }
-    }
-
-    fun getBookLastViewTime (id: String) = runBlocking { bookDao.getLastViewTime(id) }
-    fun updateBookLastViewTime (id: String) {
-        val dao = bookDao
-        val book = queryBook(id)
-        book.lastViewTime = System.currentTimeMillis()
-        runBlocking { dao.update(book) }
-    }
-
-    /**
-     * get group id of a book
-     * @param id book id
-     */
-    fun getGroupId (id: String): Int = runBlocking { bookWithGroupDao.queryGroupId(id) }
-
-    fun updateCustomTitle (id: String, value: String) = runBlocking {
-        bookDao.updateCustomTitle(id, value)
-    }
-
-    fun getCoverCropPosition (id: String): PointF? = runBlocking {
-        bookDao.getCoverCropPositionString(id)?.let {
-            Book.coverCropPositionStringToPoint(it)
+    fun setBookPageUrls (internalId: Long, urls: Array<String?>) {
+        val pageUrlsJson = Gson().toJson(urls).toString()
+        runBlocking {
+            val sourceOrdinal = itemDao.querySourceOrdinal(internalId)
+            when (ItemSource.fromOrdinal(sourceOrdinal)) {
+                ItemSource.E -> sourceDataEDao.updatePageUrlJson(internalId, pageUrlsJson)
+                ItemSource.Wn -> sourceDataWnDao.updatePageUrlJson(internalId, pageUrlsJson)
+                ItemSource.Hi, ItemSource.Ru -> throw IllegalStateException()
+            }
         }
+    }
+
+    fun getBookP (internalId: Long): Int = runBlocking {
+        val sourceOrdinal = itemDao.querySourceOrdinal(internalId)
+        return@runBlocking when (ItemSource.fromOrdinal(sourceOrdinal)) {
+            ItemSource.E -> sourceDataEDao.queryP(internalId)
+            ItemSource.Wn -> sourceDataWnDao.queryP(internalId)
+            ItemSource.Hi, ItemSource.Ru -> throw IllegalStateException()
+        }
+    }
+    fun increaseBookP (internalId: Long): Int {
+        val p = getBookP(internalId) + 1
+        runBlocking {
+            val sourceOrdinal = itemDao.querySourceOrdinal(internalId)
+            when (ItemSource.fromOrdinal(sourceOrdinal)) {
+                ItemSource.E -> sourceDataEDao.updateP(internalId, p)
+                ItemSource.Wn -> sourceDataWnDao.updateP(internalId, p)
+                ItemSource.Hi, ItemSource.Ru -> throw IllegalStateException()
+            }
+        }
+        return p
+    }
+
+    fun getBookPageNum (internalId: Long, source: ItemSource? = null): Int = runBlocking {
+        val sourceOrdinal = source?.ordinal ?: itemDao.querySourceOrdinal(internalId)
+        return@runBlocking when (ItemSource.fromOrdinal(sourceOrdinal)) {
+            ItemSource.E -> sourceDataEDao.queryPageNum(internalId)
+            ItemSource.Wn -> sourceDataWnDao.queryPageNum(internalId)
+            ItemSource.Hi, ItemSource.Ru -> throw IllegalStateException()
+        }
+    }
+
+    fun getBookCoverPage (internalId: Long): Int = runBlocking {
+        itemCommonCustomDao.queryCoverPage(internalId)
+    }
+    fun setBookCoverPage (internalId: Long, v: Int) = runBlocking {
+        itemCommonCustomDao.updateCoverPage(internalId, v)
+        ItemRepository.updateListLastUpdateTime()
+    }
+
+    fun getBookSkipPages (internalId: Long): List<Int> = runBlocking {
+        val sourceOrdinal = itemDao.querySourceOrdinal(internalId)
+        val json = when (ItemSource.fromOrdinal(sourceOrdinal)) {
+            ItemSource.E -> sourceDataEDao.querySkipPagesJson(internalId)
+            ItemSource.Wn -> sourceDataWnDao.querySkipPagesJson(internalId)
+            ItemSource.Hi, ItemSource.Ru -> throw IllegalStateException()
+        }
+        Util.readListFromJson(json)
+    }
+    fun setBookSkipPages (internalId: Long, v: List<Int>) {
+        val skipPagesJson = Gson().toJson(v).toString()
+        runBlocking {
+            val sourceOrdinal = itemDao.querySourceOrdinal(internalId)
+            when (ItemSource.fromOrdinal(sourceOrdinal)) {
+                ItemSource.E -> sourceDataEDao.updateSkipPagesJson(internalId, skipPagesJson)
+                ItemSource.Wn -> sourceDataWnDao.updateSkipPagesJson(internalId, skipPagesJson)
+                ItemSource.Hi, ItemSource.Ru -> throw IllegalStateException()
+            }
+        }
+    }
+
+    fun updateBookLastViewTime (internalId: Long) = runBlocking {
+        itemDao.updateLastViewTime(internalId, System.currentTimeMillis())
+    }
+
+    fun getGroupId (internalId: Long): Int = runBlocking { itemDao.queryGroupId(internalId) }
+
+    fun updateCustomTitle (internalId: Long, value: String) = runBlocking {
+        itemCommonCustomDao.updateCustomTitle(internalId, if (value.trim().isNotEmpty()) value else null)
     }
 
     /**
      * @param position this should be in normalized coordinates
      */
-    fun updateCoverCropPosition (id: String, position: PointF) = runBlocking {
+    fun updateCoverCropPosition (internalId: Long, position: PointF) = runBlocking {
         if (position.x < 0 || position.x > 1 || position.y < 0 || position.y > 1) {
             throw IllegalArgumentException("the position seems not a valid normalized coordinates")
         }
-        bookDao.updateCoverCropPositionString(id, "${position.x},${position.y}")
+        itemCommonCustomDao.updateCoverCropPositionString(
+            internalId,
+            "${position.x},${position.y}"
+        )
     }
 
-    private fun queryBook (id: String) = runBlocking { bookDao.queryById(id) }
+    // return book's internal id if stored, else -1
+    fun isBookStored (bookId: String, source: ItemSource): Long = runBlocking {
+        when (source) {
+            ItemSource.E -> sourceDataEDao.queryInternalId(bookId) ?: -1L
+            ItemSource.Wn -> sourceDataWnDao.queryInternalId(bookId) ?: -1L
+            ItemSource.Hi -> throw NotImplementedError()
+            ItemSource.Ru -> throw IllegalStateException()
+        }
+    }
 }

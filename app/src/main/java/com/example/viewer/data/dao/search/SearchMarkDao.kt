@@ -1,10 +1,10 @@
-package com.example.viewer.data.dao
+package com.example.viewer.data.dao.search
 
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
-import com.example.viewer.data.struct.SearchMark
+import com.example.viewer.data.struct.search.SearchMark
 
 @Dao
 interface SearchMarkDao {

@@ -1,24 +1,26 @@
 package com.example.viewer
 
 import android.content.Context
-import com.example.viewer.data.repository.BookRepository
-import com.example.viewer.data.struct.Book
+import com.example.viewer.data.repository.ItemRepository
+//import com.example.viewer.data.repository.BookRepository
+import com.example.viewer.data.struct.item.Item
+//import com.example.viewer.data.struct.Book
 import kotlinx.coroutines.runBlocking
 import kotlin.math.floor
 import kotlin.math.min
 
-class RandomBook private constructor(context: Context) {
+class ItemRNG private constructor (context: Context) {
     companion object {
         private const val POOL_SIZE = 5
 
         @Volatile
-        private var instance: RandomBook? = null
+        private var instance: ItemRNG? = null
 
-        private fun getInstance (context: Context): RandomBook = synchronized(this) {
-            instance ?: RandomBook(context).also { instance = it }
+        private fun getInstance (context: Context): ItemRNG = synchronized(this) {
+            instance ?: ItemRNG(context).also { instance = it }
         }
 
-        fun next (context: Context) = getInstance(context).next()
+        fun next (context: Context): Long = getInstance(context).next()
 
         fun getPoolStatus (context: Context): Pair<Boolean, Boolean> =
             getInstance(context).let { Pair(it.pullH, it.pullNH) }
@@ -31,19 +33,19 @@ class RandomBook private constructor(context: Context) {
         }
     }
 
-    private val bookDataset = BookRepository(context)
+    private val itemRepo: ItemRepository by lazy { ItemRepository(context) }
 
-    private val bookIdSequenceH: MutableList<Book.Companion.SequenceItem> by lazy {
-        runBlocking { bookDataset.getBookIdSeqH().toMutableList() }
+    private val bookIdSequenceH: MutableList<Item.Companion.SequenceItem> by lazy {
+        runBlocking { itemRepo.getIdSeqH().toMutableList() }
     }
-    private val bookIdSequenceNH: MutableList<Book.Companion.SequenceItem> by lazy {
-        runBlocking { bookDataset.getBookIdSeqNH().toMutableList() }
+    private val bookIdSequenceNH: MutableList<Item.Companion.SequenceItem> by lazy {
+        runBlocking { itemRepo.getIdSeqNH().toMutableList() }
     }
 
     private var pullH = true
     private var pullNH = false
 
-    private fun next (): String {
+    private fun next (): Long {
         if (!pullH && !pullNH) {
             throw IllegalStateException()
         }
@@ -60,16 +62,16 @@ class RandomBook private constructor(context: Context) {
         return pullIdFromAllSeq(seqToPick)
     }
 
-    private fun pullIdFromSeq (seq: MutableList<Book.Companion.SequenceItem>, toPick: Int): String {
+    private fun pullIdFromSeq (seq: MutableList<Item.Companion.SequenceItem>, toPick: Int): Long {
         val ret = seq.removeAt(toPick)
-        seq.add(Book.Companion.SequenceItem(
+        seq.add(Item.Companion.SequenceItem(
             id = ret.id,
             lastViewTime = seq.last().lastViewTime + 1
         ))
         return ret.id
     }
 
-    private fun pullIdFromAllSeq (toPick: Int): String {
+    private fun pullIdFromAllSeq (toPick: Int): Long {
         var idxH = 0
         var idxNH = 0
         var j = 0

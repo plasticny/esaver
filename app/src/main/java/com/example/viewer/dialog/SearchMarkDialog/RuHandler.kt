@@ -3,7 +3,7 @@ package com.example.viewer.dialog.SearchMarkDialog
 import android.content.Context
 import android.view.LayoutInflater
 import com.example.viewer.databinding.DialogSearchMarkBinding
-import com.example.viewer.struct.BookSource
+import com.example.viewer.struct.ItemSource
 
 class RuHandler (
     context: Context,
@@ -12,7 +12,7 @@ class RuHandler (
     ownerRootBinding: DialogSearchMarkBinding,
     private val keyword: String
 ): BaseHandler(context, layoutInflater, owner, ownerRootBinding) {
-    override val source: BookSource = BookSource.Ru
+    override val source: ItemSource = ItemSource.Ru
 
     override fun setupUi() {
         owner.apply {

@@ -2,14 +2,15 @@ package com.example.viewer.fetcher
 
 import android.content.Context
 import android.graphics.BitmapFactory
-import android.graphics.ImageDecoder
 import android.util.Log
 import com.example.viewer.Util
 import com.example.viewer.data.repository.BookRepository
-import com.example.viewer.data.struct.Book
-import com.example.viewer.struct.BookSource
+import com.example.viewer.data.repository.ItemRepository
+import com.example.viewer.data.struct.item.Item
+import com.example.viewer.struct.ItemSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType
 import okhttp3.OkHttpClient
@@ -29,14 +30,13 @@ abstract class BasePictureFetcher {
     companion object {
         private val okHttpClient = OkHttpClient()
 
-        fun getFetcher (context: Context, bookId: String): BasePictureFetcher {
-            val source = BookRepository(context).getBookSource(bookId)
-            println("[BasePictureFetcher.getFetcher] $source")
-            return when (source) {
-                BookSource.E -> EPictureFetcher(context, bookId)
-//                BookSource.Hi -> HiPictureFetcher(context, bookId)
-                BookSource.Wn -> WnPictureFetcher(context, bookId)
-                else -> throw NotImplementedError(source.name)
+        fun getFetcher (context: Context, itemId: Long): BasePictureFetcher {
+            val itemSource = runBlocking { ItemRepository(context).getSource(itemId) }
+            println("[BasePictureFetcher.getFetcher] ${itemSource.name}")
+            return when (itemSource) {
+                ItemSource.E -> EPictureFetcher(context, itemId)
+                ItemSource.Wn -> WnPictureFetcher(context, itemId)
+                else -> throw NotImplementedError(itemSource.name)
             }
         }
     }
@@ -54,6 +54,7 @@ abstract class BasePictureFetcher {
     private val downloadingPages = mutableSetOf<Int>()
 
     protected val context: Context
+    protected val itemId: Long
     protected val bookId: String?
     protected val pageNum: Int
     protected val isLocal: Boolean
@@ -68,12 +69,15 @@ abstract class BasePictureFetcher {
     /**
      * for local book
      */
-    protected constructor (context: Context, bookId: String, bookSource: BookSource) {
-        this.context = context
-        this.bookId = bookId
+    protected constructor (context: Context, itemId: Long, itemSource: ItemSource) {
+        val bookRepo = BookRepository(context)
 
-        pageNum = BookRepository(context).getBookPageNum(bookId)
-        bookFolder = Book.getBookFolder(context, bookId, bookSource.ordinal)
+        this.context = context
+        this.itemId = itemId
+        this.bookId = bookRepo.getBookId(itemId)
+
+        pageNum = bookRepo.getBookPageNum(itemId)
+        bookFolder = Item.getFolder(context, itemId)
         isLocal = true
     }
 
@@ -81,9 +85,10 @@ abstract class BasePictureFetcher {
      * for online book
      * @param bookId system will store this id, and avoid repeat downloading if the current book id is same as previous one
      */
-    protected constructor (context: Context, pageNum: Int, bookSource: BookSource, bookId: String? = null) {
+    protected constructor (context: Context, pageNum: Int, itemSource: ItemSource, bookId: String? = null) {
         this.context = context
         this.pageNum = pageNum
+        this.itemId = -1L
         this.bookId = bookId
 
         this.bookFolder = File(context.getExternalFilesDir(null), "tmp")
@@ -95,10 +100,10 @@ abstract class BasePictureFetcher {
         // to determine whether if the tmp folder should be cleared
         val bookIdTxt = File(this.bookFolder, "bookId.txt")
         val fullBookId = bookId?.let {
-            when (bookSource) {
-                BookSource.Wn -> "wn$bookId"
-                BookSource.E -> bookId
-                else -> throw NotImplementedError(bookSource.name)
+            when (itemSource) {
+                ItemSource.Wn -> "wn$bookId"
+                ItemSource.E -> bookId
+                else -> throw NotImplementedError(itemSource.name)
 //                BookSource.Hi -> bookId
             }
         }

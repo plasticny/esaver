@@ -13,16 +13,15 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.signature.MediaStoreSignature
-import com.example.viewer.activity.BookProfileActivity
-import com.example.viewer.data.database.BookDatabase
-import com.example.viewer.data.repository.BookRepository
+import com.example.viewer.activity.ItemProfileActivity
 import com.example.viewer.data.repository.GroupRepository
-import com.example.viewer.data.struct.Book
-import com.example.viewer.data.struct.BookWithGroup
-import com.example.viewer.databinding.FragmentMainGalleryBookBinding
+import com.example.viewer.data.repository.ItemRepository
+import com.example.viewer.data.struct.item.Item
+import com.example.viewer.databinding.FragmentMainGalleryItemBinding
 import com.example.viewer.databinding.MainGalleryFragmentAuthorBinding
 import com.example.viewer.fetcher.BasePictureFetcher
-import com.example.viewer.struct.BookSource
+import com.example.viewer.struct.ItemSource
+import com.example.viewer.struct.ItemType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -30,67 +29,42 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import kotlin.math.ceil
 
-class BookGallery (
+class Gallery (
     private val context: Context,
     private val layoutInflater: LayoutInflater,
     private val recyclerView: RecyclerView
 ) {
-    private val bookRepo = BookRepository(context)
+    private val itemRepo = ItemRepository(context)
     private val groupRepo = GroupRepository(context)
-    private val filter = Filter()
 
     // recycler view item metrics
     private val groupNameTextViewHeight = Util.sp2px(context, 18F)
     private val coverImageViewWidth =
         (context.resources.displayMetrics.widthPixels - Util.dp2px(context, 48F)) / 2
     private val coverImageViewHeight = (coverImageViewWidth * 1.4125).toInt()
-    private val bookMarginWidth = Util.dp2px(context, 8F)
+    private val itemMarginWidth = Util.dp2px(context, 8F)
 
     private val groupRecyclerViewAdapter: GroupRecyclerViewAdapter
         get() = recyclerView.adapter as GroupRecyclerViewAdapter
 
     init {
-        Log.i("BookGallery", "cover image: width $coverImageViewWidth, height $coverImageViewHeight")
+        Log.i("Gallery", "cover image: width $coverImageViewWidth, height $coverImageViewHeight")
         recyclerView.layoutManager = GridLayoutManager(context, 1)
         recyclerView.adapter = GroupRecyclerViewAdapter()
     }
 
-    fun notifyBookAdded () {
-        groupRecyclerViewAdapter.refreshGroupBooks(GroupRepository.DEFAULT_GROUP_ID)
-        scrollToGroup(GroupRepository.DEFAULT_GROUP_ID)
-    }
-
-    fun applyFilter (doDownloadComplete: Boolean? = null) {
-        filter.doDownloadComplete = doDownloadComplete
-        groupRecyclerViewAdapter.refreshGroupBooks()
-        recyclerView.scrollToPosition(0)
-    }
-
     fun refreshGroup () = groupRecyclerViewAdapter.refreshGroups()
 
-    fun refreshBooks () = groupRecyclerViewAdapter.refreshGroupBooks()
+    fun refreshItems () = groupRecyclerViewAdapter.refreshGroupItems()
 
-    fun openRandomBook () = openBook(RandomBook.next(context))
+    fun openRandomItem () = openItem(ItemRNG.next(context))
 
     fun scrollToGroup (id: Int) = recyclerView.scrollToPosition(groupRecyclerViewAdapter.getGroupPosition(id))
 
-    private fun openBook (bookId: String) {
-        context.startActivity(Intent(context, BookProfileActivity::class.java).apply {
-            putExtra("bookId", bookId)
+    private fun openItem (itemId: Long) {
+        context.startActivity(Intent(context, ItemProfileActivity::class.java).apply {
+            putExtra("itemId", itemId)
         })
-    }
-
-    inner class Filter {
-        var doDownloadComplete: Boolean? = null
-        fun isFiltered (context: Context, bookId: String, bookDataset: BookDatabase): Boolean {
-            throw NotImplementedError()
-//            if (doDownloadComplete == null) {
-//                return true
-//            }
-//            val bookFolder = File(context.getExternalFilesDir(null), bookId)
-//            val downloadedPageNum = bookFolder.listFiles()!!.size
-//            return (downloadedPageNum == bookDataset.getBookPageNum(bookId)) == doDownloadComplete
-        }
     }
 
     //
@@ -117,9 +91,9 @@ class BookGallery (
                 } else groupRepo.getGroupName(id)
             }
 
-            holder.binding.galleryAuthorBookRecyclerView.apply {
+            holder.binding.galleryAuthorItemRecyclerView.apply {
                 layoutManager = GridLayoutManager(context, 2)
-                adapter = BookRecyclerViewAdapter(id)
+                adapter = ItemRecyclerViewAdapter(id)
             }
 
             groupHolderMap[id] = holder
@@ -140,71 +114,72 @@ class BookGallery (
             }
         }
 
-        fun refreshGroupBooks () {
+        fun refreshGroupItems () {
             for (id in groupIds) {
-                refreshGroupBooks(id)
+                refreshGroupItems(id)
             }
         }
 
-        fun refreshGroupBooks (id: Int) =
+        fun refreshGroupItems (id: Int) =
             groupHolderMap[id]?.let {
-                (it.binding.galleryAuthorBookRecyclerView.adapter as BookRecyclerViewAdapter).refresh()
+                (it.binding.galleryAuthorItemRecyclerView.adapter as ItemRecyclerViewAdapter).refresh()
                 wrappingContent(it)
             }
 
         fun getGroupPosition (id: Int): Int = groupIds.indexOf(id)
 
         private fun wrappingContent (holder: ViewHolder) {
-            val bookAdapter = holder.binding.galleryAuthorBookRecyclerView.adapter as BookRecyclerViewAdapter
+            val adapter = holder.binding.galleryAuthorItemRecyclerView.adapter as ItemRecyclerViewAdapter
             holder.binding.galleryAuthorWrapper.apply {
                 layoutParams = (layoutParams as MarginLayoutParams).apply {
-                    if (bookAdapter.bookNum == 0) {
+                    if (adapter.itemNum == 0) {
                         height = 0
                         bottomMargin = 0
                     } else {
-                        height = groupNameTextViewHeight + (coverImageViewHeight + bookMarginWidth * 2) * ceil(bookAdapter.bookNum / 2.0).toInt()
-                        bottomMargin = bookMarginWidth
+                        height = groupNameTextViewHeight + (coverImageViewHeight + itemMarginWidth * 2) * ceil(adapter.itemNum / 2.0).toInt()
+                        bottomMargin = itemMarginWidth
                     }
                 }
-                visibility = if (bookAdapter.bookNum == 0) View.INVISIBLE else View.VISIBLE
+                visibility = if (adapter.itemNum == 0) View.INVISIBLE else View.VISIBLE
             }
         }
     }
 
-    inner class BookRecyclerViewAdapter (val groupId: Int): RecyclerView.Adapter<BookRecyclerViewAdapter.BookRecyclerViewHolder> () {
-        inner class BookRecyclerViewHolder (itemView: View): RecyclerView.ViewHolder(itemView) {
+    inner class ItemRecyclerViewAdapter (val groupId: Int): RecyclerView.Adapter<ItemRecyclerViewAdapter.ItemRecyclerViewHolder> () {
+        inner class ItemRecyclerViewHolder (itemView: View): RecyclerView.ViewHolder(itemView) {
             val imageView: ImageView = itemView.findViewById(R.id.gallery_item)
         }
 
-        private var bookIdentifies: List<BookWithGroup.Companion.BookIdentify> = getBookIdentifies()
-        val bookNum: Int
-            get() = bookIdentifies.size
+        private var items: List<Item.Companion.GalleryItem> = groupRepo.getGalleryItem(groupId)
 
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): BookRecyclerViewHolder {
-            val binding = FragmentMainGalleryBookBinding.inflate(layoutInflater, parent, false)
+        val itemNum: Int
+            get() = items.size
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ItemRecyclerViewHolder {
+            val binding = FragmentMainGalleryItemBinding.inflate(layoutInflater, parent, false)
             binding.galleryItem.layoutParams = binding.galleryItem.layoutParams.apply {
                 width = coverImageViewWidth
                 height = coverImageViewHeight
             }
-            return BookRecyclerViewHolder(binding.root)
+            return ItemRecyclerViewHolder(binding.root)
         }
 
-        override fun getItemCount(): Int = bookNum
+        override fun getItemCount(): Int = itemNum
 
-        override fun onBindViewHolder(holder: BookRecyclerViewHolder, position: Int) {
-            val (id, sourceOrdinal) = bookIdentifies[position]
+        override fun onBindViewHolder(holder: ItemRecyclerViewHolder, position: Int) {
+            val item = items[position]
 
-//            println("[${this@BookGallery::class.simpleName}.${this::class.simpleName}] binding $id")
-            val bookFolder = Book.getBookFolder(context, id, sourceOrdinal)
-
-            val coverPage = bookRepo.getBookCoverPage(id)
-            val cropPosition = bookRepo.getCoverCropPosition(id)
-            val coverPageFile = File(bookFolder, coverPage.toString())
+            val coverPage = itemRepo.getCoverPage(item.id)
+            val cropPosition = itemRepo.getCoverCropPosition(item.id)
+            val coverPageFile = File(Item.getFolder(context, item.id), coverPage.toString())
 
             CoroutineScope(Dispatchers.Main).launch {
                 if (!coverPageFile.exists()) {
                     withContext(Dispatchers.IO) {
-                        BasePictureFetcher.getFetcher(context, id).savePicture(coverPage)
+                        when (ItemType.fromOrdinal(item.typeOrdinal)) {
+                            ItemType.Book -> BasePictureFetcher.getFetcher(context, item.id).savePicture(coverPage)
+                            else -> NotImplementedError()
+                        }
                     }
                 }
                 Glide.with(context)
@@ -215,7 +190,7 @@ class BookGallery (
             }
 
             holder.imageView.setOnClickListener {
-                openBook(id)
+                openItem(item.id)
             }
 
             holder.imageView.setOnLongClickListener {
@@ -224,15 +199,8 @@ class BookGallery (
         }
 
         fun refresh () {
-            bookIdentifies = getBookIdentifies()
+            items = groupRepo.getGalleryItem(groupId)
             notifyDataSetChanged()
-        }
-
-        private fun getBookIdentifies (): List<BookWithGroup.Companion.BookIdentify> {
-            return groupRepo.getGroupBookIdentifies(groupId)
-//            return groupDatabase.getGroupBookIds(groupId).filter {
-//                filter.isFiltered(context, it, bookDatabase)
-//            }
         }
     }
 }

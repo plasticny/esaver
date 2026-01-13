@@ -4,11 +4,7 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.util.TypedValue
-import com.example.viewer.data.database.BookDatabase
-import com.example.viewer.data.repository.BookRepository
-import com.example.viewer.data.struct.Book
-import com.example.viewer.struct.BookSource
-import com.example.viewer.struct.Category
+//import com.example.viewer.data.struct.Book
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import java.io.File
@@ -48,15 +44,6 @@ class Util {
                     cap.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
         }
 
-        /**
-         * @return boolean represent all pages of the book is downloaded
-         */
-        fun isBookDownloaded (context: Context, bookId: String): Boolean {
-            val bookRepo = BookRepository(context)
-            val folder = Book.getBookFolder(context, bookId, bookRepo.getBookSource(bookId).ordinal)
-            return bookRepo.getBookPageNum(bookId) <= folder.listFiles()!!.size
-        }
-
         fun isGifFile (file: File): Boolean = FileInputStream(file).use { fis ->
             val header = ByteArray(6)
             if (fis.read(header) != 6) {
@@ -81,12 +68,6 @@ class Util {
                 .readerFor(Map::class.java)
                 .readValues<Map<String, T>>(json)
                 .let { if (it.hasNextValue()) it.next() else mapOf() }
-
-        fun getUrlSource (url: String): BookSource? = when {
-            Regex("(http(s?)://)?e-hentai.org/g/(\\d+)/([a-zA-Z0-9]+)(/?)$").matches(url) -> BookSource.E
-//            Regex("(http(s?)://)?hitomi.la/reader/(\\d+).html(#(\\d+))?$").matches(url) -> BookSource.Hi
-            else -> null
-        }
 
         fun log (tag: String, vararg msgs: String) {
             for (msg in msgs) {
