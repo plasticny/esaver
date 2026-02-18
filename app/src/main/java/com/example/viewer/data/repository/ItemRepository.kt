@@ -49,6 +49,8 @@ class ItemRepository (private val context: Context) {
         ItemSource.fromOrdinal(itemDao.querySourceOrdinal(id))
     }
 
+    fun getGroupId (id: Long): Int = runBlocking { itemDao.queryGroupId(id) }
+
     fun getCommonCustom (id: Long): ItemCommonCustom = runBlocking {
         itemCommonCustomDao.queryAll(id)
     }
@@ -64,6 +66,14 @@ class ItemRepository (private val context: Context) {
     fun getIdSeqH (): List<Item.Companion.SequenceItem> = runBlocking { itemDao.queryIdSeqH() }
 
     fun getIdSeqNH (): List<Item.Companion.SequenceItem> = runBlocking { itemDao.queryIdSeqNH() }
+
+    fun updateCustomTitle (internalId: Long, value: String) = runBlocking {
+        itemCommonCustomDao.updateCustomTitle(internalId, if (value.trim().isNotEmpty()) value else null)
+    }
+
+    fun updateLastViewTime (internalId: Long) = runBlocking {
+        itemDao.updateLastViewTime(internalId, System.currentTimeMillis())
+    }
 
     // if item stored, return its internal id
     fun isItemStored (searchItemData: SearchItemData, source: ItemSource): Long =

@@ -68,7 +68,7 @@
     <string name="category">類別</string>
     <string name="search_mark">搜尋標籤</string>
     <string name="read">閱讀</string>
-    <string name="save_to_gallery">存至書庫</string>
+    <string name="save_to_gallery">保存</string>
     <string name="n_page">%1$d頁</string>
     <string name="n_score">%1$.1f分</string>
     <string name="filter_out">濾除</string>

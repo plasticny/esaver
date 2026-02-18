@@ -6,6 +6,7 @@ import android.content.res.ColorStateList
 import android.graphics.PointF
 import android.net.Uri
 import android.os.Bundle
+import android.provider.ContactsContract
 import android.view.View
 import android.widget.Button
 import android.widget.ProgressBar
@@ -19,6 +20,7 @@ import androidx.room.Transaction
 import com.bumptech.glide.Glide
 import com.bumptech.glide.signature.MediaStoreSignature
 import com.example.viewer.CoverCrop
+import com.example.viewer.OkHttpHelper
 import com.example.viewer.R
 import com.example.viewer.Util
 import com.example.viewer.activity.main.MainActivity
@@ -30,6 +32,7 @@ import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.data.repository.ExcludeTagRepository
 import com.example.viewer.data.repository.GroupRepository
 import com.example.viewer.data.repository.ItemRepository
+import com.example.viewer.data.repository.VideoRepository
 import com.example.viewer.data.struct.item.Item
 import com.example.viewer.databinding.ActivityItemProfileBinding
 import com.example.viewer.databinding.ComponentItemProfileTagBinding
@@ -82,9 +85,15 @@ class ItemProfileActivity: AppCompatActivity() {
 
     private val groupRepo: GroupRepository by lazy { GroupRepository(baseContext) }
     private val bookRepo: BookRepository by lazy { BookRepository(baseContext) }
+    private val videRepo: VideoRepository by lazy { VideoRepository(baseContext) }
     private val itemRepo: ItemRepository by lazy { ItemRepository(baseContext) }
     private val cropLauncher = registerForActivityResult(CropContract()) {
-        it?.let { bookRepo.updateCoverCropPosition(item.id, it) }
+        it?.let {
+            when (item.type) {
+                ItemType.Book -> bookRepo.updateCoverCropPosition(item.id, it)
+                ItemType.Video -> throw NotImplementedError()
+            }
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -107,21 +116,32 @@ class ItemProfileActivity: AppCompatActivity() {
                     if (item.isTmp) {
                         startActivity(Intent(baseContext, OnlinePictureViewerActivity::class.java))
                     } else {
-                        BookRepository(baseContext).updateBookLastViewTime(item.id)
+                        ItemRepository(baseContext).updateLastViewTime(item.id)
                         startActivity(Intent(baseContext, LocalPictureViewerActivity::class.java).apply {
                             putExtra("itemId", item.id)
                         })
                     }
                 }
                 ItemType.Video -> {
-                    startActivity(Intent(baseContext, BaseVideoViewerActivity::class.java))
+                    if (item.isTmp) {
+                        startActivity(Intent(baseContext, BaseVideoViewerActivity::class.java))
+                    } else {
+                        ItemRepository(baseContext).updateLastViewTime(item.id)
+                        startActivity(Intent(baseContext, BaseVideoViewerActivity::class.java).apply {
+                            putExtra("itemId", item.id)
+                        })
+                    }
                 }
             }
         }
 
         rootBinding.saveButton.setOnClickListener {
+            if (!item.isTmp) {
+                return@setOnClickListener
+            }
             when (item.type) {
                 ItemType.Book -> lifecycleScope.launch { saveBook() }
+                ItemType.Video -> lifecycleScope.launch { saveVideo() }
                 else -> throw NotImplementedError()
             }
         }
@@ -258,7 +278,9 @@ class ItemProfileActivity: AppCompatActivity() {
                     visibility = View.VISIBLE
                     text = baseContext.getString(R.string.n_page, item.bookData!!.pageNum)
                 }
-                ItemType.Video -> throw NotImplementedError()
+                ItemType.Video -> {
+                    visibility = View.GONE
+                }
             }
         }
 
@@ -405,10 +427,6 @@ class ItemProfileActivity: AppCompatActivity() {
 
     @Transaction
     private suspend fun saveBook () {
-        if (!item.isTmp) {
-            return
-        }
-
         rootBinding.progress.textView.text = getString(R.string.n_percent, 0)
         toggleProgressBar(true)
 
@@ -449,7 +467,6 @@ class ItemProfileActivity: AppCompatActivity() {
             source = item.source,
             uploader = item.uploader
         )
-        ProfileItem.clearTmp()
 
         // create book folder
         Item.getFolder(baseContext, internalId).also {
@@ -463,6 +480,81 @@ class ItemProfileActivity: AppCompatActivity() {
                 }
             }
         }
+
+        ProfileItem.clearTmp()
+
+        // update ui
+        toggleProgressBar(false)
+        item = ProfileItem.build(baseContext, internalId)
+        refreshButtons()
+        ConfirmDialog(this, layoutInflater).show(
+            "已加入到收藏，返回收藏？",
+            positiveCallback = {
+                startActivity(
+                    Intent(baseContext, MainActivity::class.java).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                    }
+                )
+            }
+        )
+    }
+
+    @Transaction
+    private suspend fun saveVideo () {
+        rootBinding.progress.textView.text = getString(R.string.n_percent, 0)
+        toggleProgressBar(true)
+
+        val videoData = item.videoData!!
+
+        val internalId = videRepo.addVideo(
+            id = videoData.id,
+            videoUrl = videoData.videoUrl,
+            category = item.category,
+            source = item.source,
+            tags = item.tags,
+            uploader = item.uploader!!
+        )
+
+        Item.getFolder(baseContext, internalId).also { folder ->
+            if (!folder.exists()) {
+                folder.mkdirs()
+            }
+
+            val okHttpHelper = OkHttpHelper { total, downloaded ->
+                CoroutineScope(Dispatchers.Main).launch {
+                    rootBinding.progress.textView.text = getString(
+                        R.string.n_percent, floor(downloaded.toDouble() / total * 100).toInt()
+                    )
+                }
+            }
+
+            val success = withContext(Dispatchers.IO) {
+                okHttpHelper.downloadImage(
+                    item.coverUrl,
+                    File(folder, "0")
+                ).let {
+                    if (!it) {
+                        return@withContext false
+                    }
+                }
+
+                CoroutineScope(Dispatchers.Main).launch {
+                    rootBinding.progress.textView.text = getString(R.string.n_percent, 0)
+                }
+                okHttpHelper.curl(
+                    videoData.videoUrl,
+                    File(folder, "video")
+                )
+            }
+
+            if (!success) {
+                Toast.makeText(baseContext, "儲存失敗，再試一次", Toast.LENGTH_SHORT).show()
+                toggleProgressBar(false)
+                return
+            }
+        }
+
+        ProfileItem.clearTmp()
 
         // update ui
         toggleProgressBar(false)
@@ -524,7 +616,6 @@ class ItemProfileActivity: AppCompatActivity() {
         }
     }
 
-
     private class CropContract: ActivityResultContract<Uri, PointF?>() {
         override fun createIntent(context: Context, input: Uri): Intent {
             return Intent(context, CropActivity::class.java).
@@ -560,7 +651,7 @@ class ItemProfileActivity: AppCompatActivity() {
 
         fun showBook (item: ProfileItem) {
             val skipPages = bookRepo.getBookSkipPages(item.id)
-            val groupId = bookRepo.getGroupId(item.id)
+            val groupId = itemRepo.getGroupId(item.id)
 
             dialogBinding.groupNameEditText.setText(
                 groupRepo.getGroupName(groupId)
@@ -602,7 +693,7 @@ class ItemProfileActivity: AppCompatActivity() {
                 }
 
                 // custom title
-                bookRepo.updateCustomTitle(
+                itemRepo.updateCustomTitle(
                     item.id,
                     dialogBinding.customTitleEditText.text.toString().trim()
                 )

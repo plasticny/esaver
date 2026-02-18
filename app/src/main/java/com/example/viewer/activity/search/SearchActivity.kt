@@ -28,11 +28,13 @@ import com.example.viewer.dialog.SearchMarkDialog.SearchMarkDialog
 import com.example.viewer.dialog.SimpleEditTextDialog
 import com.example.viewer.struct.ItemSource
 import com.example.viewer.struct.Category
+import com.example.viewer.struct.ItemType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import org.apache.commons.net.nntp.NewGroupsOrNewsQuery
 
 /**
  * intExtra: searchMarkId; -1 for temporary search mark
@@ -546,7 +548,10 @@ class SearchActivity: AppCompatActivity() {
             binding.searchItemTitleTextView.text = itemRecord.title
 
             binding.pageNumTextView.apply {
-                text = context.getString(R.string.n_page, itemRecord.pageNum)
+                when (itemRecord.type) {
+                    ItemType.Book -> text = context.getString(R.string.n_page, itemRecord.pageNum)
+                    ItemType.Video -> visibility = View.GONE
+                }
             }
 
             binding.ratingTextView.apply {

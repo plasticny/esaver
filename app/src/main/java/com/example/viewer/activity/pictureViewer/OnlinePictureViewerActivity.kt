@@ -41,7 +41,8 @@ class OnlinePictureViewerActivity: BaseViewerActivity() {
         fetcher = when (profileItem.source) {
             ItemSource.E -> EPictureFetcher(this, pageNum = bookData.pageNum, bookUrl = profileItem.url, bookId = bookData.id)
             ItemSource.Wn -> WnPictureFetcher(this, pageNum = bookData.pageNum, bookUrl = profileItem.url, bookId = bookData.id)
-            ItemSource.Ru, ItemSource.Hi -> throw NotImplementedError()
+            ItemSource.Hi -> throw NotImplementedError()
+            ItemSource.Ru -> throw IllegalStateException()
         }
         pictureUrls = MutableList(bookData.pageNum) {
             val file = File(fetcher.bookFolder, it.toString())

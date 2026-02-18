@@ -122,7 +122,8 @@ class WnSearchHelper (
                     .trim().split("張").first().toInt(),
                 tags = mapOf(),
                 rating = null,
-                bookId = bookUrl.slice(18..bookUrl.length - 6)
+                bookId = bookUrl.slice(18..bookUrl.length - 6),
+                type = ItemType.Book
             )
         }
     }

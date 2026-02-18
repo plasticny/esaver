@@ -6,11 +6,15 @@ import com.example.viewer.Util
 import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.data.repository.ExcludeTagRepository
 import com.example.viewer.data.repository.ItemRepository
+import com.example.viewer.data.repository.VideoRepository
 import com.example.viewer.data.struct.item.Item
 import com.example.viewer.data.struct.item.ItemCommonCustom
 import java.io.File
 
 data class ProfileItem (
+    /**
+     * internal id
+     */
     val id: Long,
     val url: String,
     val title: String,
@@ -27,7 +31,8 @@ data class ProfileItem (
     val uploader: String?,
     val isTmp: Boolean,
 
-    val bookData: BookData? = null
+    val bookData: BookData? = null,
+    val videoData: VideoData? = null
 ) {
     companion object {
         private var tmpProfileItem: ProfileItem? = null
@@ -38,7 +43,8 @@ data class ProfileItem (
             return when (ItemSource.fromOrdinal(item.sourceOrdinal)) {
                 ItemSource.E -> buildE(context, item)
                 ItemSource.Wn -> buildWn(context, item)
-                ItemSource.Hi, ItemSource.Ru -> throw NotImplementedError()
+                ItemSource.Ru -> buildRu(context, item)
+                ItemSource.Hi -> throw NotImplementedError()
             }
         }
 
@@ -106,6 +112,35 @@ data class ProfileItem (
             )
         }
 
+        @JvmStatic
+        fun buildRu (context: Context, item: Item): ProfileItem {
+            assert(item.sourceOrdinal == ItemSource.Ru.ordinal)
+
+            val commonCustom = ItemRepository(context).getCommonCustom(item.id)
+            val dataSource = VideoRepository(context).getRuSourceData(item.id)
+            return ProfileItem (
+                id = item.id,
+                url = "",
+                title = dataSource.title,
+                subTitle = "",
+                customTitle = commonCustom.customTitle,
+                tags = Util.readMapFromJson(dataSource.tagsJson),
+                excludedTags = mapOf(),
+                source = ItemSource.Ru,
+                type = ItemType.Video,
+                category = Category.fromOrdinal(item.categoryOrdinal),
+                coverPage = commonCustom.coverPage,
+                coverUrl = File(Item.getFolder(context, item.id), commonCustom.coverPage.toString()).path,
+                coverCropPosition = commonCustom.coverCropPositionString?.let { ItemCommonCustom.coverCropPositionStringToPoint(it) },
+                uploader = dataSource.uploader,
+                isTmp = false,
+                videoData = VideoData(
+                    id = dataSource.videoId,
+                    videoUrl = dataSource.videoUrl
+                )
+            )
+        }
+
         fun setTmp (item: ProfileItem) {
             tmpProfileItem = item
         }
@@ -120,5 +155,10 @@ data class ProfileItem (
     data class BookData (
         val id: String,
         val pageNum: Int
+    )
+
+    data class VideoData (
+        val id: String,
+        val videoUrl: String
     )
 }

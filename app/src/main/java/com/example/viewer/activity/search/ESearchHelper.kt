@@ -149,7 +149,8 @@ class ESearchHelper (
                         .split("/").let {
                             it[it.lastIndex - 1]
                         }
-                }
+                },
+                type = ItemType.Book
             )
         }
     }

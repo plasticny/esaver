@@ -66,22 +66,30 @@ class RuSearchHelper (
 
         return records.map {
             SearchItemData(
-                url = it.file_url,
+                url = "",
                 coverUrl = it.sample_url,
                 cat = Category.Doujinshi,
                 title = it.id.toString(),
-                pageNum = 1,
+                pageNum = 0,
                 tags = mapOf(
                     "tags" to it.tags.split(" ")
                 ),
-                rating = it.score.toFloat()
+                rating = it.score.toFloat(),
+                type = ItemType.Video,
+                videoData = SearchItemData.VideoData(
+                    videoUrl = it.file_url,
+                    id = it.id.toString(),
+                    uploader = it.owner
+                )
             )
         }
     }
 
     override suspend fun storeDetailAsTmpProfileItem(searchItemData: SearchItemData): Boolean {
+        val videoData = searchItemData.videoData!!
+
         ProfileItem.setTmp(ProfileItem(
-            id = -1,
+            id = -1, // internal id
             url = searchItemData.url,
             title = searchItemData.title,
             subTitle = searchItemData.title,
@@ -94,8 +102,12 @@ class RuSearchHelper (
             coverPage = 0,
             coverUrl = searchItemData.coverUrl,
             coverCropPosition = null,
-            uploader = null,
-            isTmp = true
+            uploader = videoData.uploader,
+            isTmp = true,
+            videoData = ProfileItem.VideoData(
+                id = videoData.id,
+                videoUrl = videoData.videoUrl
+            )
         ))
         return true
     }

@@ -211,17 +211,6 @@ abstract class BasePictureFetcher {
                 // this line should be after the write-to-file statement
                 // else a corrupted image might be read
                 downloadingPages.remove(page)
-//                try {
-//                    ImageDecoder.decodeBitmap(ImageDecoder.createSource(file))
-//                } catch (_: Exception) {
-//                    file.delete()
-//                    throw PictureDownloadFailException()
-//                }
-//                finally {
-                    // this line should be after the write-to-file statement
-                    // else a corrupted image might be read
-//                    downloadingPages.remove(page)
-//                }
 
                 Log.i(logTag, "download finished: $page")
 

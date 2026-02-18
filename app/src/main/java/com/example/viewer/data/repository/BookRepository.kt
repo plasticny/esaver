@@ -40,6 +40,7 @@ class BookRepository (private val context: Context) {
         }
     }
 
+    @Transaction
     fun addBook (
         id: String,
         url: String,
@@ -298,16 +299,6 @@ class BookRepository (private val context: Context) {
                 ItemSource.Hi, ItemSource.Ru -> throw IllegalStateException()
             }
         }
-    }
-
-    fun updateBookLastViewTime (internalId: Long) = runBlocking {
-        itemDao.updateLastViewTime(internalId, System.currentTimeMillis())
-    }
-
-    fun getGroupId (internalId: Long): Int = runBlocking { itemDao.queryGroupId(internalId) }
-
-    fun updateCustomTitle (internalId: Long, value: String) = runBlocking {
-        itemCommonCustomDao.updateCustomTitle(internalId, if (value.trim().isNotEmpty()) value else null)
     }
 
     /**
