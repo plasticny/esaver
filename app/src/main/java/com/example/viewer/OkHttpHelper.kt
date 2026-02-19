@@ -6,6 +6,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.MediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.Response
 import okhttp3.ResponseBody
 import okio.Buffer
 import okio.BufferedSource
@@ -37,28 +38,33 @@ class OkHttpHelper {
             }.build()
     }
 
-    suspend fun curl (
+    suspend fun get (
         url: String,
-        dst: File,
         headers: Map<String, String> = mapOf()
-    ): Boolean {
+    ): Response {
         val request = Request.Builder().url(url).apply {
             for (header in headers) {
                 addHeader(header.key, header.value)
             }
         }.build()
-
         return withContext(Dispatchers.IO) {
-            myClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    return@withContext false
-                } else {
-                    dst.outputStream().use {
-                        response.body!!.byteStream().copyTo(it)
-                    }
-                    return@withContext true
-                }
+            myClient.newCall(request).execute()
+        }
+    }
+
+    suspend fun curl (
+        url: String,
+        dst: File,
+        headers: Map<String, String> = mapOf()
+    ): Boolean {
+        get(url, headers).use { response ->
+            if (!response.isSuccessful) {
+                return false
             }
+            dst.outputStream().use {
+                response.body!!.byteStream().copyTo(it)
+            }
+            return true
         }
     }
 

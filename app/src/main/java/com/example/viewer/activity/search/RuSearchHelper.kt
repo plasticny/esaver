@@ -1,6 +1,7 @@
 package com.example.viewer.activity.search
 
 import android.content.Context
+import com.example.viewer.OkHttpHelper
 import com.example.viewer.preference.KeyPreference
 import com.example.viewer.struct.ItemSource
 import com.example.viewer.struct.Category
@@ -8,17 +9,13 @@ import com.example.viewer.struct.ItemType
 import com.example.viewer.struct.ProfileItem
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
 
 class RuSearchHelper (
     context: Context,
     searchMarkData: SearchMarkData
 ): SearchHelper(context, searchMarkData) {
     private val baseUrl = buildBaseUrl(context, searchMarkData)
-    private val client = OkHttpClient()
+    private val okHttpHelper = OkHttpHelper()
 
     private var total: Int? = null
     private var count = 0
@@ -44,20 +41,13 @@ class RuSearchHelper (
         isSearchMarkChanged: () -> Boolean
     ): List<SearchItemData>? {
         if (total == null) {
-            val xml = withContext(Dispatchers.IO) {
-                val client = OkHttpClient()
-                val request = Request.Builder().url(baseUrl).build()
-                client.newCall(request).execute()
-            }.body!!.string()
+            val xml = okHttpHelper.get(baseUrl).body!!.string()
             val regex = """count="(\d+)"""".toRegex()
             val matchResult = regex.find(xml.split("\n").first())
             total = matchResult!!.groups[1]!!.value.toInt()
         }
 
-        val records = withContext(Dispatchers.IO) {
-            val request = Request.Builder().url(searchUrl).build()
-            client.newCall(request).execute()
-        }.body!!.string().let {
+        val records = okHttpHelper.get(searchUrl).body!!.string().let {
             Gson().fromJson<List<Record>>(it, object: TypeToken<List<Record>>(){}.type)
         } ?: listOf()
 
