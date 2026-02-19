@@ -15,6 +15,7 @@ import androidx.activity.result.contract.ActivityResultContract
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.net.toUri
+import androidx.lifecycle.VIEW_MODEL_STORE_OWNER_KEY
 import androidx.lifecycle.lifecycleScope
 import androidx.room.Transaction
 import com.bumptech.glide.Glide
@@ -645,7 +646,7 @@ class ItemProfileActivity: AppCompatActivity() {
         fun show (item: ProfileItem) {
             when (item.type) {
                 ItemType.Book -> showBook(item)
-                ItemType.Video -> throw NotImplementedError()
+                ItemType.Video -> showVideo(item)
             }
         }
 
@@ -669,7 +670,7 @@ class ItemProfileActivity: AppCompatActivity() {
 
             dialogBinding.searchButton.setOnClickListener {
                 SelectGroupDialog(context, layoutInflater).show {
-                        _, name -> dialogBinding.groupNameEditText.setText(name)
+                    _, name -> dialogBinding.groupNameEditText.setText(name)
                 }
             }
 
@@ -733,6 +734,60 @@ class ItemProfileActivity: AppCompatActivity() {
                 cropLauncher.launch(
                     File(Item.getFolder(baseContext, item.id), item.coverPage.toString()).toUri()
                 )
+            }
+
+            dialog.show()
+        }
+
+        fun showVideo (item: ProfileItem) {
+            val groupId = itemRepo.getGroupId(item.id)
+
+            dialogBinding.coverPageFieldWrapper.visibility = View.GONE
+            dialogBinding.skipPageFieldWrapper.visibility = View.GONE
+
+            dialogBinding.groupNameEditText.setText(
+                groupRepo.getGroupName(groupId)
+            )
+
+            dialogBinding.customTitleEditText.setText(
+                item.customTitle ?: ""
+            )
+
+            dialogBinding.searchButton.setOnClickListener {
+                SelectGroupDialog(context, layoutInflater).show {
+                        _, name -> dialogBinding.groupNameEditText.setText(name)
+                }
+            }
+
+            dialogBinding.profileDialogApplyButton.setOnClickListener {
+                // group
+                val groupName = dialogBinding.groupNameEditText.text.toString().trim()
+                val selectedGroupId = groupName.let {
+                    if (it.isEmpty()) {
+                        return@let 0
+                    }
+
+                    val id = groupRepo.getGroupIdFromName(it)
+                    if (id != null) {
+                        return@let id
+                    }
+
+                    return@let groupRepo.createGroup(groupName)
+                }
+                if (selectedGroupId != groupId) {
+                    groupRepo.changeGroup(item.id, groupId, selectedGroupId)
+                }
+
+                // custom title
+                itemRepo.updateCustomTitle(
+                    item.id,
+                    dialogBinding.customTitleEditText.text.toString().trim()
+                )
+
+                this@ItemProfileActivity.item = ProfileItem.build(baseContext, item.id)
+                rootBinding.titleTextView.text = this@ItemProfileActivity.item.run { customTitle ?: title }
+
+                dialog.dismiss()
             }
 
             dialog.show()
