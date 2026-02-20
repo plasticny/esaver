@@ -3,6 +3,7 @@ package com.example.viewer.dialog.SearchMarkDialog
 import android.content.Context
 import android.view.LayoutInflater
 import com.example.viewer.databinding.DialogSearchMarkBinding
+import com.example.viewer.struct.Category
 import com.example.viewer.struct.ItemSource
 
 class RuHandler (
@@ -10,18 +11,21 @@ class RuHandler (
     layoutInflater: LayoutInflater,
     owner: SearchMarkDialog,
     ownerRootBinding: DialogSearchMarkBinding,
+    private val name: String = "",
     private val keyword: String
 ): BaseHandler(context, layoutInflater, owner, ownerRootBinding) {
     override val source: ItemSource = ItemSource.Ru
 
     override fun setupUi() {
         owner.apply {
-            showNameField = false
             showCategoryField = false
             showTagsField = false
             showUploaderField = false
             showDoExcludeField = false
         }
+
+        ownerRootBinding.nameEditText.setText(name)
+
         ownerRootBinding.run {
             bookSourceEditText.setText(source.keyString)
             keywordEditText.setText(keyword)
@@ -30,9 +34,9 @@ class RuHandler (
 
     override fun buildDialogData(): DialogData =
         DialogData (
-            name = "",
+            name = ownerRootBinding.nameEditText.text.toString(),
             sourceOrdinal = source.ordinal,
-            categories = setOf(),
+            categories = setOf(Category.Doujinshi),
             keyword = ownerRootBinding.keywordEditText.text.toString(),
             tags = mapOf(),
             uploader = "",
