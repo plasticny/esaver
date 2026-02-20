@@ -4,7 +4,6 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.util.TypedValue
-//import com.example.viewer.data.struct.Book
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import java.io.File
@@ -15,25 +14,18 @@ class Util {
         val TAG_TRANSLATION_MAP = mapOf(
             "artist" to "作者",
             "character" to "角色",
+            "copyright" to "原作",
             "female" to "女性",
+            "general" to "泛用",
             "group" to "組別",
             "language" to "語言",
             "male" to "男性",
+            "metadata" to "檔案",
             "mixed" to "混合",
             "other" to "其他",
             "parody" to "原作",
             "temp" to "臨時"
         )
-
-        fun dp2px (context: Context, dp: Float): Int {
-            val displayMetrics = context.resources.displayMetrics
-            return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, displayMetrics).toInt()
-        }
-
-        fun sp2px (context: Context, sp: Float): Int {
-            val displayMetrics = context.resources.displayMetrics
-            return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, sp, displayMetrics).toInt()
-        }
 
         fun isInternetAvailable (context: Context): Boolean {
             val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -50,10 +42,34 @@ class Util {
                 return false
             }
             (header[0] == 'G'.code.toByte() &&
-            header[1] == 'I'.code.toByte() &&
-            header[2] == 'F'.code.toByte() &&
-            (header[3] == '8'.code.toByte() || header[3] == '7'.code.toByte()))
+                    header[1] == 'I'.code.toByte() &&
+                    header[2] == 'F'.code.toByte() &&
+                    (header[3] == '8'.code.toByte() || header[3] == '7'.code.toByte()))
         }
+
+        fun log (tag: String, vararg msgs: String) {
+            for (msg in msgs) {
+                println("[$tag] $msg")
+            }
+        }
+
+        //
+        // screen size related
+        //
+
+        fun dp2px (context: Context, dp: Float): Int {
+            val displayMetrics = context.resources.displayMetrics
+            return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, displayMetrics).toInt()
+        }
+
+        fun sp2px (context: Context, sp: Float): Int {
+            val displayMetrics = context.resources.displayMetrics
+            return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, sp, displayMetrics).toInt()
+        }
+
+        //
+        // json related
+        //
 
         inline fun<reified T> readListFromJson (json: String): List<T> =
             ObjectMapper().registerKotlinModule()
@@ -68,11 +84,5 @@ class Util {
                 .readerFor(Map::class.java)
                 .readValues<Map<String, T>>(json)
                 .let { if (it.hasNextValue()) it.next() else mapOf() }
-
-        fun log (tag: String, vararg msgs: String) {
-            for (msg in msgs) {
-                println("[$tag] $msg")
-            }
-        }
     }
 }

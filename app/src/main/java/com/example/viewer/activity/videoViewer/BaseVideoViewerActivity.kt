@@ -8,35 +8,56 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
+import com.example.viewer.data.repository.VideoRepository
+import com.example.viewer.data.struct.item.Item
 import com.example.viewer.databinding.ActivityVideoViewerBinding
 import com.example.viewer.struct.ProfileItem
+import java.io.File
 
+/**
+ * LongExtra: itemId (-1 for temp item)
+ */
 class BaseVideoViewerActivity: AppCompatActivity() {
     private lateinit var rootBinding: ActivityVideoViewerBinding
     private lateinit var player: ExoPlayer
+    private lateinit var videoUrl: String
 
-    @OptIn(UnstableApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         rootBinding = ActivityVideoViewerBinding.inflate(layoutInflater)
         setContentView(rootBinding.root)
 
-        val item = ProfileItem.getTmp()
+        val itemId = intent.getLongExtra("itemId", -1)
+        videoUrl = if (itemId == -1L) {
+            ProfileItem.getTmp().videoData!!.videoUrl
+        } else {
+            val file = File(Item.getFolder(baseContext, itemId), "video")
+            if (file.exists()) {
+                file.absolutePath
+            } else {
+                VideoRepository(baseContext).getRuSourceData(itemId).videoUrl
+            }
+        }
 
+        preparePlayer()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        player.release()
+    }
+
+    @OptIn(UnstableApi::class)
+    fun preparePlayer () {
         player = ExoPlayer.Builder(baseContext).build()
         rootBinding.playerView.player = player
 
-        val mediaItem = MediaItem.fromUri(item.url)
+        val mediaItem = MediaItem.fromUri(videoUrl)
         val mediaSource = ProgressiveMediaSource
             .Factory(DefaultDataSource.Factory(baseContext))
             .createMediaSource(mediaItem)
         player.setMediaSource(mediaSource)
         player.prepare()
         player.play()
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        player.release()
     }
 }

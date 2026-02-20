@@ -24,7 +24,7 @@ class PassActivity: AppCompatActivity() {
         setContentView(binding.root)
 
         lifecycleScope.launch {
-            Dev.run(this@PassActivity)
+            Dev().run(baseContext)
         }
 
         val passButtons = listOf(

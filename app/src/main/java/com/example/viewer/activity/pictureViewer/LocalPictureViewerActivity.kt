@@ -13,6 +13,7 @@ import com.example.viewer.ItemRNG
 import com.example.viewer.Util
 import com.example.viewer.activity.ItemProfileActivity
 import com.example.viewer.data.repository.BookRepository
+import com.example.viewer.data.repository.ItemRepository
 import com.example.viewer.databinding.ViewerImageDialogBinding
 import com.example.viewer.dialog.BookmarkDialog
 import com.example.viewer.dialog.ConfirmDialog
@@ -227,7 +228,7 @@ class LocalPictureViewerActivity: BaseViewerActivity() {
 
         prepareBook(itemId)
         runBlocking {
-            bookDataset.updateBookLastViewTime(itemId)
+            ItemRepository(baseContext).updateLastViewTime(itemId)
         }
 
         ItemProfileActivity.setResumeItem(itemId)

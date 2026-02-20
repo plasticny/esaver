@@ -54,6 +54,7 @@ class GroupRepository (context: Context) {
         if (oldGroupId != DEFAULT_GROUP_ID) {
             removeIfEmpty(oldGroupId)
         }
+        ItemRepository.updateListLastUpdateTime()
     }
 
     fun changeGroupName (id: Int, name: String) = runBlocking {

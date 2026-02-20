@@ -85,6 +85,7 @@
         <!--  cover page  -->
 
         <LinearLayout
+            android:id="@+id/coverPage_field_wrapper"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
@@ -123,6 +124,7 @@
         <!--  skip page  -->
 
         <LinearLayout
+            android:id="@+id/skipPage_field_wrapper"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"

@@ -1,8 +1,8 @@
 package com.example.viewer.fetcher
 
 import android.content.Context
-import android.graphics.BitmapFactory
 import android.util.Log
+import com.example.viewer.OkHttpHelper
 import com.example.viewer.Util
 import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.data.repository.ItemRepository
@@ -12,14 +12,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import okhttp3.MediaType
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.ResponseBody
-import okio.Buffer
-import okio.BufferedSource
-import okio.ForwardingSource
-import okio.buffer
 import org.jsoup.HttpStatusException
 import java.io.File
 import java.io.FileNotFoundException
@@ -28,8 +20,6 @@ import java.net.SocketTimeoutException
 
 abstract class BasePictureFetcher {
     companion object {
-        private val okHttpClient = OkHttpClient()
-
         fun getFetcher (context: Context, itemId: Long): BasePictureFetcher {
             val itemSource = runBlocking { ItemRepository(context).getSource(itemId) }
             println("[BasePictureFetcher.getFetcher] ${itemSource.name}")
@@ -170,64 +160,26 @@ abstract class BasePictureFetcher {
         downloadingPages.add(page)
 
         val logTag = "${this@BasePictureFetcher::class.simpleName}.${this@BasePictureFetcher::downloadPicture.name}"
+        Util.log(
+            logTag,
+            "download started: $page",
+            url
+        )
 
-        // build the download request
-        val downloadClient = progressListener?.let {
-            okHttpClient.newBuilder()
-                .addInterceptor { chain ->
-                    chain.proceed(chain.request()).run {
-                        newBuilder().body(
-                            ProgressResponseBody(body!!, progressListener)
-                        ).build()
-                    }
-                }.build()
-        } ?: okHttpClient
-        val request = Request.Builder().url(url).apply {
-            for (header in headers) {
-                addHeader(header.key, header.value)
+        val okHttpHelper = progressListener?.let { OkHttpHelper(it) } ?: OkHttpHelper()
+        val success = okHttpHelper.downloadImage(url, file, headers)
+        if (!success) {
+            if (file.exists()) {
+                file.delete()
             }
-        }.build()
-
-        return withContext(Dispatchers.IO) {
-            Util.log(
-                logTag,
-                "download started: $page",
-                url
-            )
-            downloadClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    throw HttpStatusException("download failed", response.code, url)
-                }
-
-                file.outputStream().use {
-                    response.body!!.byteStream().copyTo(it)
-                }
-                BitmapFactory.decodeFile(file.absolutePath).let {
-                    if (it == null) {
-                        file.delete()
-                        throw PictureDownloadFailException()
-                    }
-                }
-                // this line should be after the write-to-file statement
-                // else a corrupted image might be read
-                downloadingPages.remove(page)
-//                try {
-//                    ImageDecoder.decodeBitmap(ImageDecoder.createSource(file))
-//                } catch (_: Exception) {
-//                    file.delete()
-//                    throw PictureDownloadFailException()
-//                }
-//                finally {
-                    // this line should be after the write-to-file statement
-                    // else a corrupted image might be read
-//                    downloadingPages.remove(page)
-//                }
-
-                Log.i(logTag, "download finished: $page")
-
-                return@withContext file
-            }
+            throw PictureDownloadFailException()
         }
+
+        downloadingPages.remove(page)
+
+        Log.i(logTag, "download finished: $page")
+
+        return file
     }
 
     protected fun assertPageInRange (page: Int) {
@@ -250,25 +202,4 @@ abstract class BasePictureFetcher {
     fun isPictureDownloading (page: Int) = downloadingPages.contains(page)
 
     class PictureDownloadFailException: Exception()
-}
-
-private class ProgressResponseBody (
-    private val responseBody: ResponseBody,
-    private val progressListener: (contentLength: Long, downloadLength: Long) -> Unit
-): ResponseBody() {
-    private var bufferedSource =
-        object: ForwardingSource(responseBody.source()) {
-            private var totalBytesRead = 0L
-            override fun read(sink: Buffer, byteCount: Long): Long =
-                super.read(sink, byteCount).also {
-                    totalBytesRead += if (it == -1L) 0 else it
-                    progressListener(contentLength(), totalBytesRead)
-                }
-        }.buffer()
-
-    override fun contentLength(): Long = responseBody.contentLength()
-
-    override fun contentType(): MediaType? = responseBody.contentType()
-
-    override fun source(): BufferedSource = bufferedSource
 }

@@ -51,10 +51,11 @@ data class Item(
         @JvmStatic
         fun getFolder (context: Context, id: Long): File {
             assert(id >= 0L)
-            return File(
+            val galleryFolder = File(
                 context.getExternalFilesDir(null),
-                id.toString()
+                "gallery"
             )
+            return File(galleryFolder, id.toString())
         }
     }
 }

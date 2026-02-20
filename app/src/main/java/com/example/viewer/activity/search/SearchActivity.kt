@@ -28,11 +28,13 @@ import com.example.viewer.dialog.SearchMarkDialog.SearchMarkDialog
 import com.example.viewer.dialog.SimpleEditTextDialog
 import com.example.viewer.struct.ItemSource
 import com.example.viewer.struct.Category
+import com.example.viewer.struct.ItemType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import org.apache.commons.net.nntp.NewGroupsOrNewsQuery
 
 /**
  * intExtra: searchMarkId; -1 for temporary search mark
@@ -63,10 +65,11 @@ class SearchActivity: AppCompatActivity() {
         }
     }
 
+    private lateinit var rootBinding: SearchActivityBinding
+
     private lateinit var searchRepo: SearchRepository
     private lateinit var excludeTagRepo: ExcludeTagRepository
     private lateinit var searchMarkData: SearchMarkData
-    private lateinit var rootBinding: SearchActivityBinding
     private lateinit var allSearchMarkIds: List<Long>
     private lateinit var searchHelper: SearchHelper
 
@@ -364,13 +367,9 @@ class SearchActivity: AppCompatActivity() {
         }
 
         loadingMore = true
-        withContext(Dispatchers.Main) {
-            rootBinding.searchProgressBar.wrapper.visibility = ProgressBar.VISIBLE
-        }
+        toggleProgressBar(toggle = true, screen = false)
         val items = fetchNextItems()
-        withContext(Dispatchers.Main) {
-            rootBinding.searchProgressBar.wrapper.visibility = ProgressBar.GONE
-        }
+        toggleProgressBar(toggle = false, screen = false)
         loadingMore = false
 
         if (mySearchId == searchMarkData.id) {
@@ -395,13 +394,9 @@ class SearchActivity: AppCompatActivity() {
         }
 
         loadingMore = true
-        withContext(Dispatchers.Main) {
-            rootBinding.searchProgressBar.wrapper.visibility = ProgressBar.VISIBLE
-        }
+        toggleProgressBar(toggle = true, screen = false)
         val items = fetchPrevItems()
-        withContext(Dispatchers.Main) {
-            rootBinding.searchProgressBar.wrapper.visibility = ProgressBar.GONE
-        }
+        toggleProgressBar(toggle = false, screen = false)
         loadingMore = false
 
         if (mySearchId == searchMarkData.id) {
@@ -480,7 +475,9 @@ class SearchActivity: AppCompatActivity() {
      */
     private suspend fun storeTmpProfileItem (searchItemData: SearchItemData): Boolean {
         rootBinding.screenProgressBarWrapper.visibility = View.VISIBLE
+        toggleProgressBar(toggle = true, screen = true)
         val ret = searchHelper.storeDetailAsTmpProfileItem(searchItemData)
+        toggleProgressBar(toggle = false, screen = true)
         rootBinding.screenProgressBarWrapper.visibility = View.GONE
         return ret
     }
@@ -515,6 +512,17 @@ class SearchActivity: AppCompatActivity() {
         dialog.show()
     }
 
+    private suspend fun toggleProgressBar (toggle: Boolean, screen: Boolean) {
+        val status = if (toggle) ProgressBar.VISIBLE else ProgressBar.GONE
+        withContext(Dispatchers.Main) {
+            if (screen) {
+                rootBinding.screenProgressBarWrapper.visibility = status
+            } else {
+                rootBinding.searchProgressBar.wrapper.visibility = status
+            }
+        }
+    }
+
     //
     // define recycler view adapter
     //
@@ -546,7 +554,10 @@ class SearchActivity: AppCompatActivity() {
             binding.searchItemTitleTextView.text = itemRecord.title
 
             binding.pageNumTextView.apply {
-                text = context.getString(R.string.n_page, itemRecord.pageNum)
+                when (itemRecord.type) {
+                    ItemType.Book -> text = context.getString(R.string.n_page, itemRecord.pageNum)
+                    ItemType.Video -> visibility = View.GONE
+                }
             }
 
             binding.ratingTextView.apply {

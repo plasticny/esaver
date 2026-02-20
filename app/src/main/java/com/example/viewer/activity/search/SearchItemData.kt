@@ -1,6 +1,7 @@
 package com.example.viewer.activity.search
 
 import com.example.viewer.struct.Category
+import com.example.viewer.struct.ItemType
 
 data class SearchItemData (
     val url: String,
@@ -10,5 +11,13 @@ data class SearchItemData (
     val pageNum: Int,
     val tags: Map<String, List<String>>,
     val rating: Float?,
-    val bookId: String? = null
-)
+    val type: ItemType,
+    val bookId: String? = null,
+    val videoData: VideoData? = null
+) {
+    data class VideoData (
+        val videoUrl: String,
+        val id: String,
+        val uploader: String
+    )
+}
