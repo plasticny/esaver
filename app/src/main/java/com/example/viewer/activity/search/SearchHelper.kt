@@ -1,10 +1,10 @@
 package com.example.viewer.activity.search
 
 import android.content.Context
-import com.example.viewer.struct.BookSource
-import org.jsoup.nodes.Document
+import com.example.viewer.struct.ItemSource
 
 abstract class SearchHelper (
+    protected val context: Context,
     protected val searchMarkData: SearchMarkData
 ) {
     companion object {
@@ -12,11 +12,11 @@ abstract class SearchHelper (
         const val ENDED = -2
 
         fun getSearchHelper (context: Context, searchMarkData: SearchMarkData): SearchHelper {
-            return when (BookSource.fromOrdinal(searchMarkData.sourceOrdinal)) {
-                BookSource.E -> ESearchHelper(searchMarkData)
-                BookSource.Wn -> WnSearchHelper(searchMarkData)
-                BookSource.Ru -> RuSearchHelper(context, searchMarkData)
-                BookSource.Hi -> throw NotImplementedError("unexpected source")
+            return when (ItemSource.fromOrdinal(searchMarkData.sourceOrdinal)) {
+                ItemSource.E -> ESearchHelper(context, searchMarkData)
+                ItemSource.Wn -> WnSearchHelper(context, searchMarkData)
+                ItemSource.Ru -> RuSearchHelper(context, searchMarkData)
+                ItemSource.Hi -> throw NotImplementedError("unexpected source")
             }
         }
     }
@@ -35,8 +35,8 @@ abstract class SearchHelper (
 
     abstract fun getNextBlockSearchUrl (): String
     abstract fun getPrevBlockSearchUrl (): String
-    abstract suspend fun fetchBooks (searchUrl: String, isSearchMarkChanged: () -> Boolean): List<SearchBookData>?
-    abstract suspend fun storeDetailAsTmpBook (searchBookData: SearchBookData): Boolean
+    abstract suspend fun fetchItems (searchUrl: String, isSearchMarkChanged: () -> Boolean): List<SearchItemData>?
+    abstract suspend fun storeDetailAsTmpProfileItem (searchItemData: SearchItemData): Boolean
 
     fun loadSearchHistory (next: Int) {
         this.next = next

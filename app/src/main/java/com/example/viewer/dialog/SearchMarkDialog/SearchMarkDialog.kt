@@ -5,11 +5,10 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
-import com.example.viewer.data.struct.Book
-import com.example.viewer.data.struct.SearchMark
+import com.example.viewer.data.struct.search.SearchMark
 import com.example.viewer.databinding.DialogSearchMarkBinding
 import com.example.viewer.dialog.BookSourceSelectDialog
-import com.example.viewer.struct.BookSource
+import com.example.viewer.struct.ItemSource
 import com.example.viewer.struct.Category
 
 open class SearchMarkDialog (
@@ -102,7 +101,7 @@ open class SearchMarkDialog (
                 BookSourceSelectDialog(context, layoutInflater).show { source ->
                     val dialogData = dialogHandler.dialogData
                     when (source) {
-                        BookSource.E -> showESearchMark(
+                        ItemSource.E -> showESearchMark(
                             dialogData.name,
                             dialogData.categories.toList(),
                             dialogData.keyword,
@@ -110,15 +109,15 @@ open class SearchMarkDialog (
                             dialogData.uploader,
                             dialogData.doExclude
                         )
-                        BookSource.Wn -> showWnSearchMark(
+                        ItemSource.Wn -> showWnSearchMark(
                             dialogData.name,
                             Category.All,
                             dialogData.keyword
                         )
-                        BookSource.Ru -> showRuSearchMark(
+                        ItemSource.Ru -> showRuSearchMark(
                             dialogData.keyword
                         )
-                        BookSource.Hi -> throw IllegalArgumentException("unexpected source ordinal")
+                        ItemSource.Hi -> throw IllegalArgumentException("unexpected source ordinal")
                     }
                 }
             }
@@ -176,7 +175,7 @@ open class SearchMarkDialog (
 
     fun show (searchMark: SearchMark) =
         when (searchMark.sourceOrdinal) {
-            BookSource.E.ordinal -> showESearchMark(
+            ItemSource.E.ordinal -> showESearchMark(
                 searchMark.name,
                 searchMark.getCategories(),
                 searchMark.keyword,
@@ -184,7 +183,7 @@ open class SearchMarkDialog (
                 searchMark.uploader ?: "",
                 searchMark.doExclude
             )
-            BookSource.Wn.ordinal -> showWnSearchMark(
+            ItemSource.Wn.ordinal -> showWnSearchMark(
                 name = searchMark.name,
                 category = searchMark.getCategories().also { assert(it.size == 1) }.first(),
                 keyword = searchMark.keyword

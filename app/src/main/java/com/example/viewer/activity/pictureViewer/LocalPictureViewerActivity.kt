@@ -3,14 +3,15 @@ package com.example.viewer.activity.pictureViewer
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
+import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import com.example.viewer.R
 import com.example.viewer.fetcher.BasePictureFetcher
-import com.example.viewer.RandomBook
+import com.example.viewer.ItemRNG
 import com.example.viewer.Util
-import com.example.viewer.activity.BookProfileActivity
+import com.example.viewer.activity.ItemProfileActivity
 import com.example.viewer.data.repository.BookRepository
 import com.example.viewer.databinding.ViewerImageDialogBinding
 import com.example.viewer.dialog.BookmarkDialog
@@ -25,7 +26,7 @@ import java.io.FileOutputStream
 import kotlin.math.floor
 
 /**
- * string extra: bookId
+ * long extra: itemId
  */
 class LocalPictureViewerActivity: BaseViewerActivity() {
     companion object {
@@ -34,14 +35,13 @@ class LocalPictureViewerActivity: BaseViewerActivity() {
     }
 
     private lateinit var bookDataset: BookRepository
-
     private lateinit var fetcher: BasePictureFetcher
-
-    private lateinit var bookId: String
     private lateinit var skipPageSet: Set<Int>
 
     private val bookFolder: File
         get() = fetcher.bookFolder
+
+    private var itemId: Long = -1
 
     @Volatile
     private var askingNextBook = false
@@ -51,13 +51,13 @@ class LocalPictureViewerActivity: BaseViewerActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         bookDataset = BookRepository(baseContext)
-        bookId = intent.getStringExtra("bookId")!!
-        prepareBook(bookId)
+        itemId = intent.getLongExtra("itemId", -1)
+        prepareBook(itemId)
 
         super.onCreate(savedInstanceState)
 
         viewerActivityBinding.bookmarkButton.setOnClickListener {
-            BookmarkDialog(this, layoutInflater, bookId, page) { bookMarkPage ->
+            BookmarkDialog(this, layoutInflater, itemId, page) { bookMarkPage ->
                 toPage(bookMarkPage)
             }.show()
         }
@@ -136,11 +136,11 @@ class LocalPictureViewerActivity: BaseViewerActivity() {
 
     override fun getPictureFetcher(): BasePictureFetcher = fetcher
 
-    private fun prepareBook (bookId: String) {
-        skipPageSet = bookDataset.getBookSkipPages(bookId).toSet()
+    private fun prepareBook (itemId: Long) {
+        skipPageSet = bookDataset.getBookSkipPages(itemId).toSet()
 
         firstPage = 0
-        lastPage = bookDataset.getBookPageNum(bookId) - 1
+        lastPage = bookDataset.getBookPageNum(itemId) - 1
         while (skipPageSet.contains(firstPage)) {
             firstPage++
         }
@@ -149,7 +149,7 @@ class LocalPictureViewerActivity: BaseViewerActivity() {
         }
 
         page = firstPage
-        fetcher = BasePictureFetcher.getFetcher(this, bookId)
+        fetcher = BasePictureFetcher.getFetcher(this, itemId)
     }
 
     private fun showImageDialog () {
@@ -159,7 +159,7 @@ class LocalPictureViewerActivity: BaseViewerActivity() {
         // set cover page
         dialogViewBinding.viewImgDialogCoverPageButton.apply {
             setOnClickListener {
-                bookDataset.setBookCoverPage(bookId, page)
+                bookDataset.setBookCoverPage(itemId, page)
                 dialog.dismiss()
             }
         }
@@ -168,12 +168,12 @@ class LocalPictureViewerActivity: BaseViewerActivity() {
         dialogViewBinding.viewImgDialogSkipButton.apply {
             setOnClickListener {
                 bookDataset.setBookSkipPages(
-                    bookId,
+                    itemId,
                     skipPageSet.toMutableList().also { it.add(page) }.sorted()
                 )
-                skipPageSet = bookDataset.getBookSkipPages(bookId).toSet()
+                skipPageSet = bookDataset.getBookSkipPages(itemId).toSet()
 
-                if (bookDataset.getBookCoverPage(bookId) != page) {
+                if (bookDataset.getBookCoverPage(itemId) != page) {
                     // image file of skipped page is no longer needed
                     File(bookFolder, page.toString()).delete()
                 }
@@ -223,14 +223,14 @@ class LocalPictureViewerActivity: BaseViewerActivity() {
     }
 
     private fun nextBook () {
-        bookId = RandomBook.next(this)
+        itemId = ItemRNG.next(this)
 
-        prepareBook(bookId)
+        prepareBook(itemId)
         runBlocking {
-            bookDataset.updateBookLastViewTime(bookId)
+            bookDataset.updateBookLastViewTime(itemId)
         }
 
-        BookProfileActivity.changeBookWhenResume(bookId)
+        ItemProfileActivity.setResumeItem(itemId)
 
         loadPage()
     }
@@ -260,8 +260,13 @@ class LocalPictureViewerActivity: BaseViewerActivity() {
                 matrix, true
             )
             FileOutputStream(imageFile).use {
-                rotatedImage.compress(Bitmap.CompressFormat.WEBP_LOSSLESS, 100, it)
+                rotatedImage.compress(
+                    if (Build.VERSION.SDK_INT == 30) Bitmap.CompressFormat.WEBP_LOSSLESS else Bitmap.CompressFormat.WEBP,
+                    100,
+                    it
+                )
             }
+
             originImage.recycle()
             rotatedImage.recycle()
 

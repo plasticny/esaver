@@ -4,7 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.example.viewer.Util
 import com.example.viewer.data.repository.BookRepository
-import com.example.viewer.struct.BookSource
+import com.example.viewer.struct.ItemSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -14,7 +14,6 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import java.io.File
 import java.net.UnknownHostException
-import kotlin.math.log
 
 class EPictureFetcher: BasePictureFetcher {
     companion object {
@@ -59,10 +58,10 @@ class EPictureFetcher: BasePictureFetcher {
     /**
      * for local book
      */
-    constructor (context: Context, bookId: String): super(context, bookId, BookSource.E) {
-        p = bookRepo.getBookP(bookId)
-        bookUrl = bookRepo.getBookUrl(bookId)
-        pageUrls = bookRepo.getBookPageUrls(bookId)
+    constructor (context: Context, itemId: Long): super(context, itemId, ItemSource.E) {
+        p = bookRepo.getBookP(itemId)
+        bookUrl = bookRepo.getBookUrl(itemId)
+        pageUrls = bookRepo.getBookPageUrls(itemId)
     }
 
     /**
@@ -73,7 +72,7 @@ class EPictureFetcher: BasePictureFetcher {
         pageNum: Int,
         bookUrl: String,
         bookId: String? = null
-    ): super(context, pageNum, BookSource.E, bookId) {
+    ): super(context, pageNum, ItemSource.E, bookId) {
         p = 0
         this.bookUrl = bookUrl
         pageUrls = arrayOfNulls(pageNum)
@@ -185,10 +184,8 @@ class EPictureFetcher: BasePictureFetcher {
 
                 if (isLocal) {
                     // save progress if local fetcher
-                    bookId!!.let {
-                        p = bookRepo.increaseBookP(bookId)
-                        bookRepo.setBookPageUrls(bookId, pageUrls)
-                    }
+                    p = bookRepo.increaseBookP(this.itemId)
+                    bookRepo.setBookPageUrls(this.itemId, pageUrls)
                 } else {
                     p++
                 }

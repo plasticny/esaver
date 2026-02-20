@@ -21,14 +21,14 @@ import com.example.viewer.R
 import com.example.viewer.Util
 import com.example.viewer.activity.search.SearchActivity
 import com.example.viewer.data.repository.SearchRepository
-import com.example.viewer.data.struct.SearchMark
+import com.example.viewer.data.struct.search.SearchMark
 import com.example.viewer.databinding.ComponentListItemBinding
 import com.example.viewer.databinding.FragmentMainSearchBinding
 import com.example.viewer.dialog.BookSourceSelectDialog
 import com.example.viewer.dialog.ConfirmDialog
 import com.example.viewer.dialog.FilterOutDialog
 import com.example.viewer.dialog.SearchMarkDialog.SearchMarkDialog
-import com.example.viewer.struct.BookSource
+import com.example.viewer.struct.ItemSource
 import com.example.viewer.struct.Category
 
 class SearchMarkFragment: Fragment() {
@@ -40,7 +40,7 @@ class SearchMarkFragment: Fragment() {
     /**
      * book source to search when activate tmp searching
      */
-    private var searchBarSource: BookSource = BookSource.E
+    private var searchBarSource: ItemSource = ItemSource.E
 
     private var focusedSearchMark: SearchMarkEntry? = null
     private var searchMarkListLastUpdate = 0L
@@ -85,10 +85,10 @@ class SearchMarkFragment: Fragment() {
                             sourceOrdinal = searchBarSource.ordinal,
                             keyword = text.toString().trim(),
                             categories = when (searchBarSource) {
-                                BookSource.E -> Category.ECategories
-                                BookSource.Wn -> arrayOf(Category.All)
-                                BookSource.Ru -> arrayOf()
-                                BookSource.Hi -> throw NotImplementedError()
+                                ItemSource.E -> Category.ECategories
+                                ItemSource.Wn -> arrayOf(Category.All)
+                                ItemSource.Ru -> arrayOf()
+                                ItemSource.Hi -> throw NotImplementedError()
                             }.toList()
                         )
                     }
@@ -115,13 +115,13 @@ class SearchMarkFragment: Fragment() {
                 }
 
                 when (searchBarSource) {
-                    BookSource.E -> dialog.showESearchMark(
+                    ItemSource.E -> dialog.showESearchMark(
                         keyword = rootBinding.searchEditText.text.toString().trim()
                     )
-                    BookSource.Wn -> dialog.showWnSearchMark(
+                    ItemSource.Wn -> dialog.showWnSearchMark(
                         keyword = rootBinding.searchEditText.text.toString().trim()
                     )
-                    BookSource.Ru -> dialog.showRuSearchMark(
+                    ItemSource.Ru -> dialog.showRuSearchMark(
                         keyword = rootBinding.searchEditText.text.toString().trim()
                     )
                     else -> throw IllegalStateException("unexpected source")

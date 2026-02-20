@@ -22,7 +22,7 @@
             app:cardCornerRadius="8dp">
 
             <ImageView
-                android:id="@+id/search_book_imageView"
+                android:id="@+id/search_item_imageView"
                 android:layout_width="0dp"
                 android:layout_height="0dp"
                 android:layout_gravity="center"
@@ -31,7 +31,7 @@
         </androidx.cardview.widget.CardView>
 
         <TextView
-            android:id="@+id/search_book_title_textView"
+            android:id="@+id/search_item_title_textView"
             android:layout_width="match_parent"
             android:layout_height="40dp"
             android:layout_marginTop="8dp"
@@ -62,7 +62,7 @@
                 android:textAlignment="viewEnd"/>
 
             <TextView
-                android:id="@+id/search_book_cat_textView"
+                android:id="@+id/search_item_cat_textView"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"/>
 

@@ -3,15 +3,12 @@ package com.example.viewer.data.repository
 import android.content.Context
 import android.database.sqlite.SQLiteConstraintException
 import androidx.room.Transaction
-import com.example.viewer.data.dao.ExcludeTagDao
-import com.example.viewer.data.dao.SearchMarkDao
+import com.example.viewer.data.dao.search.SearchMarkDao
 import com.example.viewer.data.database.SearchDatabase
-import com.example.viewer.data.struct.ExcludeTag
-import com.example.viewer.data.struct.SearchMark
+import com.example.viewer.data.struct.search.SearchMark
 import com.example.viewer.struct.Category
-import com.example.viewer.R
-import com.example.viewer.data.dao.SearchHistoryDao
-import com.example.viewer.data.struct.SearchHistory
+import com.example.viewer.data.dao.search.SearchHistoryDao
+import com.example.viewer.data.struct.search.SearchHistory
 import com.google.gson.Gson
 import kotlinx.coroutines.runBlocking
 

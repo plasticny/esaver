@@ -4,11 +4,11 @@ import android.os.Bundle
 import android.widget.Toast
 import com.example.viewer.R
 import com.example.viewer.data.repository.BookRepository
-import com.example.viewer.data.struct.Book
 import com.example.viewer.fetcher.BasePictureFetcher
 import com.example.viewer.fetcher.EPictureFetcher
 import com.example.viewer.fetcher.WnPictureFetcher
-import com.example.viewer.struct.BookSource
+import com.example.viewer.struct.ItemSource
+import com.example.viewer.struct.ProfileItem
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -18,7 +18,7 @@ import java.io.FileNotFoundException
 import kotlin.math.floor
 
 class OnlinePictureViewerActivity: BaseViewerActivity() {
-    private lateinit var book: Book
+    private lateinit var profileItem: ProfileItem
     private lateinit var fetcher: BasePictureFetcher
     private lateinit var pictureUrls: MutableList<String?>
     private lateinit var bookRepo: BookRepository
@@ -31,17 +31,19 @@ class OnlinePictureViewerActivity: BaseViewerActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         bookRepo = BookRepository(baseContext)
 
-        book = Book.getTmpBook()
+        profileItem = ProfileItem.getTmp()
+        val bookData = profileItem.bookData!!
+
         page = 0
         firstPage = 0
-        lastPage = book.pageNum - 1
+        lastPage = bookData.pageNum - 1
 
-        fetcher = when (book.sourceOrdinal) {
-            BookSource.E.ordinal -> EPictureFetcher(this, pageNum = book.pageNum, bookUrl = book.url, bookId = book.id)
-            BookSource.Wn.ordinal -> WnPictureFetcher(this, pageNum = book.pageNum, bookUrl = book.url, bookId = book.id)
-            else -> throw NotImplementedError()
+        fetcher = when (profileItem.source) {
+            ItemSource.E -> EPictureFetcher(this, pageNum = bookData.pageNum, bookUrl = profileItem.url, bookId = bookData.id)
+            ItemSource.Wn -> WnPictureFetcher(this, pageNum = bookData.pageNum, bookUrl = profileItem.url, bookId = bookData.id)
+            ItemSource.Ru, ItemSource.Hi -> throw NotImplementedError()
         }
-        pictureUrls = MutableList(book.pageNum) {
+        pictureUrls = MutableList(bookData.pageNum) {
             val file = File(fetcher.bookFolder, it.toString())
             if (file.exists()) file.path else null
         }

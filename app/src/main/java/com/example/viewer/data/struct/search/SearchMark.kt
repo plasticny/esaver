@@ -1,4 +1,4 @@
-package com.example.viewer.data.struct
+package com.example.viewer.data.struct.search
 
 import android.content.Context
 import androidx.room.Entity

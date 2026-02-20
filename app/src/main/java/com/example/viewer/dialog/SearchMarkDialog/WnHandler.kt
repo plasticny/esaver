@@ -5,7 +5,7 @@ import android.view.LayoutInflater
 import android.widget.Button
 import com.example.viewer.R
 import com.example.viewer.databinding.DialogSearchMarkBinding
-import com.example.viewer.struct.BookSource
+import com.example.viewer.struct.ItemSource
 import com.example.viewer.struct.Category
 
 class WnHandler (
@@ -17,7 +17,7 @@ class WnHandler (
     private var category: Category = Category.All,
     private val keyword: String
 ): BaseHandler(context, layoutInflater, owner, ownerRootBinding) {
-    override val source = BookSource.Wn
+    override val source = ItemSource.Wn
 
     private val categoryButtons = mutableListOf<Button>()
 
