@@ -222,12 +222,13 @@ open class SearchMarkDialog (
     }
 
     fun showRuSearchMark (
+        name: String = "",
         keyword: String = ""
     ) {
         dialogHandler = RuHandler(
             context, layoutInflater,
             this, dialogBinding,
-            keyword
+            name, keyword
         ).also { it.setupUi() }
         dialog.show()
     }

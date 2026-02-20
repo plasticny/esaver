@@ -244,8 +244,8 @@ class SearchActivity: AppCompatActivity() {
                 }
             }
 
-            when (searchMarkData.sourceOrdinal) {
-                ItemSource.E.ordinal -> dialog.showESearchMark(
+            when (ItemSource.fromOrdinal(searchMarkData.sourceOrdinal)) {
+                ItemSource.E -> dialog.showESearchMark(
                     name = searchMarkData.name,
                     categories = searchMarkData.categories,
                     keyword = searchMarkData.keyword,
@@ -253,12 +253,16 @@ class SearchActivity: AppCompatActivity() {
                     uploader = searchMarkData.uploader ?: "",
                     doExclude = searchMarkData.doExclude
                 )
-                ItemSource.Wn.ordinal -> dialog.showWnSearchMark(
+                ItemSource.Wn -> dialog.showWnSearchMark(
                     name = searchMarkData.name,
                     category = searchMarkData.categories.also { assert(it.size == 1) }.first(),
                     keyword = searchMarkData.keyword
                 )
-                else -> throw IllegalStateException("unexpected ordinal")
+                ItemSource.Ru -> dialog.showRuSearchMark(
+                    name = searchMarkData.name,
+                    keyword = searchMarkData.keyword
+                )
+                ItemSource.Hi -> NotImplementedError()
             }
 
             dialog.apply {
