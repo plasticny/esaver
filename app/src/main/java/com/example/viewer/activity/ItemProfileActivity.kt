@@ -1,12 +1,13 @@
 package com.example.viewer.activity
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.PointF
 import android.net.Uri
 import android.os.Bundle
-import android.provider.ContactsContract
 import android.view.View
 import android.widget.Button
 import android.widget.ProgressBar
@@ -15,7 +16,6 @@ import androidx.activity.result.contract.ActivityResultContract
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.net.toUri
-import androidx.lifecycle.VIEW_MODEL_STORE_OWNER_KEY
 import androidx.lifecycle.lifecycleScope
 import androidx.room.Transaction
 import com.bumptech.glide.Glide
@@ -55,7 +55,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import org.jsoup.HttpStatusException
 import java.io.File
 import kotlin.math.floor
 import kotlin.math.min
@@ -332,7 +331,15 @@ class ItemProfileActivity: AppCompatActivity() {
 
         dialogViewBinding.categoryTextView.text = translatedCategory
 
-        dialogViewBinding.valueTextView.text = value
+        dialogViewBinding.valueTextView.apply {
+            text = value
+            setOnLongClickListener {
+                (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).run {
+                    setPrimaryClip(ClipData.newPlainText(null, value))
+                }
+                true
+            }
+        }
 
         dialogViewBinding.excludeButton.setOnClickListener {
             addFilterOutTag(category, value)
