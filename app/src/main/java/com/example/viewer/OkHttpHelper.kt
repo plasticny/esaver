@@ -56,15 +56,18 @@ class OkHttpHelper {
         url: String,
         dst: File,
         headers: Map<String, String> = mapOf()
-    ): Boolean {
+    ): Boolean = withContext(Dispatchers.IO) {
         get(url, headers).use { response ->
             if (!response.isSuccessful) {
-                return false
+                return@withContext false
             }
             dst.outputStream().use {
-                response.body!!.byteStream().copyTo(it)
+                response.body?.byteStream()?.copyTo(it)
             }
-            return true
+//            dst.outputStream().use {
+//                response.body!!.byteStream().copyTo(it)
+//            }
+            return@withContext true
         }
     }
 
@@ -72,7 +75,9 @@ class OkHttpHelper {
         url: String,
         dst: File,
         headers: Map<String, String> = mapOf(),
-    ): Boolean = curl(url, dst, headers) && BitmapFactory.decodeFile(dst.absolutePath) != null
+    ): Boolean = withContext(Dispatchers.IO) {
+        curl(url, dst, headers) && BitmapFactory.decodeFile(dst.absolutePath) != null
+    }
 
     private class ProgressResponseBody (
         private val responseBody: ResponseBody,

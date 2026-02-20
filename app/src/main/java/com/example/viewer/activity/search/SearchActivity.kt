@@ -65,10 +65,11 @@ class SearchActivity: AppCompatActivity() {
         }
     }
 
+    private lateinit var rootBinding: SearchActivityBinding
+
     private lateinit var searchRepo: SearchRepository
     private lateinit var excludeTagRepo: ExcludeTagRepository
     private lateinit var searchMarkData: SearchMarkData
-    private lateinit var rootBinding: SearchActivityBinding
     private lateinit var allSearchMarkIds: List<Long>
     private lateinit var searchHelper: SearchHelper
 
@@ -366,13 +367,9 @@ class SearchActivity: AppCompatActivity() {
         }
 
         loadingMore = true
-        withContext(Dispatchers.Main) {
-            rootBinding.searchProgressBar.wrapper.visibility = ProgressBar.VISIBLE
-        }
+        toggleProgressBar(toggle = true, screen = false)
         val items = fetchNextItems()
-        withContext(Dispatchers.Main) {
-            rootBinding.searchProgressBar.wrapper.visibility = ProgressBar.GONE
-        }
+        toggleProgressBar(toggle = false, screen = false)
         loadingMore = false
 
         if (mySearchId == searchMarkData.id) {
@@ -397,13 +394,9 @@ class SearchActivity: AppCompatActivity() {
         }
 
         loadingMore = true
-        withContext(Dispatchers.Main) {
-            rootBinding.searchProgressBar.wrapper.visibility = ProgressBar.VISIBLE
-        }
+        toggleProgressBar(toggle = true, screen = false)
         val items = fetchPrevItems()
-        withContext(Dispatchers.Main) {
-            rootBinding.searchProgressBar.wrapper.visibility = ProgressBar.GONE
-        }
+        toggleProgressBar(toggle = false, screen = false)
         loadingMore = false
 
         if (mySearchId == searchMarkData.id) {
@@ -482,7 +475,9 @@ class SearchActivity: AppCompatActivity() {
      */
     private suspend fun storeTmpProfileItem (searchItemData: SearchItemData): Boolean {
         rootBinding.screenProgressBarWrapper.visibility = View.VISIBLE
+        toggleProgressBar(toggle = true, screen = true)
         val ret = searchHelper.storeDetailAsTmpProfileItem(searchItemData)
+        toggleProgressBar(toggle = false, screen = true)
         rootBinding.screenProgressBarWrapper.visibility = View.GONE
         return ret
     }
@@ -515,6 +510,17 @@ class SearchActivity: AppCompatActivity() {
         }
 
         dialog.show()
+    }
+
+    private suspend fun toggleProgressBar (toggle: Boolean, screen: Boolean) {
+        val status = if (toggle) ProgressBar.VISIBLE else ProgressBar.GONE
+        withContext(Dispatchers.Main) {
+            if (screen) {
+                rootBinding.screenProgressBarWrapper.visibility = status
+            } else {
+                rootBinding.searchProgressBar.wrapper.visibility = status
+            }
+        }
     }
 
     //

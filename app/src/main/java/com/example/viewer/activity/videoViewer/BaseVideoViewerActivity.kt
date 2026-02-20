@@ -8,6 +8,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
+import com.example.viewer.data.repository.VideoRepository
 import com.example.viewer.data.struct.item.Item
 import com.example.viewer.databinding.ActivityVideoViewerBinding
 import com.example.viewer.struct.ProfileItem
@@ -30,7 +31,12 @@ class BaseVideoViewerActivity: AppCompatActivity() {
         videoUrl = if (itemId == -1L) {
             ProfileItem.getTmp().videoData!!.videoUrl
         } else {
-            File(Item.getFolder(baseContext, itemId), "video").absolutePath
+            val file = File(Item.getFolder(baseContext, itemId), "video")
+            if (file.exists()) {
+                file.absolutePath
+            } else {
+                VideoRepository(baseContext).getRuSourceData(itemId).videoUrl
+            }
         }
 
         preparePlayer()

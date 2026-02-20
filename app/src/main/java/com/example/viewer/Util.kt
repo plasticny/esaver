@@ -14,10 +14,13 @@ class Util {
         val TAG_TRANSLATION_MAP = mapOf(
             "artist" to "作者",
             "character" to "角色",
+            "copyright" to "原作",
             "female" to "女性",
+            "general" to "泛用",
             "group" to "組別",
             "language" to "語言",
             "male" to "男性",
+            "metadata" to "檔案",
             "mixed" to "混合",
             "other" to "其他",
             "parody" to "原作",

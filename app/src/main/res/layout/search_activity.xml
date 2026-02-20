@@ -101,10 +101,9 @@
     </LinearLayout>
 
 <!--  progress bars  -->
-
     <include
-        layout="@layout/component_progress"
         android:id="@+id/search_progress_bar"
+        layout="@layout/component_progress"
         android:layout_width="60dp"
         android:layout_height="60dp"
         android:layout_alignParentEnd="true"
