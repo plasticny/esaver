@@ -26,6 +26,7 @@
     <string name="fa_list">\uf03a</string>
     <string name="fa_share_from_square">\uf14d</string>
     <string name="fa_crop">\uf125</string>
+    <string name="fa_bars">\uf0c9</string>
 <!--  book category string  -->
     <string name="category_all">全部</string>
     <string name="doujinshi">同人誌</string>

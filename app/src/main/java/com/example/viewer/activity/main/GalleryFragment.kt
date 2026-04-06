@@ -6,7 +6,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.setFragmentResultListener
+import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import com.example.viewer.Gallery
 import com.example.viewer.R
@@ -16,6 +18,8 @@ import com.example.viewer.databinding.FragmentMainGalleryBinding
 import com.example.viewer.dialog.RandomSettingDialog
 
 class GalleryFragment: Fragment() {
+    private val navViewModel: NavViewModel by activityViewModels()
+
     private lateinit var ctx: Context
     private lateinit var binding: FragmentMainGalleryBinding
     private lateinit var gallery: Gallery
@@ -34,6 +38,10 @@ class GalleryFragment: Fragment() {
 
         groupListLastUpdate = GroupRepository.getLastUpdateTime()
         itemListLastUpdate = ItemRepository.getListLastUpdateTime()
+
+        binding.menuButton.setOnClickListener {
+            navViewModel.setOpenStatus(true)
+        }
 
         binding.groupListButton.setOnClickListener {
             findNavController().navigate(R.id.main_nav_sort_group)
